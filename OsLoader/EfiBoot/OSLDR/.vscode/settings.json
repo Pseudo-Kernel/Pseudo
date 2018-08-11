@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "uefi.h": "c",
+        "uefibasetype.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
+}

@@ -1,0 +1,27 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"uefi.h": "c",
+			"uefibasetype.h": "c",
+			"uefilib.h": "c",
+			"base.h": "c",
+			"osldr.h": "c",
+			"peimage.h": "c",
+			"uefiapplicationentrypoint.h": "c",
+			"loadedimage.h": "c",
+			"efispec.h": "c",
+			"efiapi.h": "c",
+			"xiosbase": "c",
+			"xlocale": "c"
+		},
+		"editor.autoClosingBrackets": false
+	}
+}

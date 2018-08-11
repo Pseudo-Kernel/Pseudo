@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerWorkingDirectory>$(SolutionDir)VM\QEMU</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>$(SolutionDir)VM\QEMU\qemu-system-x86_64.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g -bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda fat:"$(SolutionDir)VM\Filesystem"</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerWorkingDirectory>$(SolutionDir)VM\QEMU</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>$(SolutionDir)VM\QEMU\qemu-system-x86_64.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g -bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda fat:"$(SolutionDir)VM\Filesystem"</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+</Project>
