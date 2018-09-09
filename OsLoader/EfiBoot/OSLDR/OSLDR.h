@@ -121,11 +121,10 @@ OslMmQueryMemoryMap (
 // PE Loader Routines.
 //
 
-VOID *
+EFI_PHYSICAL_ADDRESS
 EFIAPI
-OslPeLoadImage64 (
-  IN OS_LOADER_BLOCK  *LoaderBlock, 
-  IN void             *FileBuffer, 
-  IN UINT32            BufferSize
-  );
+OslPeLoadImage(
+	IN EFI_BOOT_SERVICES *BootServices,
+	IN VOID *FileBuffer,
+	IN UINTN FileBufferLength);
 

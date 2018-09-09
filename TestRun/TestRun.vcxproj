@@ -42,12 +42,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>
-    </NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeReBuildCommandLine>
+    <NMakeOutput>$(SolutionDir)VM\boot_image.vhd</NMakeOutput>
+    <NMakeCleanCommandLine>del "$(SolutionDir)VM\boot_image.vhd"</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>
-    </NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeReBuildCommandLine>
+    <NMakeOutput>$(SolutionDir)VM\boot_image.vhd</NMakeOutput>
+    <NMakeCleanCommandLine>del "$(SolutionDir)VM\boot_image.vhd"</NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

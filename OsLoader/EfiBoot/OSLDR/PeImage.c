@@ -77,24 +77,26 @@ OslPeIsImageTypeSupported(
 BOOLEAN
 EFIAPI
 OslPeFixupImage(
-	IN VOID     *ImageBase,
-	IN UINT64    CurrentPreferredBase,
-	IN UINT64    FixupBase,
-	IN BOOLEAN   UseDefaultPreferredBase)
+	IN EFI_PHYSICAL_ADDRESS    ImageBase,
+	IN EFI_PHYSICAL_ADDRESS    CurrentPreferredBase,
+	IN EFI_PHYSICAL_ADDRESS    FixupBase,
+	IN BOOLEAN                 UseDefaultPreferredBase)
 {
 	PIMAGE_NT_HEADERS_3264 Nt;
-	UINT64 PreferredBase;
-	UINT64 ImageDefaultBase;
+	EFI_PHYSICAL_ADDRESS PreferredBase;
+	EFI_PHYSICAL_ADDRESS ImageDefaultBase;
 	PIMAGE_DATA_DIRECTORY DataDirectory;
 	UINT64 OffsetDelta;
 
-	Nt = OslPeImageBaseToNtHeaders(ImageBase);
+	Nt = OslPeImageBaseToNtHeaders((void *)ImageBase);
 	if(!Nt)
 		return FALSE;
 
 	if(!OslPeIsImageTypeSupported(Nt))
 		return FALSE;
 
+	ImageDefaultBase = Nt->Nt64.OptionalHeader.ImageBase;
+	DataDirectory = Nt->Nt64.OptionalHeader.DataDirectory;
 
 	PreferredBase = UseDefaultPreferredBase ? ImageDefaultBase : CurrentPreferredBase;
 	OffsetDelta = FixupBase - PreferredBase;
@@ -182,109 +184,115 @@ OslPeFixupImage(
 /**
   Loads the PE32+ Image.
   
+  @param[in] BootServices				Pointer to EFI boot services table.
   @param[in] FileBuffer                 Buffer which contains file content.
-  @param[in] PreferredBase              Preferred Base Address.
+  @param[in] FileBufferLength           Length of the FileBuffer.
   
   @retval Non-NULL                      The operation is completed successfully.
   @retval NULL                          An error occurred during the operation.
   
 **/
-VOID *
+EFI_PHYSICAL_ADDRESS
 EFIAPI
-OslPeLoadSystemImage(
+OslPeLoadImage(
+	IN EFI_BOOT_SERVICES *BootServices, 
 	IN VOID *FileBuffer, 
-	IN VOID *PreferredBase)
+	IN UINTN FileBufferLength)
 {
-#if 0
 	PIMAGE_NT_HEADERS_3264 Nt;
 	PIMAGE_SECTION_HEADER SectionHeader;
-	ULONG_PTR BaseAddress;
-	ULONG SectionAlignment;
-	ULONG SizeOfHeaders;
-	ULONG SizeOfImage;
-	ULONG64 ImageDefaultBase;
-	ULONG i;
+	UINTN SectionAlignment;
+	UINTN SizeOfImage;
+	UINTN SizeOfHeaders;
+	UINTN PageCount;
+	EFI_PHYSICAL_ADDRESS BaseAddress;
+
+	UINTN i;
 
 	Nt = OslPeImageBaseToNtHeaders(FileBuffer);
-	if(!Nt)
-		return NULL;
+	if (!Nt)
+		return (EFI_PHYSICAL_ADDRESS)NULL;
 
-  if(!OslPeIsImageTypeSupported(Nt))
-    return NULL;
+	if (!OslPeIsImageTypeSupported(Nt))
+		return (EFI_PHYSICAL_ADDRESS)NULL;
 
-	BaseAddress = LdrpHelperAllocatePage(PreferredBase, SizeOfImage);
-	if(!BaseAddress)
-		return 0;
+	SectionAlignment = Nt->Nt64.OptionalHeader.SectionAlignment;
+	SizeOfImage = Nt->Nt64.OptionalHeader.SizeOfImage;
+	SizeOfHeaders = Nt->Nt64.OptionalHeader.SizeOfHeaders;
 
-	//
-	// Locate the headers.
-	//
+	if (SizeOfHeaders >= Nt->Nt64.OptionalHeader.SizeOfImage)
+		return (EFI_PHYSICAL_ADDRESS)NULL;
 
-	memset((PVOID)BaseAddress, 0, (SizeOfHeaders + SectionAlignment - 1) & ~(SectionAlignment - 1));
-	memcpy((PVOID)BaseAddress, FileBuffer, SizeOfHeaders);
 
 	//
-	// Locate the sections.
+	// Allocate zero-filled pages for our image.
 	//
 
-	SectionHeader = IMAGE_FIRST_SECTION(&Nt->Nt32); // returns same result for Nt32/Nt64.
-	for(i = 0; i < Nt->Nt32.FileHeader.NumberOfSections; i++)
+	PageCount = EFI_SIZE_TO_PAGES(SizeOfImage);
+
+	if (BootServices->AllocatePages(AllocateAnyPages, EfiLoaderData, PageCount, &BaseAddress)
+		!= EFI_SUCCESS)
 	{
-		ULONG SectionVirtualSize;
+		return (EFI_PHYSICAL_ADDRESS)NULL;
+	}
+
+	BootServices->SetMem((void *)BaseAddress, SizeOfImage, 0);
+
+	//
+	// Copy the headers and section data.
+	//
+
+	BootServices->CopyMem((void *)BaseAddress, FileBuffer, SizeOfHeaders);
+	
+	SectionHeader = IMAGE_FIRST_SECTION(&Nt->Nt64);
+
+	for (i = 0; i < Nt->Nt64.FileHeader.NumberOfSections; i++)
+	{
+		UINTN SectionVirtualSize;
+		UINTN SectionRawSize;
+		UINTN SectionRva;
+		UINTN SectionRawOffset;
+
+		EFI_PHYSICAL_ADDRESS Source;
+		EFI_PHYSICAL_ADDRESS Destination;
 
 		SectionVirtualSize = SectionHeader[i].Misc.VirtualSize;
 		SectionVirtualSize = (SectionVirtualSize + SectionAlignment - 1) & ~(SectionAlignment - 1);
+		SectionRawSize = SectionHeader[i].SizeOfRawData;
+
+		SectionRva = BaseAddress + SectionHeader[i].VirtualAddress;
+		SectionRawOffset = SectionHeader[i].PointerToRawData;
+
+		if (SectionRva >= SizeOfImage ||
+			SectionVirtualSize >= SizeOfImage ||
+			SectionRva + SectionVirtualSize > SizeOfImage ||
+			SectionRawOffset >= FileBufferLength ||
+			SectionRawSize >= FileBufferLength ||
+			SectionRawOffset + SectionRawSize > FileBufferLength)
+		{
+			// Section out of bounds.
+			BootServices->FreePages(BaseAddress, PageCount);
+			return (EFI_PHYSICAL_ADDRESS)NULL;
+		}
 
 //		LDR_TRACE("Section '%s' -> 0x%p - 0x%p\n", SectionHeader[Index].Name, 
 //			(ULONG)BaseAddress+SectionHeader[Index].VirtualAddress, 
 //			(ULONG)BaseAddress+SectionHeader[Index].VirtualAddress+SectionVirtualSize-1);
 
-		memset((PVOID)((ULONG_PTR)BaseAddress + SectionHeader[i].VirtualAddress), 0, SectionVirtualSize);
-		memcpy((PVOID)((ULONG_PTR)BaseAddress + SectionHeader[i].VirtualAddress), 
-			(PUCHAR)FileBuffer + SectionHeader[i].PointerToRawData, SectionHeader[i].SizeOfRawData);
+		Source = (EFI_PHYSICAL_ADDRESS)FileBuffer + SectionRawOffset;
+		Destination = BaseAddress + SectionRva;
+
+		BootServices->SetMem((void *)Destination, SectionVirtualSize, 0);
+		BootServices->CopyMem((void *)Destination, (void *)Source, SectionRawSize);
 	}
 
-	//
-	// Do the relocation fixup.
-	//
 
-	if(!LdrFixupSystemImage(BaseAddress, 0, BaseAddress, TRUE))
+	if (!OslPeFixupImage(BaseAddress, BaseAddress, (EFI_PHYSICAL_ADDRESS)NULL, TRUE))
 	{
-		LdrpHelperFreePage(BaseAddress);
-
-		return 0;
+		// Relocation failed.
+		BootServices->FreePages(BaseAddress, PageCount);
+		return (EFI_PHYSICAL_ADDRESS)NULL;
 	}
 
 	return BaseAddress;
-#endif
-
-	return NULL;
 }
-
-/**
-  Loads the PE Image.
-
-  @param[in] LoaderBlock    The loader block pointer.  
-  @param[in] FilePath       File Path.
-  
-  @retval Non-NULL          The operation is completed successfully.
-  @retval other             An error occurred during the operation.
-
-**/
-VOID *
-EFIAPI
-OslPeLoadImage64 (
-  IN OS_LOADER_BLOCK  *LoaderBlock, 
-  IN VOID             *FileBuffer, 
-  IN UINT32            BufferSize
-  )
-{
-//  void *ImageBase = NULL;
-//  EFI_STATUS Status = EFI_SUCCESS;
-
-//  Status = LoaderBlock->Base.BootServices->AllocatePages(
-//    EfiLoaderData, 
-
-  return NULL;
-}
-

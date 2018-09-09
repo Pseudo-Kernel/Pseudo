@@ -1,0 +1,5 @@
+Using directory:
+-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda fat:"$(SolutionDir)VM\Filesystem"
+
+Using raw image:
+-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda "$(SolutionDir)VM\boot_image.vhd"

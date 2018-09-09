@@ -197,6 +197,9 @@ typedef	IMAGE_NT_HEADERS32			IMAGE_NT_HEADERS, *PIMAGE_NT_HEADERS;
 
 // IMAGE_FIRST_SECTION doesn't need 32/64 versions since the file header is the same either way.
 
+#define	FIELD_OFFSET(_type, _field)	\
+	( (UINTN)( &((_type *)0)->_field ) )
+
 #define IMAGE_FIRST_SECTION( ntheader ) ((PIMAGE_SECTION_HEADER)        \
     ((CHAR8 *)(ntheader) +                                            \
      FIELD_OFFSET( IMAGE_NT_HEADERS, OptionalHeader ) +                 \
@@ -509,4 +512,5 @@ typedef union _IMAGE_NT_HEADERS_3264 {
 	IMAGE_NT_HEADERS32 Nt32;
 	IMAGE_NT_HEADERS64 Nt64;
 } IMAGE_NT_HEADERS_3264, *PIMAGE_NT_HEADERS_3264;
+
 
