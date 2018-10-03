@@ -1,2 +1,0 @@
-DO NOT rename the file name which is already used in edk2, Even if they are in the different directory.
-

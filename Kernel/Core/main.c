@@ -25,8 +25,18 @@ KiKernelStart(
 {
 	CHAR8 s[10] = "456789";
 	U64 l = strlen(s);
+	U64 i;
 
 	*(volatile U64 *)0xb8000 = l;
+
+	for (i = 0; i < 0x100; i += 8)
+	{
+		// QEMU FrameBuffer write test
+		*(volatile U64 *)(0x80000000 + i) = 0x00ffffff00ffffffff;
+	}
+
+	for (;;)
+		__halt();
 
 	return l;
 }

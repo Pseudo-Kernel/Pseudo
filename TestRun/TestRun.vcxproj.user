@@ -4,12 +4,12 @@
     <LocalDebuggerWorkingDirectory>$(SolutionDir)VM\QEMU</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommand>$(SolutionDir)VM\QEMU\qemu-system-x86_64.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda "$(SolutionDir)VM\boot_image.vhd"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-S -gdb tcp:127.0.0.1:7000 -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda "$(SolutionDir)VM\boot_image.vhd"</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)VM\QEMU</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommand>$(SolutionDir)VM\QEMU\qemu-system-x86_64.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda "$(SolutionDir)VM\boot_image.vhd"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-S -gdb tcp:127.0.0.1:7000 -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "$(SolutionDir)VM\OVMF\ovmf-x64\OVMF-pure-efi.fd" -net none -hda "$(SolutionDir)VM\boot_image.vhd"</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>
