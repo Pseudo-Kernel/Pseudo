@@ -4,6 +4,22 @@
 #include "OsLoader.h"
 
 /**
+	Halts the system.
+	This function is called when returned from the kernel entry point.
+**/
+VOID
+EFIAPI
+OslReturnedFromKernel(
+	VOID)
+{
+	for (;;)
+	{
+		__halt();
+	}
+}
+
+
+/**
 	Transfer to the kernel.
 
 	@param[in] LoaderBlock    The loader block which contains OS loader information.
@@ -14,7 +30,7 @@
 **/
 BOOLEAN
 EFIAPI
-OslTransferToKernel (
+OslTransferToKernel(
 	IN OS_LOADER_BLOCK *LoaderBlock)
 {
 	IMAGE_NT_HEADERS_3264 *Nt3264;
@@ -32,6 +48,8 @@ OslTransferToKernel (
 
 	// Start the Kernel!
 	StartEntry(KernelBase, (UINT64)LoaderBlock, sizeof(OS_LOADER_BLOCK), 0);
+
+	OslReturnedFromKernel();
 
 	return FALSE;
 }

@@ -4,7 +4,8 @@
 // Calling Conventions.
 //
 
-#define	CALLCONV					__stdcall
+// __cdecl, __stdcall are accepted but ignored by compiler on x64.
+#define	KERNELAPI					__stdcall
 
 
 //
@@ -21,7 +22,7 @@
 #if 0
 #define	TAG8(_a, _b, _c, _d, _e, _f, _g, _h) ( \
 	( ((unsigned __int64)TAG4((_a), (_b), (_c), (_d))) << 0x00 ) | \ 
-	( ((unsigned __int64)TAG4((_e), (_f), (_g), (_h))) << 0x20 ) \
+(((unsigned __int64)TAG4((_e), (_f), (_g), (_h))) << 0x20) \
 )
 #endif
 
@@ -37,6 +38,16 @@
 #define	FALSE				(0 == 1)
 #endif // !FALSE
 
+#define	ARRAY_SIZE(_x)		( sizeof((_x)) / sizeof((_x)[0]) )
+
+#define	ASSERT(_x)			if(!(_x)) { for(;;); } //BootGfxFatalStop("ASSERTION FAILED!"); }
+#define C_ASSERT(_x)		typedef char __C_ASSERT__[(_x)?1:-1]
+
+
+
+#define	FIELD_OFFSET(_type, _field)					( (UPTR)(&((_type *)0)->_field) )
+#define	CONTAINING_RECORD(_addr, _type, _field)		( (_type *)((UPTR)(_addr) - FIELD_OFFSET(_type, _field)) )
+
 
 //
 // IN, OUT, OPTIONAL
@@ -51,6 +62,13 @@
 #ifndef OPTIONAL
 #define	OPTIONAL
 #endif // !OPTIONAL
+
+//
+// Stringizer.
+//
+
+#define	__ASCII(_x)					#_x
+#define	_ASCII(_x)					__ASCII(_x)
 
 
 //

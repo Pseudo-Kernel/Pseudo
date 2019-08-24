@@ -13,6 +13,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestRun", "TestRun\TestRun.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EfiBootLite", "OsLoader\EfiBootLite\EfiBootLite.vcxproj", "{49E0E494-4E87-454A-BEF6-875F0B081E53}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{57C049B9-D118-4821-A03A-E4550E9EA172}"
+	ProjectSection(SolutionItems) = preProject
+		Kernel\name_prefix.txt = Kernel\name_prefix.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

@@ -115,7 +115,8 @@
     <PostBuildEvent>
       <Command>
       </Command>
-      <Message>copy file to filesystem</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>mkdir "$(SolutionDir)VM\Filesystem\EFI\BOOT"
@@ -129,6 +130,11 @@ copy "$(TargetPath)" "$(SolutionDir)VM\Filesystem\EFI\BOOT" /y
       <TreatOutputAsContent>false</TreatOutputAsContent>
       <Inputs>$(TargetPath);%(Inputs)</Inputs>
     </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>del "$(TargetPath)"
+del "$(SolutionDir)VM\Filesystem\EFI\BOOT\$(TargetFileName)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -179,7 +185,8 @@ copy "$(TargetPath)" "$(SolutionDir)VM\Filesystem\EFI\BOOT" /y
     <PostBuildEvent>
       <Command>
       </Command>
-      <Message>copy file to filesystem</Message>
+      <Message>
+      </Message>
     </PostBuildEvent>
     <CustomBuildStep>
       <Command>mkdir "$(SolutionDir)VM\Filesystem\EFI\BOOT"
@@ -193,6 +200,11 @@ copy "$(TargetPath)" "$(SolutionDir)VM\Filesystem\EFI\BOOT" /y
       <TreatOutputAsContent>false</TreatOutputAsContent>
       <Inputs>$(TargetPath);%(Inputs)</Inputs>
     </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>del "$(TargetPath)"
+del "$(SolutionDir)VM\Filesystem\EFI\BOOT\$(TargetFileName)"
+</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="OsKernel.c" />

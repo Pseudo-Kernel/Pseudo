@@ -42,16 +42,32 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeReBuildCommandLine>
+    <NMakeBuildCommandLine>$(SolutionDir)zipimage.exe "$(SolutionDir)VM\Filesystem\EFI\BOOT\init.bin" "$(SolutionDir)VM\Filesystem\EFI\BOOT\init"
+$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"
+$(SolutionDir)nbuildinc.exe
+</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(SolutionDir)zipimage.exe "$(SolutionDir)VM\Filesystem\EFI\BOOT\init.bin" "$(SolutionDir)VM\Filesystem\EFI\BOOT\init"
+$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"
+$(SolutionDir)nbuildinc.exe
+</NMakeReBuildCommandLine>
     <NMakeOutput>$(SolutionDir)VM\boot_image.vhd</NMakeOutput>
-    <NMakeCleanCommandLine>del "$(SolutionDir)VM\boot_image.vhd"</NMakeCleanCommandLine>
+    <NMakeCleanCommandLine>del "$(SolutionDir)VM\boot_image.vhd"
+del "$(SolutionDir)VM\Filesystem\EFI\BOOT\init.bin"
+</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"</NMakeReBuildCommandLine>
+    <NMakeBuildCommandLine>$(SolutionDir)zipimage.exe "$(SolutionDir)VM\Filesystem\EFI\BOOT\init.bin" "$(SolutionDir)VM\Filesystem\EFI\BOOT\init"
+$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"
+$(SolutionDir)nbuildinc.exe
+</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(SolutionDir)zipimage.exe "$(SolutionDir)VM\Filesystem\EFI\BOOT\init.bin" "$(SolutionDir)VM\Filesystem\EFI\BOOT\init"
+$(SolutionDir)VM\boot_image.bat "$(SolutionDir)VM\boot_image.vhd" W "$(SolutionDir)VM\Filesystem"
+$(SolutionDir)nbuildinc.exe
+</NMakeReBuildCommandLine>
     <NMakeOutput>$(SolutionDir)VM\boot_image.vhd</NMakeOutput>
-    <NMakeCleanCommandLine>del "$(SolutionDir)VM\boot_image.vhd"</NMakeCleanCommandLine>
+    <NMakeCleanCommandLine>del "$(SolutionDir)VM\boot_image.vhd"
+del "$(SolutionDir)VM\Filesystem\EFI\BOOT\init.bin"
+</NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

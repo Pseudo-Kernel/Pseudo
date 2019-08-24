@@ -56,7 +56,7 @@ rem Create the diskpart script which detaches our boot image from volume.
 type nul                                                            > %SCRIPT_CLEANUP%
 echo select vdisk file="%BOOT_IMAGE_PATH%"                         >> %SCRIPT_CLEANUP%
 echo select volume=%ASSIGN_DRIVE_LETTER%                           >> %SCRIPT_CLEANUP%
-echo remove                                                        >> %SCRIPT_CLEANUP%
+echo remove letter=%ASSIGN_DRIVE_LETTER%                           >> %SCRIPT_CLEANUP%
 echo detach vdisk                                                  >> %SCRIPT_CLEANUP%
 echo exit                                                          >> %SCRIPT_CLEANUP%
 

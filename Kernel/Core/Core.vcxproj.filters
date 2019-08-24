@@ -18,5 +18,40 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dbg\dbg.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="misc\common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="init\preinit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mm\pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ke\lock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="misc\list.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="init\bootgfx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="init\zipread.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdio.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mm\mminit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="init\initstack.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

@@ -24,19 +24,28 @@ typedef	VOID						*PVOID, **PPVOID;
 #endif
 
 typedef __int32						PTR32, *PPTR32;
+typedef __int32						SPTR32, *PSPTR32;
 typedef unsigned __int32			UPTR32, *PUPTR32;
 typedef __int64						PTR64, *PPTR64;
+typedef __int64						SPTR64, *PSPTR64;
 typedef unsigned __int64			UPTR64, *PUPTR64;
 
 #if (defined _X64_) || (defined _AMD64_)
 typedef PTR64						PTR, *PPTR, **PPPTR;
+typedef SPTR64						SPTR, *PSPTR, **PPSPTR;
 typedef UPTR64						UPTR, *PUPTR, **PPUPTR;
 #elif defined _X86_
 typedef PTR32						PTR, *PPTR, **PPPTR;
+typedef SPTR32						SPTR, *PSPTR, **PPSPTR;
 typedef UPTR32						UPTR, *PUPTR, **PPUPTR;
 #else
 #error Unknown architecture!
 #endif
+
+typedef	UPTR						SIZE_T, *PSIZE_T;
+typedef	PTR							SSIZE_T, *PSSIZE_T;
+
+
 
 
 // Other types.

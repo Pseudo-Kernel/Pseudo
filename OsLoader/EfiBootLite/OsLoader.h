@@ -2,6 +2,8 @@
   Header for Base Definitions.
 **/
 
+#define	OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600		1
+
 //
 // Base Headers.
 //
@@ -53,6 +55,7 @@ extern EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *gConOut;
 #define WIDE(_x)              _WIDE(_x)
 #define __FUNCTIONW__         _WIDE(__FUNCTION__)
 #define __FILEW__             _WIDE(__FILE__)
+#define	__DATEW__             _WIDE(__DATE__)
 
 #define	__ASCII(_x)           #_x
 #define	_ASCII(_x)            __ASCII(_x)
@@ -87,30 +90,31 @@ extern EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *gConOut;
 
 #define ASSERT(_expr) \
 { \
-  if(!(_expr)) \
-  { \
-    TRACE(" ------------ Assertion Failed ------------ "); \
-    TRACE("   Expression : %s\n", #_expr); \
-    TRACE("   Function   : %d\n", __FUNCTIONW__); \
-    TRACE("   Source     : %s\n", __FILEW__); \
-    TRACE("   Line       : %d\n", __LINE__); \
-    TRACE(" ------------------------------------------ "); \
-  } \
+	if(!(_expr)) \
+	{ \
+		TRACE(" ------------ Assertion Failed ------------ "); \
+		TRACE("   Expression : %s\n", #_expr); \
+		TRACE("   Function   : %d\n", __FUNCTIONW__); \
+		TRACE("   Source     : %s\n", __FILEW__); \
+		TRACE("   Line       : %d\n", __LINE__); \
+		TRACE(" ------------------------------------------ "); \
+	} \
 }
-
-
-//
-// Memory Type.
-//
-
-typedef enum _OS_MEMORY_TYPE {
-	OsMemTypeLoaderData
-} OS_MEMORY_TYPE;
 
 
 //
 // OS Loader Block.
 //
+
+#pragma pack(push, 8)
+
+typedef struct _OS_VIDEO_MODE_RECORD {
+	UINT32 Mode;
+	UINT32 SizeOfInfo;
+
+	// Copy of returned buffer from EFI_GRAPHICS_OUTPUT_PROTOCOL.QueryMode
+	// UCHAR ModeInfo[SizeOfInfo];
+} OS_VIDEO_MODE_RECORD, *POS_VIDEO_MODE_RECORD;
 
 typedef struct _OS_LOADER_BLOCK {
 	struct
@@ -145,11 +149,36 @@ typedef struct _OS_LOADER_BLOCK {
 
 	struct
 	{
+		EFI_PHYSICAL_ADDRESS TempBase;
+		UINTN TempSize;
+
+		EFI_PHYSICAL_ADDRESS ShadowBase; // Low 1M Shadow
+		UINTN ShadowSize;
+
 		EFI_PHYSICAL_ADDRESS KernelPhysicalBase;
 		UINTN MappedSize;
 
-		EFI_PHYSICAL_ADDRESS TempBase;
-		UINTN TempSize;
+		EFI_PHYSICAL_ADDRESS KernelStackBase;
+		UINTN StackSize;
+
+		EFI_PHYSICAL_ADDRESS BootImageBase;
+		UINTN BootImageSize;
+
+		//
+		// Video Modes.
+		// VideoModes = [VideoModeRecord1] [VideoModeRecord2] ... [VideoModeRecordN]
+		// VideoModeRecord = [ModeNumber] [SizeOfInfo] [VideoMode]
+		// UINT32 ModeNumber;
+		// UINT32 SizeOfInfo;
+		// UCHAR ModeInfo[SizeOfMode]; // Returned from EFI_GRAPHICS_OUTPUT_PROTOCOL.QueryMode
+		//
+
+		EFI_PHYSICAL_ADDRESS VideoModeBase;
+		EFI_PHYSICAL_ADDRESS VideoFramebufferBase;
+		UINTN VideoFramebufferSize;
+		UINTN VideoModeSize;
+		UINT32 VideoMaxMode;
+		UINT32 VideoModeSelected;
 	} LoaderData;
 
 	struct
@@ -162,6 +191,8 @@ typedef struct _OS_LOADER_BLOCK {
 		BOOLEAN DebugPrint;
 	} Debug;
 } OS_LOADER_BLOCK, *POS_LOADER_BLOCK;
+
+#pragma pack(pop)
 
 extern OS_LOADER_BLOCK OslLoaderBlock;
 
@@ -274,6 +305,7 @@ typedef union _X64_PTE {
 
 #endif
 
+
 //
 // Kernel Entry Point.
 //
@@ -285,6 +317,23 @@ UINT64
 	IN UINT64 LoaderBlock,
 	IN UINT32 SizeOfLoaderBlock,
 	IN UINT64 Reserved);
+
+
+//
+// Efi Routines.
+//
+
+EFI_STATUS
+EFIAPI
+EfiAllocatePages(
+	IN UINTN Size,
+	OUT EFI_PHYSICAL_ADDRESS *Address);
+
+EFI_STATUS
+EFIAPI
+EfiFreePages(
+	IN EFI_PHYSICAL_ADDRESS Address,
+	IN UINTN Size);
 
 //
 // Misc Routines.
@@ -302,10 +351,15 @@ Trace(
 BOOLEAN
 EFIAPI
 OslWaitForKeyInput(
-	IN OS_LOADER_BLOCK *LoaderBlock,
 	IN UINT16 ScanCode,
 	IN CHAR16 UnicodeCharacter, 
 	IN UINT64 Timeout);
+
+VOID
+EFIAPI
+OslDbgWaitEnterKey(
+	IN OS_LOADER_BLOCK *LoaderBlock,
+	IN CHAR16 *Message);
 
 //
 // Memory Routines.

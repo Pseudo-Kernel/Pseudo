@@ -16,7 +16,7 @@ EFI_GUID gEfiGraphicsOutputProtocolGuid = { 0x9042A9DE, 0x23DC, 0x4A38,{ 0x96, 0
 EFI_GUID gEfiHiiFontProtocolGuid = { 0xe9ca4775, 0x8657, 0x47fc,{ 0x97, 0xe7, 0x7e, 0xd6, 0x5a, 0x08, 0x43, 0x24 } };
 EFI_GUID gEfiUgaDrawProtocolGuid = { 0x982C298B, 0xF4FA, 0x41CB,{ 0xB8, 0x38, 0x77, 0xAA, 0x68, 0x8F, 0xB8, 0x39 } };
 
-EFI_GUID gEfiAcpiTableGuid = EFI_ACPI_TABLE_GUID;
+EFI_GUID gEfiAcpi20TableGuid = EFI_ACPI_20_TABLE_GUID;
 
 
 OS_LOADER_BLOCK OslLoaderBlock;
@@ -45,8 +45,6 @@ Trace(
 	gConOut->OutputString(gConOut, Buffer);
 }
 
-
-
 /**
 	Initializes the loader block.
 
@@ -63,33 +61,128 @@ OslInitializeLoaderBlock(
 	IN  EFI_SYSTEM_TABLE  *SystemTable)
 {
 	OS_LOADER_BLOCK *LoaderBlock = &OslLoaderBlock;
-	EFI_PHYSICAL_ADDRESS TempBase = 0xffff0000;
-	const UINTN TempSize = 0x100000;
+	EFI_PHYSICAL_ADDRESS TempBase = 0;
+	EFI_PHYSICAL_ADDRESS ShadowBase = 0;
+	EFI_PHYSICAL_ADDRESS KernelStackBase = 0;
+	const UINTN TempSize = 0x800000; // 4M
+	const UINTN ShadowSize = 0x100000; // 1M
+	const UINTN KernelStackSize = 0x20000; // 128K
 
 	EFI_STATUS Status;
+	UINTN Offset;
 
-	TRACEF(L"LoaderBlock 0x%p\r\n", LoaderBlock);
+	TRACE(L"LoaderBlock 0x%p\r\n", LoaderBlock);
 
-	SystemTable->BootServices->SetMem((void *)LoaderBlock, sizeof(*LoaderBlock), 0);
+	gBS->SetMem((void *)LoaderBlock, sizeof(*LoaderBlock), 0);
 
 	LoaderBlock->Base.ImageHandle = ImageHandle;
 	LoaderBlock->Base.SystemTable = SystemTable;
 	LoaderBlock->Base.BootServices = SystemTable->BootServices;
 	LoaderBlock->Base.RuntimeServices = SystemTable->RuntimeServices;
 
-	Status = gBS->AllocatePages(AllocateMaxAddress,
-		EfiLoaderData, EFI_SIZE_TO_PAGES(TempSize), &TempBase);
+	Status = EfiAllocatePages(TempSize, &TempBase);
 	if (Status != EFI_SUCCESS)
 		return Status;
 
-	SystemTable->BootServices->SetMem((void *)TempBase, TempSize, 0);
+	gBS->SetMem((void *)TempBase, TempSize, 0);
+
+	Status = EfiAllocatePages(ShadowSize, &ShadowBase);
+	if (Status != EFI_SUCCESS)
+		return Status;
+
+	// Copy the shadow 1M (0x00000 to 0xfffff)
+	for (Offset = 0; Offset < ShadowSize; Offset++)
+		*((CHAR8 *)ShadowBase + Offset) = *((CHAR8 *)0 + Offset);
+
+
+	Status = EfiAllocatePages(KernelStackSize, &KernelStackBase);
+	if (Status != EFI_SUCCESS)
+		return Status;
+
+	gBS->SetMem((void *)KernelStackBase, KernelStackSize, 0);
+
 
 	LoaderBlock->LoaderData.TempBase = TempBase;
 	LoaderBlock->LoaderData.TempSize = TempSize;
+	LoaderBlock->LoaderData.ShadowBase = ShadowBase;
+	LoaderBlock->LoaderData.ShadowSize = ShadowSize;
+	LoaderBlock->LoaderData.KernelStackBase = KernelStackBase;
+	LoaderBlock->LoaderData.StackSize = KernelStackSize;
 
 	return EFI_SUCCESS;
 }
 
+/**
+	Allocates the pages below 4GB.
+
+	@param[in]  Size          Size to allocate.
+	@param[out] Address       .
+
+	@retval EFI_SUCCESS       The operation is completed successfully.
+	@retval other             An error occurred during the operation.
+
+**/
+EFI_STATUS
+EFIAPI
+EfiAllocatePages(
+	IN UINTN Size, 
+	OUT EFI_PHYSICAL_ADDRESS *Address)
+{
+	EFI_PHYSICAL_ADDRESS TargetAddress = (EFI_PHYSICAL_ADDRESS)0xffff0000;
+	EFI_STATUS Status = gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, 
+		EFI_SIZE_TO_PAGES(Size), &TargetAddress);
+
+	if (Status == EFI_SUCCESS)
+		*Address = TargetAddress;
+	else
+		*Address = 0;
+
+	return Status;
+}
+
+/**
+	Frees the pages.
+
+	@param[in] Address        4KiB-aligned address to free.
+	@param[in] Size           Size to free.
+
+	@retval EFI_SUCCESS       The operation is completed successfully.
+	@retval other             An error occurred during the operation.
+
+**/
+EFI_STATUS
+EFIAPI
+EfiFreePages(
+	IN EFI_PHYSICAL_ADDRESS Address, 
+	IN UINTN Size)
+{
+	return gBS->FreePages(Address, EFI_SIZE_TO_PAGES(Size));
+}
+
+/**
+	Compares the GUID.
+
+	@param[in] Guid1          GUID to compare.
+	@param[in] Guid2          GUID to compare.
+
+	@retval TRUE              GUID is equal.
+	@retval other             GUID is not equal.
+
+**/
+BOOLEAN
+EFIAPI
+EfiIsEqualGuid(
+	IN EFI_GUID *Guid1,
+	IN EFI_GUID *Guid2)
+{
+	UINT64 *p1 = (UINT64 *)Guid1;
+	UINT64 *p2 = (UINT64 *)Guid2;
+
+	if (sizeof(*Guid1) != 0x10)
+		return FALSE;
+
+	return (p1[0] == p2[0] && p1[1] == p2[1]);
+}
 
 /**
 	Opens the Boot Partition.
@@ -140,7 +233,7 @@ OslOpenBootPartition(
 
 
 /**
-	Loads the Kernel Image to Memory.
+	Loads the file to Memory.
 
 	@param[in] LoaderBlock    The loader block pointer.
 
@@ -150,34 +243,34 @@ OslOpenBootPartition(
 **/
 BOOLEAN
 EFIAPI
-OslLoadKernelImage(
-	IN OS_LOADER_BLOCK *LoaderBlock)
+OslLoadFile(
+	IN OS_LOADER_BLOCK *LoaderBlock, 
+	IN CHAR16 *FilePath, 
+	OUT VOID **Buffer, 
+	OUT UINTN *Size)
 {
 	EFI_FILE *RootDirectory = LoaderBlock->Base.RootDirectory;
-	EFI_FILE *KernelImage = NULL;
+	EFI_FILE *TargetFile = NULL;
 	EFI_STATUS Status = EFI_SUCCESS;
 
 	UINTN FileBufferSize = 0;
-	EFI_PHYSICAL_ADDRESS FileBuffer = 0;
-	EFI_PHYSICAL_ADDRESS KernelPhysicalBase = 0;
-	UINTN MappedSize = 0;
-
-	EFI_PHYSICAL_ADDRESS FileInfo = 0;
 	UINTN FileInfoSize = 0;
+	EFI_PHYSICAL_ADDRESS FileBuffer = 0;
+	EFI_PHYSICAL_ADDRESS FileInfo = 0;
 
 	do
 	{
-		Status = RootDirectory->Open(RootDirectory, &KernelImage,
-			L"Efi\\Boot\\Core.sys", EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY);
+		Status = RootDirectory->Open(RootDirectory, &TargetFile,
+			FilePath, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY);
 
 		if (Status != EFI_SUCCESS)
 		{
-			TRACEF(L"Failed to Open the Kernel Image\r\n");
+			TRACEF(L"Failed to Open the file (0x%lx)\r\n", (UINT64)Status);
 			break;
 		}
 
 		// This returns required FileInfoSize with error.
-		KernelImage->GetInfo(KernelImage, &gEfiFileInfoGuid, &FileInfoSize, NULL);
+		TargetFile->GetInfo(TargetFile, &gEfiFileInfoGuid, &FileInfoSize, NULL);
 
 		Status = gBS->AllocatePages(
 			AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES(FileInfoSize), &FileInfo);
@@ -185,12 +278,12 @@ OslLoadKernelImage(
 		if (Status != EFI_SUCCESS)
 			break;
 
-		Status = KernelImage->GetInfo(KernelImage, &gEfiFileInfoGuid, &FileInfoSize, (void *)FileInfo);
+		Status = TargetFile->GetInfo(TargetFile, &gEfiFileInfoGuid, &FileInfoSize, (void *)FileInfo);
 
 		if (Status != EFI_SUCCESS)
 			break;
 
-		DTRACEF(LoaderBlock, L"Kernel Name `%ls', Size 0x%lX\r\n",
+		DTRACEF(LoaderBlock, L"File `%ls', Size 0x%lX\r\n",
 			((EFI_FILE_INFO *)FileInfo)->FileName,
 			((EFI_FILE_INFO *)FileInfo)->FileSize);
 
@@ -206,14 +299,20 @@ OslLoadKernelImage(
 			break;
 		}
 
-		Status = KernelImage->Read(KernelImage, &FileBufferSize, (void *)FileBuffer);
+		Status = TargetFile->Read(TargetFile, &FileBufferSize, (void *)FileBuffer);
 		if (Status != EFI_SUCCESS)
 			break;
 
 		if (FileBufferSize >= 0x100000000ULL)
 			break;
 
-		KernelPhysicalBase = OslPeLoadImage((void *)FileBuffer, FileBufferSize, &MappedSize);
+		gBS->FreePages(FileInfo, EFI_SIZE_TO_PAGES(FileInfoSize));
+
+		*Buffer = (VOID *)FileBuffer;
+		*Size = FileBufferSize;
+
+		return TRUE;
+
 	} while (FALSE);
 
 	if (FileInfo)
@@ -222,21 +321,77 @@ OslLoadKernelImage(
 	if (FileBuffer)
 		gBS->FreePages(FileBuffer, EFI_SIZE_TO_PAGES(FileBufferSize));
 
-	if (!KernelPhysicalBase)
+	return FALSE;
+}
+
+/**
+	Loads the Boot files to Memory.
+
+	@param[in] LoaderBlock    The loader block pointer.
+
+	@retval FALSE             An error occurred during the operation.
+	@retval other             The operation is completed successfully.
+
+**/
+BOOLEAN
+EFIAPI
+OslLoadBootFiles(
+	IN OS_LOADER_BLOCK *LoaderBlock)
+{
+	UINTN FileBufferSize = 0;
+	EFI_PHYSICAL_ADDRESS FileBuffer = 0;
+	EFI_PHYSICAL_ADDRESS KernelPhysicalBase = 0;
+	UINTN MappedSize = 0;
+
+	if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\Core.sys", (VOID **)&FileBuffer, &FileBufferSize))
+		return FALSE;
+
+	KernelPhysicalBase = OslPeLoadImage((void *)FileBuffer, FileBufferSize, &MappedSize);
+	gBS->FreePages(FileBuffer, EFI_SIZE_TO_PAGES(FileBufferSize));
+
+	if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\init.bin", (VOID **)&FileBuffer, &FileBufferSize))
 	{
+		gBS->FreePages(KernelPhysicalBase, EFI_SIZE_TO_PAGES(MappedSize));
 		return FALSE;
 	}
 
 	LoaderBlock->LoaderData.KernelPhysicalBase = KernelPhysicalBase;
 	LoaderBlock->LoaderData.MappedSize = MappedSize;
+	LoaderBlock->LoaderData.BootImageBase = FileBuffer;
+	LoaderBlock->LoaderData.BootImageSize = FileBufferSize;
 
-	if (IS_DEBUG_MODE(LoaderBlock))
-	{
-		DTRACEF(LoaderBlock, L"DBG: Press Enter Key to Continue\r\n");
-		OslWaitForKeyInput(LoaderBlock, 0, 0x0d, 0x00ffffffffffffff);
-	}
+	OslDbgWaitEnterKey(LoaderBlock, NULL);
 
 	return TRUE;
+}
+
+/**
+	Wait for user enter key.
+
+	@param[in] LoaderBlock    The loader block pointer.
+
+	@retval None.
+
+**/
+VOID
+EFIAPI
+OslDbgWaitEnterKey(
+	IN OS_LOADER_BLOCK *LoaderBlock, 
+	IN CHAR16 *Message)
+{
+	if(IS_DEBUG_MODE(LoaderBlock))
+	{
+		if(!Message)
+			TRACE(L"DBG: Press Enter Key to Continue\r");
+		else
+			TRACE(Message);
+
+		OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
+		// 79 chars
+		TRACE(L"                                        "
+			  L"                                       \r");
+	}
 }
 
 /**
@@ -264,14 +419,14 @@ OslDbgDumpLowMemoryToDisk(
 		Status = RootDirectory->Open(
 			RootDirectory,
 			&DumpImage,
-			L"Efi\\Boot\\Dump1M.bin",
+			L"Efi\\Boot\\Dump_00000000_000FFFFF.bin",
 			EFI_FILE_MODE_CREATE | EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE,
 			0
 		);
 
 		if (Status != EFI_SUCCESS)
 		{
-			TRACEF(L"Cannot create the dump file\r\n");
+			TRACEF(L"Cannot create the dump file (0x%lx)\r\n", (UINT64)Status);
 			break;
 		}
 
@@ -281,10 +436,10 @@ OslDbgDumpLowMemoryToDisk(
 
 		BufferSize = 0x100000;
 
-		Status = DumpImage->Write(DumpImage, &BufferSize, (void *)0x00000000);
+		Status = DumpImage->Write(DumpImage, &BufferSize, (void *)LoaderBlock->LoaderData.ShadowBase);
 		if (Status != EFI_SUCCESS || !BufferSize)
 		{
-			TRACEF(L"Cannot write to the dump file\r\n");
+			TRACEF(L"Cannot write to the dump file (0x%lx)\r\n", (UINT64)Status);
 			break;
 		}
 
@@ -309,6 +464,33 @@ OslDbgDumpLowMemoryToDisk(
 }
 
 /**
+	Lookup the configuration table by GUID.
+
+	@param[in] Guid           The table identifier.
+
+	@retval Non-NULL          Address of table.
+	@retval NULL              Failed to lookup the table.
+
+**/
+VOID *
+EFIAPI
+EfiLookupConfigurationTable(
+	IN EFI_GUID *Guid)
+{
+	UINTN i;
+
+	for (i = 0; i < gST->NumberOfTableEntries; i++)
+	{
+		if (EfiIsEqualGuid(&gST->ConfigurationTable[i].VendorGuid, Guid))
+		{
+			return gST->ConfigurationTable[i].VendorTable;
+		}
+	}
+
+	return NULL;
+}
+
+/**
 	Query the following configuration tables.
 	- ACPI table
 	- SMBIOS table
@@ -328,14 +510,296 @@ OslQueryConfigurationTables(
 	//	gEfiSmbios3TableGuid
 	//	#error FIXME: Must implement query ACPI tables and SMBIOS tables!!!!
 
-	return FALSE;
+	VOID *AcpiTable = EfiLookupConfigurationTable(&gEfiAcpi20TableGuid);
+
+	LoaderBlock->Configuration.AcpiTable = (EFI_PHYSICAL_ADDRESS)AcpiTable;
+
+	if(AcpiTable)
+	{
+		TRACE(L"Found ACPI table address (2.0 or higher) 0x%p\r\n", AcpiTable);
+	}
+	else
+	{
+		TRACE(L"Cannot find ACPI table\r\n");
+	}
+
+	return (BOOLEAN)(AcpiTable != NULL);
 }
 
+/**
+	Evaulate the video mode.
+
+	@param[in] ModeInfo       The loader block pointer.
+
+	@retval 0                 This video mode is not usable.
+	@retval other             Score of the video mode.
+
+**/
+UINT32
+EFIAPI
+OslEvaluateVideoMode(
+	IN EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *ModeInfo)
+{
+#if OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600 // 800x600 test resolution
+	if (ModeInfo->HorizontalResolution == 800 && ModeInfo->VerticalResolution == 600)
+		return 100;
+	else
+		return 0;
+#else
+	UINT32 Score = 0;
+	UINT32 Ratio = 0;
+
+	if (!ModeInfo)
+		return 0;
+
+	// We support pixel format RGBx8888 or BGRx8888 only.
+	// Pixel - 32bpp, RGBx or BGRx (in byte-order).
+	if (ModeInfo->PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
+		ModeInfo->PixelFormat != PixelBlueGreenRedReserved8BitPerColor)
+		return 0;
+
+	// Assume no gaps between lines.
+	if (ModeInfo->PixelsPerScanLine != ModeInfo->HorizontalResolution)
+		return 0;
+
+	// Minimum resolution must be >= 1024x768.
+	// Maximum resolution must be < 2000x???.
+	if (ModeInfo->HorizontalResolution < 1024 || ModeInfo->VerticalResolution < 768 || 
+		ModeInfo->HorizontalResolution >= 2000)
+		return 0;
+
+	// H:V - 4:3 to 16:9 (1.25 ~ 1.778). 16:9 is better.
+	Ratio = ModeInfo->HorizontalResolution * 1000 / ModeInfo->VerticalResolution;
+	if (1250 <= Ratio && Ratio <= 1778)
+	{
+		Score = (Ratio - 1200) * (ModeInfo->HorizontalResolution - 1000);
+	}
+
+	return Score;
+#endif
+}
+
+/**
+	Query the video mode information and switch mode.
+
+	@param[in] LoaderBlock    The loader block pointer.
+
+	@retval FALSE             An error occurred during the operation.
+	@retval other             The operation is completed successfully.
+
+**/
+BOOLEAN
+EFIAPI
+OslQuerySwitchVideoModes(
+	IN OS_LOADER_BLOCK *LoaderBlock)
+{
+	EFI_GRAPHICS_OUTPUT_PROTOCOL *GfxOut;
+	EFI_STATUS Status;
+
+	UINTN HandleCount = 0;
+	EFI_HANDLE *HandleBuffer = NULL;
+	BOOLEAN Found = FALSE;
+	EFI_PHYSICAL_ADDRESS VideoModeBuffer = 0;
+	UINTN VideoModeBufferLength = 0;
+
+	UINT32 SelectedMode = 0xffffffff;
+
+	Status = gBS->LocateHandleBuffer(ByProtocol, &gEfiGraphicsOutputProtocolGuid, NULL, &HandleCount, &HandleBuffer);
+	if (Status != EFI_SUCCESS)
+	{
+		TRACEF(L"Failed to LocateHandleBuffer\r\n");
+		return FALSE;
+	}
+
+	if (!HandleCount || !HandleBuffer)
+	{
+		TRACEF(L"Failed to LocateHandleBuffer\r\n");
+		return FALSE;
+	}
+
+	do
+	{
+		UINT32 Mode;
+		UINT32 MaxMode = 0;
+		UINTN ValidCount = 0;
+		UINTN Offset = 0;
+		UINT32 Score = 0;
+		UINT32 MaxScore = 0;
+
+		UINTN SizeOfInfo;
+		EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *ModeInfo;
+		UINT32 XResolution;
+		UINT32 YResolution;
+		EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION FillColor;
+
+		Status = gBS->HandleProtocol(HandleBuffer[0], &gEfiGraphicsOutputProtocolGuid, (void **)&GfxOut);
+		if (Status != EFI_SUCCESS)
+		{
+			TRACEF(L"Failed to HandleProtocol\r\n");
+			break;
+		}
+
+		TRACE(L"Querying the Video Mode...\r\n");
+		TRACE(L"MaxModeNumber 0x%X\r\n", GfxOut->Mode->MaxMode);
+		TRACE(L"Current Mode Framebuffer 0x%p - 0x%p\r\n", 
+			GfxOut->Mode->FrameBufferBase, 
+			GfxOut->Mode->FrameBufferBase + GfxOut->Mode->FrameBufferSize - 1);
+
+		MaxMode = GfxOut->Mode->MaxMode;
+
+		//
+		// Query the buffer size.
+		// Evaluate the video modes.
+		//
+
+		for (Mode = 0; Mode <= MaxMode; Mode++)
+		{
+			if (GfxOut->QueryMode(GfxOut, Mode, &SizeOfInfo, &ModeInfo)
+				== EFI_SUCCESS)
+			{
+				Score = OslEvaluateVideoMode(ModeInfo);
+				if (MaxScore <= Score)
+				{
+					SelectedMode = Mode;
+					MaxScore = Score;
+
+					XResolution = ModeInfo->HorizontalResolution;
+					YResolution = ModeInfo->VerticalResolution;
+				}
+
+				VideoModeBufferLength += (SizeOfInfo + sizeof(OS_VIDEO_MODE_RECORD));
+
+				// Must free the buffer that QueryMode returned
+				gBS->FreePool((void *)ModeInfo);
+			}
+		}
+
+		if (SelectedMode > MaxMode)
+		{
+			TRACE(L"Failed to lookup supported video modes\r\n");
+			break;
+		}
+
+		if (EfiAllocatePages(VideoModeBufferLength, &VideoModeBuffer)
+			!= EFI_SUCCESS)
+			break;
+
+		//
+		// Build the video mode buffer.
+		//
+
+		for (Mode = 0; Mode <= MaxMode; Mode++)
+		{
+			if (GfxOut->QueryMode(GfxOut, Mode, &SizeOfInfo, &ModeInfo)
+				== EFI_SUCCESS)
+			{
+				OS_VIDEO_MODE_RECORD *Record = (OS_VIDEO_MODE_RECORD *)(VideoModeBuffer + Offset);
+
+				Record->Mode = Mode;
+				Record->SizeOfInfo = (UINT32)SizeOfInfo;
+				gBS->CopyMem((VOID *)(Record + 1), ModeInfo, SizeOfInfo);
+				Offset += (SizeOfInfo + sizeof(OS_VIDEO_MODE_RECORD));
+
+				TRACE(L" %c%2u: %4u x %4u, PixelsPerScanLine %4u, PixelFormat: ", 
+					(SelectedMode == Mode) ? '*' : ' ', 
+					Mode, 
+					ModeInfo->HorizontalResolution, 
+					ModeInfo->VerticalResolution, 
+					ModeInfo->PixelsPerScanLine);
+
+				switch (ModeInfo->PixelFormat)
+				{
+				case PixelRedGreenBlueReserved8BitPerColor:
+					// x[31:24] B[23:16] G[15:8] R[7:0]
+					TRACE(L"RGBx8888");
+					break;
+				case PixelBlueGreenRedReserved8BitPerColor:
+					// x[31:24] R[23:16] G[15:8] B[7:0]
+					TRACE(L"BGRx8888");
+					break;
+				case PixelBitMask:
+					TRACE(L"BitMask (R:%u, G:%u, B:%u, x:%u)",
+						ModeInfo->PixelInformation.RedMask,
+						ModeInfo->PixelInformation.GreenMask,
+						ModeInfo->PixelInformation.BlueMask,
+						ModeInfo->PixelInformation.ReservedMask);
+					break;
+				case PixelBltOnly:
+					TRACE(L"< Physical framebuffer not supported >");
+					break;
+				default:
+					TRACE(L"< Unknown >");
+				}
+
+				TRACE(L"\r\n");
+
+				// Must free the buffer that QueryMode returned
+				gBS->FreePool((void *)ModeInfo);
+
+				ValidCount++;
+
+				if (!(ValidCount % 20))
+				{
+					OslDbgWaitEnterKey(LoaderBlock, NULL);
+				}
+			}
+		}
+
+		TRACE(L"End of Video Modes.\r\n");
+		TRACE(L"Switch to % 4u x % 4u...\r\n", XResolution, YResolution);
+		OslDbgWaitEnterKey(LoaderBlock, NULL);
+
+		if (GfxOut->SetMode(GfxOut, SelectedMode) != EFI_SUCCESS)
+		{
+			TRACE(L"Failed to set video mode\r\n");
+			break;
+		}
+
+		TRACE(L"Mode switched to %4u x %4u\r\n", 
+			GfxOut->Mode->Info->HorizontalResolution, 
+			GfxOut->Mode->Info->VerticalResolution);
+		TRACE(L"Framebuffer 0x%p - 0x%p\r\n",
+			GfxOut->Mode->FrameBufferBase,
+			GfxOut->Mode->FrameBufferBase + GfxOut->Mode->FrameBufferSize - 1);
+
+		OslDbgWaitEnterKey(LoaderBlock, NULL);
+
+
+		// Clear the screen once more.
+		FillColor.Raw = 0;
+		GfxOut->Blt(GfxOut, 
+			&FillColor.Pixel, 
+			EfiBltVideoFill, 
+			0, 0, 0, 0,
+			GfxOut->Mode->Info->HorizontalResolution,
+			GfxOut->Mode->Info->VerticalResolution,
+			0);
+
+		LoaderBlock->LoaderData.VideoModeBase = VideoModeBuffer;
+		LoaderBlock->LoaderData.VideoModeSize = VideoModeBufferLength;
+		LoaderBlock->LoaderData.VideoMaxMode = MaxMode;
+		LoaderBlock->LoaderData.VideoFramebufferBase = GfxOut->Mode->FrameBufferBase;
+		LoaderBlock->LoaderData.VideoModeSelected = SelectedMode;
+		LoaderBlock->LoaderData.VideoFramebufferSize = GfxOut->Mode->FrameBufferSize;
+
+		Found = TRUE;
+	} while (FALSE);
+
+	if (HandleBuffer)
+		gBS->FreePool((void *)HandleBuffer);
+
+	if (!Found)
+	{
+		if(VideoModeBuffer)
+			EfiFreePages(VideoModeBuffer, VideoModeBufferLength);
+	}
+
+	return Found;
+}
 
 /**
 	Wait for Single Keystroke.
 
-	@param[in] LoaderBlock      The loader block pointer.
 	@param[in] ScanCode         ScanCode to wait.
 	@param[in] UnicodeCharacter Unicode character. Used if ScanCode = 0.
 	@param[in] Timeout          Timeout in microseconds.
@@ -347,7 +811,6 @@ OslQueryConfigurationTables(
 BOOLEAN
 EFIAPI
 OslWaitForKeyInput(
-	IN OS_LOADER_BLOCK *LoaderBlock,
 	IN UINT16 ScanCode,
 	IN CHAR16 UnicodeCharacter,
 	IN UINT64 Timeout)
@@ -447,9 +910,12 @@ UefiMain(
 	gBS = SystemTable->BootServices;
 	gRS = SystemTable->RuntimeServices;
 
+	gConOut->SetAttribute(gConOut, 0x0f);
+	TRACE(L"PseudoOS Loader for UEFI environment.\r\n");
+	gConOut->SetAttribute(gConOut, 0x07);
 
-	TRACEF(L"Hello in the UEFI-World!!\r\n");
-	TRACEF(L"ImageHandle 0x%p, SystemTable 0x%p\r\n", ImageHandle, SystemTable);
+	TRACE(L"Latest build date: " __DATEW__ L" \r\n\r\n");
+	TRACE(L"ImageHandle 0x%p, SystemTable 0x%p\r\n", ImageHandle, SystemTable);
 
 	//
 	// Disable watchdog timer.
@@ -470,17 +936,39 @@ UefiMain(
 	}
 
 	TRACE(L"Press the F1 Key to DebugTrace...\r\n");
-	if (OslWaitForKeyInput(&OslLoaderBlock, SCAN_F1, 0, 1 * 1000 * 1000))
+	if (OslWaitForKeyInput(SCAN_F1, 0, 1 * 1000 * 1000))
 	{
 		TRACE(L"DBG: DebugTrace Enabled\r\n\r\n");
 		OslLoaderBlock.Debug.DebugPrint = TRUE;
 	}
 
+#if 0
+	#define	ARG_HELPER(_s)		ASCII(_s), sizeof(_s)
+
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_TABLE_HEADER));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_SYSTEM_TABLE));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_BOOT_SERVICES));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_RUNTIME_SERVICES));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_MEMORY_DESCRIPTOR));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_TIME));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_TIME_CAPABILITIES));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_CAPSULE_HEADER));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_GUID));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_CONFIGURATION_TABLE));
+	TRACE(L"%s = %u\r\n", ARG_HELPER(EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
+
+	TRACE(L"%s = %u\r\n", ARG_HELPER(OS_LOADER_BLOCK));
+
+	OslDbgWaitEnterKey(&OslLoaderBlock, NULL);
+
+	#undef ARG_HELPER
+#endif
+
 	//
 	// Open the Boot Partition so that we can load the kernel image.
 	//
 
-	TRACEF(L"Opening the Boot Partition...\r\n");
+	TRACE(L"Opening the Boot Partition...\r\n");
 
 	Status = OslOpenBootPartition(&OslLoaderBlock);
 	if (Status != EFI_SUCCESS)
@@ -493,33 +981,34 @@ UefiMain(
 	//
 	// Dump low 1M area to file so that user may check the INT 10H capability manually.
 	//
-
-	TRACEF(L"Dumping Low 1M Area\r\n");
+#if 1
+	TRACE(L"Dumping Low 1M Area\r\n");
 
 	OslDbgDumpLowMemoryToDisk(&OslLoaderBlock);
+#endif
 
-	TRACEF(L"Loading Kernel...\r\n");
+	TRACE(L"Loading boot files...\r\n");
 
-	if (!OslLoadKernelImage(&OslLoaderBlock))
+	if (!OslLoadBootFiles(&OslLoaderBlock))
 	{
-		TRACEF(L"Failed to load kernel image\r\n");
+		TRACEF(L"Failed to load boot files\r\n");
 		gBS->Stall(5 * 1000 * 1000);
 		return EFI_LOAD_ERROR;
 	}
-
 
 	//
 	// Query the configuration tables.
 	// Currently we use ACPI table only.
 	//
 
-//	EfiGetSystemConfigurationTable(&AcpiTableGuid, (void **)&OslLoaderBlock.Configuration.AcpiTable);
+	OslQueryConfigurationTables(&OslLoaderBlock);
+
 
 	//
 	// Print the System Memory Map.
 	//
 
-	TRACEF(L"Query Memory Map...\r\n");
+	TRACE(L"Query Memory Map...\r\n");
 
 	Status = OslMmQueryMemoryMap(&OslLoaderBlock);
 	if (Status != EFI_SUCCESS)
@@ -535,19 +1024,18 @@ UefiMain(
 		OslLoaderBlock.Memory.DescriptorSize);
 
 	//
-	// FIXME : Query the Graphics Mode.
+	// Query the Graphics Mode.
 	//
 	// NOTE : DO NOT ASSUME that the VGA mode is available.
-	//        It seems that some machines don't support the legacy VGA mode
-	//        (And physical address 0xb8000 is not valid anymore)
+	//        Although UEFI supports text mode, it is emulated mode.
+	//        (writing to 0xb8000 does not take an effect anymore.)
 	//
 
-
-	gConOut->SetMode(gConOut, 0);
-	gConOut->ClearScreen(gConOut);
-
-	//	SystemTable->BootServices->OpenProtocol
-
+	if (!OslQuerySwitchVideoModes(&OslLoaderBlock))
+	{
+		gBS->Stall(5 * 1000 * 1000);
+		return EFI_NOT_STARTED;
+	}
 
 	//
 	// Query the memory map once again because memory map must be changed by other calls.
@@ -573,7 +1061,7 @@ UefiMain(
 		TRACEF(L"ExitBootServices() failed (Status 0x%lX)\r\n", Status);
 
 		TRACEF(L"Press Enter Key to Exit\r\n");
-		OslWaitForKeyInput(&OslLoaderBlock, 0, 0x0d, 0x00ffffffffffffff);
+		OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
 
 		return Status;
 	}

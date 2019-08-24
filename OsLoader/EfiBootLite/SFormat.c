@@ -352,15 +352,16 @@ StrFormatV(
 	//         'p'           void *.
 	//
 
-#define	WRITE_CHAR(_ch)	\
+	#define	WRITE_CHAR(_ch)	\
 		do										\
 		{										\
 			if (OutputLength >= BufferLength)	\
 			{									\
-				*d++ = (_ch);					\
-				OutputLength++;					\
 				goto _Return;					\
 			}									\
+												\
+			*d++ = (_ch);						\
+			OutputLength++;						\
 		} while (0)
 
 	UINTN OutputLength = 0;
@@ -581,7 +582,7 @@ StrFormatV(
 		}
 	}
 
-#undef WRITE_CHAR
+	#undef WRITE_CHAR
 
 _Return:
 

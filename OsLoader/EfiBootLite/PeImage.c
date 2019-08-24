@@ -6,7 +6,6 @@
 #include "PeImage.h"
 
 
-
 //
 // PE image support.
 //
@@ -129,15 +128,23 @@ OslPeFixupImage(
 			{
 				UINT16 Type = TypeOffset[i].s.Type;
 
+				//
 				// Accept record types for PE32+ only.
-				if (Type != IMAGE_REL_BASED_ABSOLUTE && Type != IMAGE_REL_BASED_DIR64)
+				// We can handle HIGH, LOW, HIGHLOW so don't care about it
+				//
+
+				if (Type != IMAGE_REL_BASED_ABSOLUTE &&
+					Type != IMAGE_REL_BASED_HIGH &&
+					Type != IMAGE_REL_BASED_LOW &&
+					Type != IMAGE_REL_BASED_HIGHLOW &&
+					Type != IMAGE_REL_BASED_DIR64)
 				{
 					DTRACEF(&OslLoaderBlock, L"Unsupported record type 0x%X\r\n", Type);
 					return FALSE;
 				}
 			}
 
-			RelocCurr = (PIMAGE_BASE_RELOCATION)((CHAR8 *)RelocCurr + RelocCurr->SizeOfBlock);
+			RelocCurr = (PIMAGE_BASE_RELOCATION)((CHAR8 *)RelocCurr + ((RelocCurr->SizeOfBlock + 0x03) & ~0x03));
 
 			if ((UINT64)RelocCurr - (UINT64)Reloc >= DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size)
 				break;
@@ -145,6 +152,7 @@ OslPeFixupImage(
 
 		//
 		// Do the fixups.
+		// More information: https://stackoverflow.com/questions/17436668/how-are-pe-base-relocations-build-up
 		//
 
 		for(RelocCurr = Reloc; ; )
@@ -157,24 +165,47 @@ OslPeFixupImage(
 				union
 				{
 					UINT64 *u64;
+					UINT32 *u32;
+					UINT16 *u16;
 					UINT64 p;
 				} Pointer;
 
 				Pointer.p = (UINT64)ImageBase + RelocCurr->VirtualAddress + TypeOffset[i].s.Offset;
 
+				//
+				// Example data of Core.sys: 00003000 00000010 A010 A020 A030 A040
+				// 
+				// VirtualAddress   0x00003000
+				// SizeOfBlock      0x00000010
+				// < TypeOffsets >
+				//  + DIR64     Offset 0x010
+				//  + DIR64     Offset 0x020
+				//  + DIR64     Offset 0x030
+				//  + DIR64     Offset 0x040
+				//
+
 				switch(TypeOffset[i].s.Type)
 				{
 				case IMAGE_REL_BASED_ABSOLUTE:
 					break;
+				case IMAGE_REL_BASED_HIGH:
+					*Pointer.u16 += (UINT16)((OffsetDelta & 0xffff0000) >> 0x10);
+					break;
+				case IMAGE_REL_BASED_LOW:
+					*Pointer.u16 += (UINT16)(OffsetDelta & 0xffff);
+					break;
 				case IMAGE_REL_BASED_HIGHLOW:	// PE, 32-bit offset
+					*Pointer.u32 += (UINT32)(OffsetDelta & 0xffffffff);
 					break;
 				case IMAGE_REL_BASED_DIR64:		// PE32+, 64-bit offset
+			//		TRACE(L"Address 0x%lx, OffsetDelta 0x%lx, BeforeFixup 0x%lx, AfterFixup 0x%lx\r\n",
+			//			Pointer.u64, OffsetDelta, *Pointer.u64, *Pointer.u64 + OffsetDelta);
 					*Pointer.u64 += OffsetDelta;
 					break;
 				}
 			}
 
-			RelocCurr = (PIMAGE_BASE_RELOCATION)((CHAR8 *)RelocCurr + RelocCurr->SizeOfBlock);
+			RelocCurr = (PIMAGE_BASE_RELOCATION)((CHAR8 *)RelocCurr + ((RelocCurr->SizeOfBlock + 0x03) & ~0x03));
 
 			if ((UINT64)RelocCurr - (UINT64)Reloc >= DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size)
 				break;
@@ -212,7 +243,6 @@ OslPeLoadImage(
 	UINTN SectionAlignment;
 	UINTN SizeOfImage;
 	UINTN SizeOfHeaders;
-	UINTN PageCount;
 	EFI_PHYSICAL_ADDRESS BaseAddress;
 
 	UINTN i;
@@ -248,13 +278,9 @@ OslPeLoadImage(
 	// Address must be in the lower 4GB area.
 	//
 
-	PageCount = EFI_SIZE_TO_PAGES(SizeOfImage);
-
 	DTRACEF(&OslLoaderBlock, L"SizeOfImage = 0x%lX\r\n", SizeOfImage);
 
-	BaseAddress = 0xffff0000;
-	if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, PageCount, &BaseAddress)
-		!= EFI_SUCCESS)
+	if (EfiAllocatePages(SizeOfImage, &BaseAddress) != EFI_SUCCESS)
 	{
 		DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages\r\n");
 		return 0;
@@ -306,7 +332,7 @@ OslPeLoadImage(
 		{
 			// Section out of bounds.
 			DTRACEF(&OslLoaderBlock, L"Section[%d] out of bounds\r\n", i);
-			gBS->FreePages(BaseAddress, PageCount);
+			EfiFreePages(BaseAddress, SizeOfImage);
 			return 0;
 		}
 
@@ -317,11 +343,12 @@ OslPeLoadImage(
 		gBS->CopyMem((void *)Destination, (void *)Source, SectionRawSize);
 	}
 
-	if (!OslPeFixupImage(BaseAddress, BaseAddress, (EFI_PHYSICAL_ADDRESS)0, TRUE))
+	// [18-10-16] BUGFIX : Invalid fixup
+	if (!OslPeFixupImage(BaseAddress, (EFI_PHYSICAL_ADDRESS)0, BaseAddress, TRUE))
 	{
 		// Relocation failed.
 		DTRACEF(&OslLoaderBlock, L"Failed to fixup image\r\n", i);
-		gBS->FreePages(BaseAddress, PageCount);
+		EfiFreePages(BaseAddress, SizeOfImage);
 		return 0;
 	}
 
@@ -332,7 +359,7 @@ OslPeLoadImage(
 		BaseAddress + Nt->Nt64.OptionalHeader.SizeOfImage - 1, 
 		BaseAddress + Nt->Nt64.OptionalHeader.AddressOfEntryPoint);
 
-	*MappedSize = EFI_PAGES_TO_SIZE(PageCount);
+	*MappedSize = SizeOfImage;
 
 	return BaseAddress;
 }

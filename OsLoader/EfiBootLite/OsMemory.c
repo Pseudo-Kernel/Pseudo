@@ -158,21 +158,19 @@ OslMmDumpMemoryMap(
 			L" %2d:  0x%016lX  0x%016lX  %26ls\r\n",
 			i,
 			MapEntry->PhysicalStart,
-			MapEntry->PhysicalStart + (MapEntry->NumberOfPages << EFI_PAGE_SHIFT),
+			MapEntry->PhysicalStart + (MapEntry->NumberOfPages << EFI_PAGE_SHIFT) - 1,
 			TypeString);
 
 		if (!((i + 1) % 20))
 		{
-			DTRACE(&OslLoaderBlock, L"DBG: Press Enter Key to Continue...\r");
-			OslWaitForKeyInput(&OslLoaderBlock, 0, 0x0d, 0x00ffffffffffffffULL);
+			OslDbgWaitEnterKey(&OslLoaderBlock, NULL);
 		}
 
 		#undef CASE_COPY_STRING
 	}
 
 	DTRACE(&OslLoaderBlock, L"End of Memory Map.\r\n");
-	DTRACE(&OslLoaderBlock, L"DBG: Press Enter Key to Continue...\r");
-	OslWaitForKeyInput(&OslLoaderBlock, 0, 0x0d, 0x00ffffffffffffffULL);
+	OslDbgWaitEnterKey(&OslLoaderBlock, NULL);
 
 	TRACE(L"\r\n");
 }

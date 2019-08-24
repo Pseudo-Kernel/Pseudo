@@ -32,6 +32,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -72,6 +73,13 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <CallingConvention>StdCall</CallingConvention>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <ExpandAttributedSource>true</ExpandAttributedSource>
+      <AssemblerOutput>All</AssemblerOutput>
+      <GenerateXMLDocumentationFiles>
+      </GenerateXMLDocumentationFiles>
+      <UseUnicodeForAssemblerListing>
+      </UseUnicodeForAssemblerListing>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -87,8 +95,9 @@
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>del "$(SolutionDir)VM\Filesystem\EFI\BOOT\$(TargetFileName)" /f /q
+
+</Command>
     </PreBuildEvent>
     <CustomBuildStep>
       <Command>mkdir "$(SolutionDir)VM\Filesystem\EFI\BOOT"
@@ -114,6 +123,13 @@ copy "$(TargetPath)" "$(SolutionDir)VM\Filesystem\EFI\BOOT"
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <CallingConvention>StdCall</CallingConvention>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <ExpandAttributedSource>true</ExpandAttributedSource>
+      <AssemblerOutput>All</AssemblerOutput>
+      <GenerateXMLDocumentationFiles>
+      </GenerateXMLDocumentationFiles>
+      <UseUnicodeForAssemblerListing>
+      </UseUnicodeForAssemblerListing>
     </ClCompile>
     <Link>
       <SubSystem>Native</SubSystem>
@@ -131,8 +147,9 @@ copy "$(TargetPath)" "$(SolutionDir)VM\Filesystem\EFI\BOOT"
       </Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>del "$(SolutionDir)VM\Filesystem\EFI\BOOT\$(TargetFileName)" /f /q
+
+</Command>
     </PreBuildEvent>
     <CustomBuildStep>
       <Command>mkdir "$(SolutionDir)VM\Filesystem\EFI\BOOT"
@@ -146,9 +163,25 @@ copy "$(TargetPath)" "$(SolutionDir)VM\Filesystem\EFI\BOOT"
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="dbg\dbg.c" />
+    <ClCompile Include="init\bootgfx.c" />
+    <ClCompile Include="init\preinit.c" />
+    <ClCompile Include="init\zipread.c" />
+    <ClCompile Include="ke\lock.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="misc\common.c" />
+    <ClCompile Include="misc\list.c" />
+    <ClCompile Include="mm\mminit.c" />
+    <ClCompile Include="mm\pool.c" />
+    <ClCompile Include="stdio.c">
+      <WholeProgramOptimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</WholeProgramOptimization>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="init\initstack.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
 </Project>

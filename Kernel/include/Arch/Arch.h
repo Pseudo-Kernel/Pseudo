@@ -14,4 +14,5 @@
 #include "x86/Types.h"
 #elif defined _X64_
 #include "x64/Types.h"
+#include "x64/intrin64.h"
 #endif
