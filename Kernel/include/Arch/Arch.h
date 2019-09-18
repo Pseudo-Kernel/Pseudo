@@ -1,18 +1,30 @@
 #pragma once
 
-#if !defined(_68K_) && !defined(_MPPC_) && !defined(_X86_) && !defined(_IA64_) && !defined(_AMD64_) && !defined(_ARM_) && defined(_M_IX86)
-#define _X86_
+
+#define _ARCH_TYPE_UNKNOWN_                     0
+#define _ARCH_TYPE_X86_                         1
+#define _ARCH_TYPE_X64_                         2
+
+
+#ifdef __GNUC__
+#ifdef __i386__
+#define _ARCH_TYPE_                             _ARCH_TYPE_X86_
+#elif defined __x86_64__
+#define _ARCH_TYPE_                             _ARCH_TYPE_X64_
+#else
+#define _ARCH_TYPE_                             _ARCH_TYPE_UNKNOWN_
 #endif
-
-#if !defined(_68K_) && !defined(_MPPC_) && !defined(_X86_) && !defined(_IA64_) && !defined(_AMD64_) && !defined(_ARM_) && defined(_M_AMD64)
-#define _AMD64_
-#define	_X64_
-#endif
+#else
+#error gcc is required!
+#endif // __GNUC__
 
 
-#ifdef _X86_
+
+#if _ARCH_TYPE_ == _ARCH_TYPE_X86_
 #include "x86/Types.h"
-#elif defined _X64_
+#elif _ARCH_TYPE_ == _ARCH_TYPE_X64_
 #include "x64/Types.h"
 #include "x64/intrin64.h"
+#else
+#error Unknown architecture!
 #endif

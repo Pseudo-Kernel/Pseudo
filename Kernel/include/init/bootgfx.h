@@ -171,6 +171,9 @@ typedef struct _BOOT_GFX_SCREEN {
 
 
 
+
+typedef struct _ZIP_CONTEXT			*PZIP_CONTEXT;
+
 BOOLEAN
 KERNELAPI
 BootGfxInitialize(
@@ -179,7 +182,7 @@ BootGfxInitialize(
 	IN U32 ModeNumberCurrent, // Current mode number
 	IN PVOID FrameBuffer, // Linear framebuffer address
 	IN SIZE_T FrameBufferSize, // Framebuffer size
-	IN struct _ZIP_CONTEXT *BootImageContext
+	IN PZIP_CONTEXT BootImageContext
 	);
 
 BOOLEAN

@@ -10,7 +10,7 @@ DBG_TRACE_LEVEL DbgPrintTraceLevel = TraceLevelDebug;
 BOOLEAN
 KERNELAPI
 DbgpNormalTraceN(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *TraceMessage, 
 	IN SIZE_T Length)
 {
@@ -27,7 +27,7 @@ DbgpNormalTraceN(
 BOOLEAN
 KERNELAPI
 DbgTraceN(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *TraceMessage, 
 	IN SIZE_T Length)
 {
@@ -40,7 +40,7 @@ DbgTraceN(
 BOOLEAN
 KERNELAPI
 DbgTraceF(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *Format,
 	...)
 {
@@ -61,7 +61,7 @@ DbgTraceF(
 BOOLEAN
 KERNELAPI
 DbgTrace(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *TraceMessage)
 {
 	return DbgTraceN(TraceLevel, TraceMessage, strlen(TraceMessage));
@@ -70,7 +70,7 @@ DbgTrace(
 BOOLEAN
 KERNELAPI
 DbgInitialize(
-	IN enum _DBG_TRACE_LEVEL DefaultTraceLevel)
+	IN DBG_TRACE_LEVEL DefaultTraceLevel)
 {
 	DbgpTrace = DbgpNormalTraceN;
 	DbgPrintTraceLevel = DefaultTraceLevel;

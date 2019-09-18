@@ -581,11 +581,18 @@ BootGfxFatalStop(
 	BootGfxSetTextColor(0xff0000);
 	BootFonPrintTextN(&PiBootGfx.Screen, PiBootGfx.BootFont, Buffer, BufferLength, FALSE, &PrintLength);
 
-	// System stop.
-	_disable();
+	__asm__ __volatile__ (
+		"_Loop:\n\t"
+		"cli\n\t"
+		"hlt\n\t"
+		"jmp _Loop"
+	);
 
-	for (;;)
-		__halt();
+	// System stop.
+//	_disable();
+
+//	for (;;)
+//		__halt();
 }
 
 BOOLEAN

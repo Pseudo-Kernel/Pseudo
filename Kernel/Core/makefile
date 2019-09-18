@@ -6,7 +6,8 @@ CC = gcc
 KERNEL_FAKE_BASE_ADDRESS := 0x400000
 
 # NOTE: mingw64-gcc uses ms_abi in default so we don't have to do it manually...
-CFLAGS = -masm=intel -fstack-check=no -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt 
+CFLAGS = -masm=intel -fstack-check=no -nodefaultlibs $\
+	-nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c++0x
 
 # We'll create UEFI application image
 LDFLAGS = -Wl,--dll,--shared,--exclude-all-symbols,$\

@@ -1,13 +1,5 @@
 #pragma once
 
-
-typedef
-BOOLEAN
-(KERNELAPI *PDBG_TRACE_ROUTINE)(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
-	IN CHAR8 *TraceMessage,
-	IN SIZE_T Length);
-
 typedef enum _DBG_TRACE_LEVEL {
 	TraceLevelAll,			// All
 	TraceLevelDebug,		// Debug & Event & Warning & Error
@@ -16,6 +8,14 @@ typedef enum _DBG_TRACE_LEVEL {
 	TraceLevelError,		// Error
 } DBG_TRACE_LEVEL;
 
+typedef
+BOOLEAN
+(KERNELAPI *PDBG_TRACE_ROUTINE)(
+	IN DBG_TRACE_LEVEL TraceLevel,
+	IN CHAR8 *TraceMessage,
+	IN SIZE_T Length);
+
+
 extern PDBG_TRACE_ROUTINE DbgpTrace;
 extern DBG_TRACE_LEVEL DbgPrintTraceLevel;
 
@@ -23,26 +23,26 @@ extern DBG_TRACE_LEVEL DbgPrintTraceLevel;
 BOOLEAN
 KERNELAPI
 DbgInitialize(
-	IN enum _DBG_TRACE_LEVEL DefaultTraceLevel);
+	IN DBG_TRACE_LEVEL DefaultTraceLevel);
 
 BOOLEAN
 KERNELAPI
 DbgTraceN(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *TraceMessage,
 	IN SIZE_T Length);
 
 BOOLEAN
 KERNELAPI
 DbgTraceF(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *Format,
 	...);
 
 BOOLEAN
 KERNELAPI
 DbgTrace(
-	IN enum _DBG_TRACE_LEVEL TraceLevel,
+	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *TraceMessage);
 
 #define	DASSERT(_expr)	{	\

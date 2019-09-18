@@ -62,8 +62,11 @@ KiKernelStart(
 	SafeStackTop = LoaderBlock->LoaderData.KernelStackBase + LoaderBlock->LoaderData.StackSize - 0x10;
 	PiPreStackSwitch((OS_LOADER_BLOCK *)LoaderBlock, SizeOfLoaderBlock, (PVOID)SafeStackTop);
 
+
+
 	for (;;)
-		__halt();
+		__asm__ __volatile__ ("hlt\t\n" ::: "memory");
+		//__halt();
 
 	return 0;
 }

@@ -2,6 +2,8 @@
 #ifndef _INTRIN64_H_
 #define	_INTRIN64_H_
 
+#if 0
+
 //
 // x64 Assembly Instructions.
 //
@@ -376,5 +378,6 @@ unsigned __int64 _umul128(
 	unsigned __int64 Multiplicand, 
 	unsigned __int64 *HighProduct );
 
+#endif
 
 #endif
