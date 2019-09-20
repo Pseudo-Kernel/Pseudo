@@ -58,20 +58,20 @@ ZipCompareFilePath_U8(
 BOOLEAN
 KERNELAPI
 ZipCompareFilePathL_U8(
-	IN U8 *FilePath1,
-	IN U8 *FilePath2, 
+	IN CHAR8 *FilePath1,
+	IN CHAR8 *FilePath2, 
 	IN U32 Length1, 
 	IN U32 Length2)
 {
-	U8 *s1 = FilePath1;
-	U8 *s2 = FilePath2;
+	CHAR8 *s1 = FilePath1;
+	CHAR8 *s2 = FilePath2;
 	U32 Offset = 0;
 	U32 MaxLength = Length1 > Length2 ? Length1 : Length2;
 
 	while (Offset < MaxLength)
 	{
-		U8 c1 = *s1++;
-		U8 c2 = *s2++;
+		CHAR8 c1 = *s1++;
+		CHAR8 c2 = *s2++;
 
 		if ('a' <= c1 && c1 <= 'z') c1 += 'A' - 'a';
 		if ('a' <= c2 && c2 <= 'z') c2 += 'A' - 'a';
@@ -352,7 +352,7 @@ BOOLEAN
 KERNELAPI
 ZipLookupFile_U8(
 	IN ZIP_CONTEXT *ZipContext,
-	IN U8 *FileName, 
+	IN CHAR8 *FileName, 
 	OUT U32 *OffsetToCentralDirectory)
 {
 	ZIP_RECORD_HEADER Header;
@@ -388,7 +388,7 @@ ZipLookupFile_U8(
 
 	do
 	{
-		U8 *CentralDirectoryFileName;
+		CHAR8 *CentralDirectoryFileName;
 
 		if (!ZipGetRecord(ZipContext, &Header, &HeaderLength, &RecordLength, &RecordOffset))
 			break;
@@ -402,7 +402,7 @@ ZipLookupFile_U8(
 			break;
 
 		ZipSetOffset(ZipContext, sizeof(Header.CentralDirectoryHeader), ZIP_OFFSET_CURRENT);
-		CentralDirectoryFileName = (U8 *)ZipGetPointer(ZipContext);
+		CentralDirectoryFileName = (CHAR8 *)ZipGetPointer(ZipContext);
 		ZipSetOffset(ZipContext, RecordOffset + RecordLength, ZIP_OFFSET_BEGIN);
 
 		ZIPTRACE("Record Offset 0x%08x, FileName `%.*s' ...\n",

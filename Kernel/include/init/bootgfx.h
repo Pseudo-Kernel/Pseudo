@@ -2,6 +2,9 @@
 
 #pragma pack(push, 1)
 
+#define	FON_DOS_SIGNATURE				0x5a4d
+#define	FON_NE_SIGNATURE				0x454e
+
 typedef struct _FON_DOS_HEADER {
 	U16 Magic;	// 'MZ'
 	U8 Reserved[0x3a];
@@ -138,11 +141,13 @@ typedef struct _FON_GLYPHENTRY_V3 {
 
 
 
+typedef struct _BOOT_GFX_SCREEN				BOOT_GFX_SCREEN, *PBOOT_GFX_SCREEN;
+
 
 typedef
 BOOLEAN
 (KERNELAPI *PBOOT_GFX_FRAMEBUFFER_SCROLL)(
-	IN OUT struct _BOOT_GFX_SCREEN *Screen, 
+	IN OUT BOOT_GFX_SCREEN *Screen, 
 	IN U32 ScrollHeight);
 
 typedef struct _BOOT_GFX_FRAMEBUFFER {
@@ -168,6 +173,7 @@ typedef struct _BOOT_GFX_SCREEN {
 	U32 TextWidth;
 	U32 TextHeight;
 } BOOT_GFX_SCREEN, *PBOOT_GFX_SCREEN;
+
 
 
 

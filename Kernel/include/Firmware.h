@@ -71,12 +71,11 @@ typedef struct {
 	U8   Pad2;
 } EFI_TIME;
 
-COMPILER_PACK(4)
 typedef struct {
 	U32    Resolution;
 	U32    Accuracy;
 	BOOLEAN   SetsToZero;
-} EFI_TIME_CAPABILITIES;
+} EFI_TIME_CAPABILITIES COMPILER_PACK(4);
 
 typedef
 EFI_STATUS
@@ -235,14 +234,13 @@ typedef enum {
 	EfiMaxMemoryType
 } EFI_MEMORY_TYPE;
 
-COMPILER_PACK(8)
 typedef struct {
 	EFI_MEMORY_TYPE       Type;
 	EFI_PHYSICAL_ADDRESS  PhysicalStart;
 	EFI_VIRTUAL_ADDRESS   VirtualStart;
 	U64                   NumberOfPages;
 	U64                   Attribute;
-} EFI_MEMORY_DESCRIPTOR;
+} EFI_MEMORY_DESCRIPTOR COMPILER_PACK(8);
 
 typedef
 EFI_STATUS
@@ -303,7 +301,6 @@ typedef struct {
 	VOID                              *VendorTable;
 } EFI_CONFIGURATION_TABLE;
 
-COMPILER_PACK(8)
 typedef struct _EFI_SYSTEM_TABLE {
 	EFI_TABLE_HEADER                  Hdr;
 	CHAR16                            *FirmwareVendor;
@@ -318,7 +315,7 @@ typedef struct _EFI_SYSTEM_TABLE {
 	EFI_BOOT_SERVICES                 *BootServices;
 	UPTR                              NumberOfTableEntries;
 	EFI_CONFIGURATION_TABLE           *ConfigurationTable;
-} EFI_SYSTEM_TABLE;
+} EFI_SYSTEM_TABLE COMPILER_PACK(8);
 
 
 

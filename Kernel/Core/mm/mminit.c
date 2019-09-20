@@ -30,7 +30,7 @@ MiInitializeMemory(
 
 	// Initializes the 4-Level paging.
 
-	PML4Base = MmAllocatePool(PoolTypeNonPagedPreInit, PAGE_SIZE, PAGE_SIZE, 'NIMM');
+	PML4Base = MmAllocatePool(PoolTypeNonPagedPreInit, PAGE_SIZE, PAGE_SIZE, TAG4('M', 'M', 'I', 'N'));
 
 	// PML4 virtual base at 0xffffffff`fffff000
 	PML4Base[]
@@ -98,7 +98,7 @@ MiDiscardFirmwareMemory(
 	/* _entry type must be (U64 *) */							\
 	if(!( (_map)[_idx] & PAGE_PRESENT ))	{					\
 		(_lower_map) = MmAllocatePool(PoolTypeNonPagedPreInit,	\
-			PAGE_SIZE, PAGE_SIZE, 'TINI');						\
+			PAGE_SIZE, PAGE_SIZE, TAG4('I', 'N', 'I', 'T'));	\
 		DbgTraceF(TraceLevelDebug, "Allocated %s = 0x%llx\n",	\
 			_ASCII(_lower_map), (U64)(_lower_map));				\
 		if(!(_lower_map)) {										\
@@ -312,7 +312,7 @@ MiInitializeMemoryMap(
 
 
 	// 512 entries of PML4E.
-	PML4 = MmAllocatePool(PoolTypeNonPagedPreInit, PAGE_SIZE, PAGE_SIZE, 'TINI');
+	PML4 = MmAllocatePool(PoolTypeNonPagedPreInit, PAGE_SIZE, PAGE_SIZE, TAG4('I', 'N', 'I', 'T'));
 	memset(PML4, 0, PAGE_SIZE);
 
 	if (!PML4)

@@ -16,11 +16,15 @@
 #define	EXPORT							__declspec(dllexport)
 #define	IMPORT							__declspec(dllimport)
 
+#define __FUNCTION__                    __func__
+
+
+
 //
 // Alignments.
 //
 
-#define	COMPILER_PACK(_x)				__declspec(align(_x))
+#define	COMPILER_PACK(_x)				__attribute__((aligned(_x))) //__declspec(align(_x))
 #define	STRUCT_PACK						COMPILER_PACK
 #define	UNION_PACK						COMPILER_PACK
 

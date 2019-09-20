@@ -333,9 +333,9 @@ ClDbgHex(
 	FormatHelper_ValueToStringU8(Buffer, ARRAY_SIZE(Buffer) - 1, 0, 0, Value, 16, 0);
 
 	for (p = Buffer; *p; *p++)
-		__outbyte(0xe9, *p);
+		__PseudoIntrin_OutPortByte(0xe9, *p);
 
-	__outbyte(0xe9, '\n');
+	__PseudoIntrin_OutPortByte(0xe9, '\n');
 }
 
 SIZE_T

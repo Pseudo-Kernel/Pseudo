@@ -208,7 +208,7 @@ BOOLEAN
 KERNELAPI
 ZipLookupFile_U8(
 	IN ZIP_CONTEXT *ZipContext,
-	IN U8 *FileName,
+	IN CHAR8 *FileName,
 	OUT U32 *OffsetToCentralDirectory);
 
 BOOLEAN

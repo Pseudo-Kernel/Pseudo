@@ -259,7 +259,7 @@ BootFonLookupFont(
 		return FALSE;
 
 	DosHeader = (FON_DOS_HEADER *)Buffer;
-	if (DosHeader->Magic != 'ZM') // IMAGE_DOS_SIGNATURE
+	if (DosHeader->Magic != FON_DOS_SIGNATURE) // IMAGE_DOS_SIGNATURE
 		return FALSE;
 
 	if (BufferLength < DosHeader->Offset || 
@@ -267,7 +267,7 @@ BootFonLookupFont(
 		return FALSE;
 
 	NeHeader = (FON_NE_HEADER *)((UPTR)Buffer + DosHeader->Offset);
-	if (NeHeader->Magic != 'EN') // IMAGE_OS2_SIGNATURE
+	if (NeHeader->Magic != FON_NE_SIGNATURE) // IMAGE_OS2_SIGNATURE
 		return FALSE;
 
 	// http://bytepointer.com/resources/win16_ne_exe_format_win3.0.htm
@@ -462,7 +462,7 @@ BootGfxScrollBufferInternal(
 BOOLEAN
 KERNELAPI
 BootGfxScrollBuffer(
-	IN OUT struct _BOOT_GFX_SCREEN *Screen,
+	IN OUT BOOT_GFX_SCREEN *Screen,
 	IN U32 ScrollHeight)
 {
 	U32 Width = Screen->TextResolutionX * Screen->TextWidth;
@@ -581,18 +581,11 @@ BootGfxFatalStop(
 	BootGfxSetTextColor(0xff0000);
 	BootFonPrintTextN(&PiBootGfx.Screen, PiBootGfx.BootFont, Buffer, BufferLength, FALSE, &PrintLength);
 
-	__asm__ __volatile__ (
-		"_Loop:\n\t"
-		"cli\n\t"
-		"hlt\n\t"
-		"jmp _Loop"
-	);
-
 	// System stop.
-//	_disable();
+	__PseudoIntrin_DisableInterrupt();
 
-//	for (;;)
-//		__halt();
+	for (;;)
+		__PseudoIntrin_Halt();
 }
 
 BOOLEAN

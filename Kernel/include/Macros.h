@@ -12,17 +12,17 @@
 // Tag4, Tag8.
 //
 
-#define	TAG4(_a, _b, _c, _d) ( \
-	( (((U32)(_a)) & 0xff) << 0x00 ) | \
-	( (((U32)(_b)) & 0xff) << 0x08 ) | \
-	( (((U32)(_c)) & 0xff) << 0x10 ) | \
-	( (((U32)(_d)) & 0xff) << 0x18 ) \
+#define	TAG4(_a, _b, _c, _d) (\
+	( (((U32)(_a)) & 0xff) << 0x00 ) |\
+	( (((U32)(_b)) & 0xff) << 0x08 ) |\
+	( (((U32)(_c)) & 0xff) << 0x10 ) |\
+	( (((U32)(_d)) & 0xff) << 0x18 )\
 )
 
 #if 0
-#define	TAG8(_a, _b, _c, _d, _e, _f, _g, _h) ( \
-	( ((unsigned __int64)TAG4((_a), (_b), (_c), (_d))) << 0x00 ) | \ 
-(((unsigned __int64)TAG4((_e), (_f), (_g), (_h))) << 0x20) \
+#define	TAG8(_a, _b, _c, _d, _e, _f, _g, _h) (\
+	( ((unsigned __int64)TAG4((_a), (_b), (_c), (_d))) << 0x00 ) |\
+	(((unsigned __int64)TAG4((_e), (_f), (_g), (_h))) << 0x20)\
 )
 #endif
 

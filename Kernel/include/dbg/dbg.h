@@ -55,6 +55,6 @@ DbgTrace(
 			"  Line   : %d\n"	\
 			"\n",	\
 			__LINE__);	\
-		for(;;) __halt();	\
+		for(;;) __PseudoIntrin_Halt();	\
 	}	\
 }

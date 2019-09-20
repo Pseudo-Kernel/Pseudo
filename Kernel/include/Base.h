@@ -5,6 +5,9 @@
 #include <Macros.h>
 
 
+//#include <x86intrin.h> // Part of GCC
+
+
 //
 // Base types.
 //

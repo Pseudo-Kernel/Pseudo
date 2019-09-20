@@ -2,6 +2,48 @@
 #ifndef _INTRIN64_H_
 #define	_INTRIN64_H_
 
+// http://svn.assembla.com/svn/iLog/intrin_x86.h
+
+static __inline__ __attribute__((always_inline))
+void __PseudoIntrin_OutPortByte(unsigned short Port, unsigned char Value)
+{
+    __asm__ __volatile__ (
+        "mov dx, %0\n\t"
+        "mov al, %1\n\t"
+        "out dx, al\n\t"
+        :
+        : "r"(Port), "r"(Value)
+        : "memory"
+    );
+}
+
+
+static __inline__ __attribute__((always_inline))
+void __PseudoIntrin_DisableInterrupt()
+{
+    __asm__ __volatile__ ("cli\n\t" ::: "memory");
+}
+
+static __inline__ __attribute__((always_inline))
+void __PseudoIntrin_EnableInterrupt()
+{
+    __asm__ __volatile__ ("sti\n\t" ::: "memory");
+}
+
+static __inline__ __attribute__((always_inline))
+void __PseudoIntrin_Halt()
+{
+    __asm__ __volatile__ ("hlt\n\t" ::: "memory");
+}
+
+static __inline__ __attribute__((always_inline))
+void __PseudoIntrin_Pause()
+{
+    __asm__ __volatile__ ("pause\n\t" ::: "memory");
+}
+
+
+
 #if 0
 
 //

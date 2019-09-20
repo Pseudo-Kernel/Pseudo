@@ -18,7 +18,7 @@ KeAcquireSpinLock(
 {
 	// ASSERT_ALIGN(Lock, 4)
 	while (_InterlockedExchange((volatile U32 *)&Lock->Lock, 1))
-		_mm_pause();
+		__PseudoIntrin_Pause();
 }
 
 VOID

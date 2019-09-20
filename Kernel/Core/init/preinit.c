@@ -29,6 +29,35 @@ ZIP_CONTEXT PiBootImageContext; // Boot image context
 }
 
 
+__attribute__((naked))
+VOID
+KERNELAPI
+PiPreStackSwitch(
+	IN OS_LOADER_BLOCK *LoaderBlock,
+	IN U32 SizeOfLoaderBlock, 
+	IN PVOID SafeStackTop)
+{
+	__asm__ __volatile__(
+		"mov rcx, %0\n\t"
+		"mov edx, %1\n\t"
+		"mov r8, %2\n\t"
+		"and r8, not 0x07\n\t"				// align to 16-byte boundary
+		"sub r8, 0x20\n\t"					// shadow area
+		"mov qword ptr [r8], rcx\n\t"		// 1st param
+		"mov qword ptr [r8+0x08], rdx\n\t"	// 2nd param
+		"xchg r8, rsp\n\t"					// switch the stack
+		"call PiPreInitialize\n\t"
+		"\n\t"								// MUST NOT REACH HERE!
+		"__InitFailed:\n\t"
+		"cli\n\t"
+		"hlt\n\t"
+		"jmp __InitFailed\n\t"
+		:
+		: "r"(LoaderBlock), "r"(SizeOfLoaderBlock), "r"(SafeStackTop)
+		: "memory"
+	);
+}
+
 VOID
 KERNELAPI
 PiPreInitialize(
