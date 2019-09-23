@@ -57,7 +57,7 @@ OslMmQueryMemoryMap (
 
 	for (TryCount = 0; TryCount < 0x10; TryCount++)
 	{
-		Status = gBS->AllocatePool(EfiLoaderData, MapSize, &Map);
+		Status = gBS->AllocatePool(EfiLoaderData, MapSize, (void **)&Map);
 		if (Status != EFI_SUCCESS)
 			return Status;
 
