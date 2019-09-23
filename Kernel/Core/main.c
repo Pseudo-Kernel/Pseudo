@@ -49,7 +49,7 @@ U64
 KERNELAPI
 KiKernelStart(
 	IN PTR LoadedBase, 
-	IN struct _OS_LOADER_BLOCK *LoaderBlock, 
+	IN OS_LOADER_BLOCK *LoaderBlock, 
 	IN U32 SizeOfLoaderBlock, 
 	IN PTR Reserved)
 {
@@ -61,13 +61,15 @@ KiKernelStart(
 		__FUNCTION__, LoadedBase, LoaderBlock, SizeOfLoaderBlock, Reserved);
 
 	SafeStackTop = LoaderBlock->LoaderData.KernelStackBase + LoaderBlock->LoaderData.StackSize - 0x10;
-	PiPreStackSwitch((OS_LOADER_BLOCK *)LoaderBlock, SizeOfLoaderBlock, (PVOID)SafeStackTop);
+	PiPreStackSwitch(LoaderBlock, SizeOfLoaderBlock, (PVOID)SafeStackTop);
 
 
 
 	for (;;)
-		__asm__ __volatile__ ("hlt\t\n" ::: "memory");
-		//__halt();
+	{
+		__PseudoIntrin_DisableInterrupt();
+		__PseudoIntrin_Halt();
+	}
 
 	return 0;
 }

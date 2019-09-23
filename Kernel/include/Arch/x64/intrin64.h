@@ -4,43 +4,129 @@
 
 // http://svn.assembla.com/svn/iLog/intrin_x86.h
 
-static __inline__ __attribute__((always_inline))
-void __PseudoIntrin_OutPortByte(unsigned short Port, unsigned char Value)
-{
-    __asm__ __volatile__ (
-        "mov dx, %0\n\t"
-        "mov al, %1\n\t"
-        "out dx, al\n\t"
-        :
-        : "r"(Port), "r"(Value)
-        : "memory"
-    );
-}
+#define __PSEUDO_INTRINSIC_HEADER	\
+	static __inline__ __attribute__((always_inline))
+#define __PSEUDO_INTRINSIC(_type_ret, _fn)    \
+    __PSEUDO_INTRINSIC_HEADER _type_ret __PseudoIntrin_##_fn
 
 
-static __inline__ __attribute__((always_inline))
-void __PseudoIntrin_DisableInterrupt()
+
+#define	PSEUDO_INTRINSIC_INPORT(_fn_postfix, _type_val)	\
+	__PSEUDO_INTRINSIC(_type_val, InPort##_fn_postfix)	\
+	(unsigned __int16 Port)	{							\
+		_type_val Value = 0;							\
+	    __asm__ __volatile__ (							\
+	        "in %0, %1\n\t"								\
+	        : "=r"(Value)								\
+	        : "r"(Port)									\
+    	    : /*"memory"*/								\
+    	);												\
+		return Value;									\
+	}
+
+#define	PSEUDO_INTRINSIC_OUTPORT(_fn_postfix, _type_val)	\
+	__PSEUDO_INTRINSIC(_type_val, OutPort##_fn_postfix)		\
+	(unsigned __int16 Port, _type_val Value) {				\
+	    __asm__ __volatile__ (								\
+	        "out %0, %1\n\t"								\
+	        :												\
+	        : "r"(Port), "r"(Value)							\
+    	    : /*"memory"*/									\
+    	);													\
+	}
+
+#define	PSEUDO_INTRINSIC_INPORT_BUFFER(_fn_postfix, _type_val, _inst_postfix)	\
+	__PSEUDO_INTRINSIC(void, InPortBuffer##_fn_postfix)	\
+	(unsigned __int16 Port, _type_val *Buffer, __int64 Count) {	\
+	    __asm__ __volatile__ (							\
+	        "rep ins" _inst_postfix "\n\t"				\
+	        : "=D"(Buffer), "=c"(Count)					\
+	        : "d"(Port), "c"(Count)						\
+    	    : "memory"/* should we need compiler-level barrier? */	\
+    	);												\
+	}
+
+#define	PSEUDO_INTRINSIC_OUTPORT_BUFFER(_fn_postfix, _type_val, _inst_postfix)	\
+	__PSEUDO_INTRINSIC(void, OutPortBuffer##_fn_postfix)	\
+	(unsigned __int16 Port, _type_val *Buffer, __int64 Count) {	\
+	    __asm__ __volatile__ (								\
+	        "rep outs" _inst_postfix "\n\t"					\
+	        : "=c"(Count)									\
+	        : "d"(Port), "S"(Buffer), "c"(Count)			\
+    	    : "memory"/* should we need compiler-level barrier? */	\
+    	);													\
+	}
+
+#define	PSEUDO_INTRINSIC_INTERLOCKEDEXCHANGE(_fn_postfix, _type_val)	\
+	__PSEUDO_INTRINSIC(_type_val, InterlockedExchange##_fn_postfix)		\
+	(_type_val volatile *Target, _type_val Value) {						\
+	    return __atomic_exchange_n(Target, Value, __ATOMIC_SEQ_CST);	\
+	}
+//    __asm__ __volatile__ (
+//        "lock xchg %0, %1\n\t"
+//        : "+m"(Target)
+//        : "r"(Value)
+//        : "memory"
+//    );
+
+
+
+
+// __PseudoIntrin_InPortXxx
+PSEUDO_INTRINSIC_INPORT(8, unsigned __int8)
+PSEUDO_INTRINSIC_INPORT(16, unsigned __int16)
+PSEUDO_INTRINSIC_INPORT(32, unsigned __int32)
+
+// __PseudoIntrin_OutPortXxx
+PSEUDO_INTRINSIC_OUTPORT(8, unsigned __int8)
+PSEUDO_INTRINSIC_OUTPORT(16, unsigned __int16)
+PSEUDO_INTRINSIC_OUTPORT(32, unsigned __int32)
+
+// __PseudoIntrin_InPortBufferXxx
+PSEUDO_INTRINSIC_INPORT_BUFFER(8, unsigned __int8, "b")
+PSEUDO_INTRINSIC_INPORT_BUFFER(16, unsigned __int16, "w")
+PSEUDO_INTRINSIC_INPORT_BUFFER(32, unsigned __int32, "d")
+
+// __PseudoIntrin_OutPortBufferXxx
+PSEUDO_INTRINSIC_OUTPORT_BUFFER(8, unsigned __int8, "b")
+PSEUDO_INTRINSIC_OUTPORT_BUFFER(16, unsigned __int16, "w")
+PSEUDO_INTRINSIC_OUTPORT_BUFFER(32, unsigned __int32, "d")
+
+// __PseudoIntrin_InterlockedExchangeXxx
+PSEUDO_INTRINSIC_INTERLOCKEDEXCHANGE(8, __int8)
+PSEUDO_INTRINSIC_INTERLOCKEDEXCHANGE(16, __int16)
+PSEUDO_INTRINSIC_INTERLOCKEDEXCHANGE(32, __int32)
+PSEUDO_INTRINSIC_INTERLOCKEDEXCHANGE(64, __int64)
+
+
+__PSEUDO_INTRINSIC(void, DisableInterrupt) ()
 {
     __asm__ __volatile__ ("cli\n\t" ::: "memory");
 }
 
-static __inline__ __attribute__((always_inline))
-void __PseudoIntrin_EnableInterrupt()
+__PSEUDO_INTRINSIC(void, EnableInterrupt) ()
 {
     __asm__ __volatile__ ("sti\n\t" ::: "memory");
 }
 
-static __inline__ __attribute__((always_inline))
-void __PseudoIntrin_Halt()
+__PSEUDO_INTRINSIC(void, Halt) ()
 {
     __asm__ __volatile__ ("hlt\n\t" ::: "memory");
 }
 
-static __inline__ __attribute__((always_inline))
-void __PseudoIntrin_Pause()
+__PSEUDO_INTRINSIC(void, Pause) ()
 {
     __asm__ __volatile__ ("pause\n\t" ::: "memory");
 }
+
+__PSEUDO_INTRINSIC(__int64, ReadTimestampCounter) ()
+{
+	__int64 Value = 0;
+	__asm__ __volatile__ ("rdtsc\n\t" : "=A"(Value));
+	return Value;
+}
+
+
 
 
 

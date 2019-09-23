@@ -157,7 +157,7 @@ MiInitializePoolBlockList(
 
 	// Initialize the first free.
 	FirstHeader = (PPOOL_HEADER)AreaStart;
-	MiInitializePoolHeader(FirstHeader, 'TINI', 0, 0, AreaSize - sizeof(POOL_HEADER), 0);
+	MiInitializePoolHeader(FirstHeader, TAG4('I', 'N', 'I', 'T'), 0, 0, AreaSize - sizeof(POOL_HEADER), 0);
 	InitializeDListHead(&FirstHeader->BlockList);
 	InsertDListBefore(&PoolObject->BlockListHead, &FirstHeader->BlockList);
 	MiUpdatePoolHeaderChecksum(FirstHeader);

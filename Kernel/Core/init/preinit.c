@@ -136,7 +136,11 @@ PiPreInitialize(
 
 	BootGfxPrintTextFormat("Memory mapping done.\n");
 
-	for (;;);
+	for (;;)
+	{
+		__PseudoIntrin_DisableInterrupt();
+		__PseudoIntrin_Halt();
+	}
 
 //	if (!PiDiscardFirmwareMemory())
 //	{

@@ -17,7 +17,7 @@ KeAcquireSpinLock(
 	IN PKSPIN_LOCK Lock)
 {
 	// ASSERT_ALIGN(Lock, 4)
-	while (_InterlockedExchange((volatile U32 *)&Lock->Lock, 1))
+	while (__PseudoIntrin_InterlockedExchange32((volatile __int32 *)&Lock->Lock, 1))
 		__PseudoIntrin_Pause();
 }
 
@@ -28,7 +28,7 @@ KeReleaseSpinLock(
 {
 	// ASSERT_ALIGN(Lock, 4)
 	// ASSERT(
-	_InterlockedExchange((volatile U32 *)&Lock->Lock, 0);
+	__PseudoIntrin_InterlockedExchange32((volatile __int32 *)&Lock->Lock, 0);
 	// == 1 );
 }
 

@@ -19,15 +19,7 @@ DbgpNormalTraceN(
 	if (TraceLevel < DbgPrintTraceLevel)
 		return FALSE;
 
-	__asm__ __volatile__ (
-		"cld\n\t"
-		"mov rcx, %0\n\t"
-		"mov rsi, %1\n\t"
-		"rep outsb\n\t"
-		:
-		: "r"(Length), "r"(TraceMessage)
-		: "memory"
-	);
+	__PseudoIntrin_OutPortBuffer8(DBG_SPECIAL_IO_PORT, (U8 *)TraceMessage, Length);
 //	__outbytestring(DBG_SPECIAL_IO_PORT, TraceMessage, (U32)Length);
 
 	return TRUE;

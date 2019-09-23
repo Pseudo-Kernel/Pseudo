@@ -1,6 +1,10 @@
 #pragma once
 
 
+#ifdef __LP64__
+#else
+#endif
+
 // GCC does not support __intXX
 #define __int8                      char
 #define __int16                     short

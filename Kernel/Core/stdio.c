@@ -1,9 +1,9 @@
 
-#pragma message("Must be compiled without: /GL option")
+//#pragma message("Must be compiled without: /GL option")
 
 #include <Base.h>
 
-#pragma function(memset, memcmp, memcpy)
+//#pragma function(memset, memcmp, memcpy)
 
 //
 // standard runtime functions.
@@ -44,6 +44,15 @@ void *memcpy(void *dest, const void *src, size_t size)
 		*d++ = *s++;
 
 	return dest;
+}
+
+size_t strlen(const char *s)
+{
+	size_t len = 0;
+	while (*s++)
+		len++;
+
+	return len;
 }
 
 #if 0

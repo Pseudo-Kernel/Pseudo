@@ -9,9 +9,10 @@ public static extern bool MoveFile(string ExistingFileName, string NewFileName);
 Add-Type -MemberDefinition $WinAPIDefinition -Name 'Kernel32' -Namespace 'Win32' -PassThru
 
 
-Get-ChildItem -Recurse -Force | foreach {
+Get-ChildItem -Recurse -Force | ForEach-Object {
     "Renaming " + $_.FullName + " to lowercase"
-    [Win32.Kernel32]::MoveFile($_.FullName, $_.FullName.ToLower()) | Out-Null}
+    [Win32.Kernel32]::MoveFile($_.FullName, $_.FullName.ToLower()) | Out-Null
+}
 
 <#
 Get-ChildItem -Recurse -Force | foreach {
