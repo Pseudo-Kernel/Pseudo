@@ -95,17 +95,17 @@ detach vdisk
     $ScriptCreateImage | Out-File -FilePath $ScriptPath_CreateImage -Encoding ascii -Force
     $Process = Start-Process -FilePath "diskpart" -ArgumentList ("/s", $ScriptPath_CreateImage) -Wait -PassThru -ErrorAction Stop
     if ($Process.ExitCode -ne 0) {
-        throw "diskpart returned error " + $Process.ExitCode
+        throw [string]::Format("diskpart returned error 0x{0:x}", $Process.ExitCode)
     }
 
     # Copy our boot files to filesystem.
-    Copy-Item -Path $FilesystemContentsPath -Destination ($AssignDriveLetterTemporary + ":\") -Recurse -Verbose -ErrorAction Stop
+    Copy-Item -Path ($FilesystemContentsPath +"\*") -Destination ($AssignDriveLetterTemporary + ":\") -Recurse -Verbose -ErrorAction Stop
 
     # Detach the image from partition manager.
     $ScriptDetachImage | Out-File -FilePath $ScriptPath_DetachImage -Encoding ascii -Force
     $Process = Start-Process -FilePath "diskpart" -ArgumentList ("/s", $ScriptPath_DetachImage) -Wait -PassThru -ErrorAction Stop
     if ($Process.ExitCode -ne 0) {
-        throw "diskpart returned error " + $Process.ExitCode
+        throw [string]::Format("diskpart returned error 0x{0:x}", $Process.ExitCode)
     }
 
     # Clean up

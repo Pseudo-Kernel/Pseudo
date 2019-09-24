@@ -2,13 +2,16 @@
 CC = gcc
 
 BASE_ADDRESS := 0x200000
+START_ROUTINE := UefiMain
 
 # NOTE: mingw64-gcc uses ms_abi in default so we don't have to do it manually...
-CFLAGS = -masm=intel -fstack-check=no -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt 
+#CFLAGS = -masm=intel -fstack-check=no -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt 
+CFLAGS = -masm=intel -fstack-check=no -nostdinc -nodefaultlibs $\
+	-nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic
 
 # We'll create UEFI application image
 LDFLAGS = -Wl,--dll,--shared,--exclude-all-symbols,$\
-		--image-base,$(BASE_ADDRESS),--dynamicbase,--subsystem,10 $\
+		--image-base,$(BASE_ADDRESS),--dynamicbase,--subsystem,10,-e$(START_ROUTINE) $\
 		-fstack-check=no
 
 # Invoking GCC

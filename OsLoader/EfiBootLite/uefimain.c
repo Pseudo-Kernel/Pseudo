@@ -881,12 +881,6 @@ OslWaitForKeyInput(
 	return Result;
 }
 
-
-int test(int a, int b, int c, int d, int e, int f, int g)
-{
-	return a | b | c | d | e | f | g;
-}
-
 /**
 	Entry point of the UEFI application.
 
@@ -906,6 +900,11 @@ UefiMain(
 	EFI_STATUS Status;
 
 	//
+	// FIXME : QEMU with gdb does not break when normal breakpoint is hit
+	//         maybe hardware breakpoint will work...
+	//
+
+	//
 	// Initialize the global structures.
 	//
 
@@ -916,8 +915,6 @@ UefiMain(
 	gBS = SystemTable->BootServices;
 	gRS = SystemTable->RuntimeServices;
 	
-	test(1, 2, 3, 4, 5, 6, 7);
-
 	gConOut->SetAttribute(gConOut, 0x0f);
 	TRACE(L"PseudoOS Loader for UEFI environment.\r\n");
 	gConOut->SetAttribute(gConOut, 0x07);

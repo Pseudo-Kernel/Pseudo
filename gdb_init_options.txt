@@ -1,0 +1,6 @@
+
+set disassembly-flavor intel
+target remote 127.0.0.1:7000
+disassemble $rip, +30
+display/i $pc
+

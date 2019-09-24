@@ -25,21 +25,28 @@ FILESYSTEM_RELATIVE_PATH := ./vm/filesystem
 CURDIR := $(shell cd)
 
 
-# QEMU := ./vm/qemu/qemu-system-x86_64.exe
-# QEMU_ARGS := -S -gdb tcp:127.0.0.1:7000 -debugcon stdio -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "./vm/OVMF/ovmf-x64/OVMF-pure-efi.fd" -net none -hda "./VM/boot_image.vhd"
+#QEMU := qemu-system-x86_64.exe
+#QEMU_RELATIVE_PATH := ./vm/qemu
+#QEMU_ARGS := -S -gdb $\
+#	tcp:127.0.0.1:7000 -debugcon stdio $\
+#	-L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g $\
+#	--bios "../OVMF/ovmf-x64/OVMF-pure-efi.fd" -net none $\
+#	-hda "$(CURDIR)\$(TARGET)"
 
 
 .PHONY: clean all
 
-all: clean run
+all: run
 
 clean:
 	@echo cleaning...
+	@del $(TARGET)
 	@cd $(BUILD_RELATIVE_PATH_OSLOADER) && $(MAKE) clean
 	@cd $(BUILD_RELATIVE_PATH_KERNEL) && $(MAKE) clean
 
 # Starts a virtual machine.
 run: image
+#	@cd $(QEMU_RELATIVE_PATH) && $(QEMU) $(QEMU_ARGS)
 
 image: $(TARGET)
 
@@ -49,6 +56,7 @@ $(TARGET): $(TARGET_OSLOADER) $(TARGET_KERNEL)
 	@copy "$(BUILD_RELATIVE_PATH_OSLOADER)\$(TARGET_OSLOADER)" "$(FILESYSTEM_RELATIVE_PATH)/EFI/BOOT/" /y
 	@copy "$(BUILD_RELATIVE_PATH_KERNEL)\$(TARGET_KERNEL)" "$(FILESYSTEM_RELATIVE_PATH)/EFI/BOOT/" /y
 	$(ZIPIMAGE) "$(FILESYSTEM_RELATIVE_PATH)/EFI/BOOT/init.bin" "$(FILESYSTEM_RELATIVE_PATH)/EFI/BOOT/init"
+	@del $(TARGET)
 	$(POWERSHELL) -ExecutionPolicy RemoteSigned -File $(BOOTIMGCREATE) -BootImagePath "$(CURDIR)\$(TARGET)" -FilesystemContentsPath "$(FILESYSTEM_RELATIVE_PATH)"
 
 # Loader build.
