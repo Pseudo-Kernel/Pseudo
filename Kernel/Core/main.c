@@ -57,6 +57,8 @@ KiKernelStart(
 
 	DbgInitialize(TraceLevelDebug);
 
+//	DbgHardwareBreak();
+
 	DbgTraceF(TraceLevelDebug, "%s (%p, %p, %X, %p)\n",
 		__FUNCTION__, LoadedBase, LoaderBlock, SizeOfLoaderBlock, Reserved);
 

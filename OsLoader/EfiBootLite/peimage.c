@@ -244,6 +244,7 @@ OslPeLoadImage(
 	UINTN SizeOfImage;
 	UINTN SizeOfHeaders;
 	EFI_PHYSICAL_ADDRESS BaseAddress;
+	EFI_STATUS AllocationStatus;
 
 	UINTN i;
 
@@ -280,10 +281,20 @@ OslPeLoadImage(
 
 	DTRACEF(&OslLoaderBlock, L"SizeOfImage = 0x%lX\r\n", SizeOfImage);
 
-	if (EfiAllocatePages(SizeOfImage, &BaseAddress) != EFI_SUCCESS)
+	BaseAddress = Nt->Nt64.OptionalHeader.ImageBase;
+	AllocationStatus = EfiAllocatePages(SizeOfImage, &BaseAddress, TRUE);
+
+	if (AllocationStatus != EFI_SUCCESS)
 	{
-		DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages\r\n");
-		return 0;
+		DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages at Preferred Base 0x%p\r\n", BaseAddress);
+		// Not a failure, keep going
+
+		AllocationStatus = EfiAllocatePages(SizeOfImage, &BaseAddress, FALSE);
+		if(AllocationStatus != EFI_SUCCESS)
+		{
+			DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages\r\n");
+			return 0;
+		}
 	}
 
 	gBS->SetMem((void *)BaseAddress, SizeOfImage, 0);

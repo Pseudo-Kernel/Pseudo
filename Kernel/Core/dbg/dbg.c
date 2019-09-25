@@ -79,3 +79,28 @@ DbgInitialize(
 	return TRUE;
 }
 
+__attribute__((naked))
+VOID
+KERNELAPI
+DbgHardwareBreak(
+	VOID)
+{
+	// 
+	// DR0 -> RW0=00 L0=1 G0=1 LEN0=00
+	//     -> DR7[17:16]=00 DR7[0]=1 DR7[1]=1 DR7[19:18]=00
+	//     -> Mask 1111 0000 0000 0000 0011 = 0xf0003
+	//     -> Value 0000 0000 0000 0000 0011 = 0x00003
+	// 
+
+	// We'll use DR0 for QEMU break
+	__asm__ __volatile__ (
+		"lea rax, qword ptr [__DbgBreakOn]\n\t"
+		"mov dr0, rax\n\t"
+		"mov rax, dr7\n\t"
+		"and rax, not 0xf0003\n\t"
+		"or rax, 0x03\n\t"
+		"mov dr7, rax\n\t"
+		"__DbgBreakOn:\n\t"
+		"ret\n\t"
+	);
+}

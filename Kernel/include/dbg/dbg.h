@@ -45,6 +45,11 @@ DbgTrace(
 	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *TraceMessage);
 
+VOID
+KERNELAPI
+DbgHardwareBreak(
+	VOID);
+
 #define	DASSERT(_expr)	{	\
 	if(!(_expr))	{	\
 		DbgTraceF(TraceLevelDebug,	\

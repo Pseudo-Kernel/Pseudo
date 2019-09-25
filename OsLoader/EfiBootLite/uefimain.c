@@ -80,13 +80,13 @@ OslInitializeLoaderBlock(
 	LoaderBlock->Base.BootServices = SystemTable->BootServices;
 	LoaderBlock->Base.RuntimeServices = SystemTable->RuntimeServices;
 
-	Status = EfiAllocatePages(TempSize, &TempBase);
+	Status = EfiAllocatePages(TempSize, &TempBase, FALSE);
 	if (Status != EFI_SUCCESS)
 		return Status;
 
 	gBS->SetMem((void *)TempBase, TempSize, 0);
 
-	Status = EfiAllocatePages(ShadowSize, &ShadowBase);
+	Status = EfiAllocatePages(ShadowSize, &ShadowBase, FALSE);
 	if (Status != EFI_SUCCESS)
 		return Status;
 
@@ -95,7 +95,7 @@ OslInitializeLoaderBlock(
 		*((CHAR8 *)ShadowBase + Offset) = *((CHAR8 *)0 + Offset);
 
 
-	Status = EfiAllocatePages(KernelStackSize, &KernelStackBase);
+	Status = EfiAllocatePages(KernelStackSize, &KernelStackBase, FALSE);
 	if (Status != EFI_SUCCESS)
 		return Status;
 
@@ -126,11 +126,25 @@ EFI_STATUS
 EFIAPI
 EfiAllocatePages(
 	IN UINTN Size, 
-	OUT EFI_PHYSICAL_ADDRESS *Address)
+	IN OUT EFI_PHYSICAL_ADDRESS *Address, 
+	IN BOOLEAN AddressSpecified)
 {
-	EFI_PHYSICAL_ADDRESS TargetAddress = (EFI_PHYSICAL_ADDRESS)0xffff0000;
-	EFI_STATUS Status = gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, 
-		EFI_SIZE_TO_PAGES(Size), &TargetAddress);
+	EFI_PHYSICAL_ADDRESS TargetAddress;
+	EFI_ALLOCATE_TYPE AllocateType;
+	EFI_STATUS Status;
+
+	if (AddressSpecified)
+	{
+		TargetAddress = *Address;
+		AllocateType = AllocateAddress;
+	}
+	else
+	{
+		TargetAddress = (EFI_PHYSICAL_ADDRESS)0xffff0000;
+		AllocateType = AllocateMaxAddress;
+	}
+	
+	Status = gBS->AllocatePages(AllocateType, EfiLoaderData, EFI_SIZE_TO_PAGES(Size), &TargetAddress);
 
 	if (Status == EFI_SUCCESS)
 		*Address = TargetAddress;
@@ -680,7 +694,7 @@ OslQuerySwitchVideoModes(
 			break;
 		}
 
-		if (EfiAllocatePages(VideoModeBufferLength, &VideoModeBuffer)
+		if (EfiAllocatePages(VideoModeBufferLength, &VideoModeBuffer, FALSE)
 			!= EFI_SUCCESS)
 			break;
 

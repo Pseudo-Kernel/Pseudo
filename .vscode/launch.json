@@ -8,7 +8,8 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/VM/Filesystem/EFI/BOOT/BOOTx64.efi",
+//            "program": "${workspaceFolder}/VM/Filesystem/EFI/BOOT/BOOTx64.efi",
+            "program": "${workspaceFolder}/VM/Filesystem/EFI/BOOT/Core.sys",
             "args": [
                 "--nx", "--nh"
             ],
