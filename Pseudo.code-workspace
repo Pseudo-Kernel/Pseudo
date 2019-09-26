@@ -1,0 +1,56 @@
+{
+	"folders": [
+		{
+			"name": "Kernel",
+			"path": "./Source/Kernel",
+		},
+		{
+			"name": "OsLoader",
+			"path": "./Source/OsLoader/EfiBootLite",
+		},
+		{
+			"name": "TestExec",
+			"path": "TestExec",
+		},
+	],
+
+	"settings": {
+		"terminal.integrated.shell.windows": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+		"terminal.integrated.windowsEnableConpty": false,
+		"terminal.integrated.env.windows": {
+			"PATH": "${env:PATH};D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin;"
+		},
+
+		"files.exclude": {
+			"**/*.s": true,
+			"**/*.i": true,
+			"**/*.d": true,
+			"**/*.o": true,
+			"**/*.vcxproj*": true,
+	
+			"__*": true,
+			"Fonts": true,
+			"Utility": true,
+		},
+
+		"C_Cpp.default.cStandard": "c11",
+		"C_Cpp.default.intelliSenseMode": "gcc-x64",
+		"files.associations": {
+			"osloader.h": "c"
+		},
+	},
+
+//	"launch": {
+//		"version": "0.2.0",
+//		"configurations": [ ],
+//		"compounds": [
+//			{
+//				"name": "Total",
+//				"configurations": [
+//					"Start Virtual Machine",
+//					"(gdb) Launch",
+//				]
+//			}
+//		],
+//	},
+}

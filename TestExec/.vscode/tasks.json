@@ -1,0 +1,41 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Clean",
+            "type": "shell",
+            "command": [ "make clean", ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build All",
+            "type": "shell",
+            "command": [ "make all", ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Start Virtual Machine",
+            "type": "shell",
+            "command": "Start-Process",
+            "args": [
+                "-FilePath", "./qemu/qemu-system-x86_64.exe", 
+                // QEMU args
+                "-S -gdb tcp:127.0.0.1:7000 -debugcon stdio -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios \"./OVMF/ovmf-x64/OVMF-pure-efi.fd\" -net none -hda \"vm.vhd\"",
+            ],
+//            "isBackground": true,
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": "Build All",
+        },
+    ]
+}
