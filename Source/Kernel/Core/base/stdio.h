@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stddef.h>
-#include <stdarg.h>
+#include <base/stddef.h>
+#include <base/stdarg.h>
 
 //#pragma intrinsic(memset, memcmp, memcpy)
 #pragma intrinsic(strcpy, strlen, strcmp, strcat)

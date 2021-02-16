@@ -1,5 +1,8 @@
 {
     "C_Cpp.default.systemIncludePath": [
-        "${workspaceFolder:Kernel}/include",
+        "${workspaceFolder}/core/**",
     ],
+    "cmake.configureSettings": {
+        "CMAKE_C_COMPILER": "gcc",
+    },
 }

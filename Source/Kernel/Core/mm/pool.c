@@ -1,7 +1,7 @@
 
-#include <Base.h>
-#include <Ke/ke.h>
-#include <Mm/pool.h>
+#include <base/base.h>
+#include <ke/ke.h>
+#include <mm/pool.h>
 
 
 POOL_BLOCK_LIST MiPoolList[PoolTypeMaximum];

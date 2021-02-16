@@ -1,10 +1,10 @@
 
-#include <Base.h>
+#include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 #include <init/zip.h>
-#include <Mm/pool.h>
-#include <Mm/mminit.h>
+#include <mm/pool.h>
+#include <mm/mminit.h>
 
 typedef struct _MMPAGE {
 	U64 Vpn;

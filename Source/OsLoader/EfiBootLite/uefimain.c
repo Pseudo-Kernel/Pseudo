@@ -914,11 +914,6 @@ UefiMain(
 	EFI_STATUS Status;
 
 	//
-	// FIXME : QEMU with gdb does not break when normal breakpoint is hit
-	//         maybe hardware breakpoint will work...
-	//
-
-	//
 	// Initialize the global structures.
 	//
 
@@ -1057,7 +1052,7 @@ UefiMain(
 	}
 
 	//
-	// Query the memory map once again because memory map must be changed by other calls.
+	// Query the memory map once again because memory map may change by calling other UEFI service calls.
 	//
 
 	Status = OslMmQueryMemoryMap(&OslLoaderBlock);

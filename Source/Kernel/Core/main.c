@@ -1,5 +1,5 @@
 
-#include <Base.h>
+#include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 
@@ -64,8 +64,6 @@ KiKernelStart(
 
 	SafeStackTop = LoaderBlock->LoaderData.KernelStackBase + LoaderBlock->LoaderData.StackSize - 0x10;
 	PiPreStackSwitch(LoaderBlock, SizeOfLoaderBlock, (PVOID)SafeStackTop);
-
-
 
 	for (;;)
 	{

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Arch/Arch.h>
-#include <Compiler.h>
-#include <Macros.h>
+#include <arch/arch.h>
+#include <base/compiler.h>
+#include <base/macros.h>
 
 
 //#include <x86intrin.h> // Part of GCC
@@ -24,13 +24,13 @@ typedef	struct _GUID {
 } GUID, *PGUID;
 
 
-#include <Firmware.h>
-#include <OsLoader.h>
-#include <stdio.h>
+#include <base/firmware.h>
+#include <base/osloader.h>
+#include <base/stdio.h>
 #include <init/preinit.h>
 
-#include <Misc/misc.h>
+#include <misc/misc.h>
 #include <dbg/dbg.h>
-#include <Ke/ke.h>
+#include <ke/ke.h>
 
 
