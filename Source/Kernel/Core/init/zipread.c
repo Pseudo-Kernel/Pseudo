@@ -158,7 +158,6 @@ ZipInternalAccessibleRange(
 	IN U32 Offset,
 	IN U32 Length)
 {
-	U64 RangeStart = Offset;
 	U64 RangeEnd = Offset + Length;
 
 	// [0, BufferLength-1], [Offset, Offset+Length-1]

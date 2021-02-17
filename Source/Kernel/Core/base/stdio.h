@@ -4,8 +4,8 @@
 #include <base/stdarg.h>
 
 //#pragma intrinsic(memset, memcmp, memcpy)
-#pragma intrinsic(strcpy, strlen, strcmp, strcat)
-#pragma intrinsic(wcscpy, wcslen, wcscmp, wcscat)
+//#pragma intrinsic(strcpy, strlen, strcmp, strcat)
+//#pragma intrinsic(wcscpy, wcslen, wcscmp, wcscat)
 
 #define is_digit(c) ((c) >= '0' && (c) <= '9')
 

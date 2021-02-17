@@ -177,7 +177,7 @@ MmAllocatePool(
 	PDLIST_ENTRY ListHead;
 	PDLIST_ENTRY ListCurrent;
 	SIZE_T AlignedSize;
-	U8 AlignmentShift;
+	U8 AlignmentShift = 0;
 
 	PPOOL_HEADER BlockHeader;
 	UPTR BlockAddress = 0;

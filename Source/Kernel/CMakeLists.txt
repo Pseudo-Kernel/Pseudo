@@ -68,7 +68,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 # Compile options.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -save-temps -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O3 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.
 # Native application (Base=0x400000, Subsystem=Native, EntryPoint=KiKernelStart)

@@ -332,7 +332,7 @@ ClDbgHex(
 	CHAR8 Buffer[65], *p;
 	FormatHelper_ValueToStringU8(Buffer, ARRAY_SIZE(Buffer) - 1, 0, 0, Value, 16, 0);
 
-	for (p = Buffer; *p; *p++)
+	for (p = Buffer; *p; p++)
 		__PseudoIntrin_OutPort8(0xe9, *p);
 
 	__PseudoIntrin_OutPort8(0xe9, '\n');
@@ -379,7 +379,6 @@ ClStrFormatU8V(
 		} while (0)
 
 	SIZE_T OutputLength = 0;
-	SIZE_T InputLength = 0;
 
 	CHAR8 *s = Format;
 	CHAR8 *d = Buffer;
@@ -391,7 +390,6 @@ ClStrFormatU8V(
 
 		SIZE_T Width = 0;
 		SIZE_T PrecisionWidth = 0;
-		SIZE_T VarSize = 0;
 		SIZE_T i;
 
 		BOOLEAN Integer = TRUE;

@@ -14,25 +14,25 @@
 #define	PSEUDO_INTRINSIC_INPORT(_fn_postfix, _type_val)	\
 	__PSEUDO_INTRINSIC(_type_val, InPort##_fn_postfix)	\
 	(unsigned __int16 Port)	{							\
-		_type_val Value = 0;							\
+		_type_val Value = 0;					   		\
 	    __asm__ __volatile__ (							\
 	        "in %0, %1\n\t"								\
-	        : "=r"(Value)								\
-	        : "r"(Port)									\
+	        : "=a"(Value)								\
+	        : "d"(Port)									\
     	    : /*"memory"*/								\
-    	);												\
-		return Value;									\
+    	);											      	\
+		return Value;									   \
 	}
 
 #define	PSEUDO_INTRINSIC_OUTPORT(_fn_postfix, _type_val)	\
-	__PSEUDO_INTRINSIC(_type_val, OutPort##_fn_postfix)		\
-	(unsigned __int16 Port, _type_val Value) {				\
+	__PSEUDO_INTRINSIC(void, OutPort##_fn_postfix)  	\
+	(unsigned __int16 Port, _type_val Value) {			\
 	    __asm__ __volatile__ (								\
 	        "out %0, %1\n\t"								\
-	        :												\
-	        : "r"(Port), "r"(Value)							\
+	        :											   	\
+	        : "d"(Port), "a"(Value)						\
     	    : /*"memory"*/									\
-    	);													\
+    	);													      \
 	}
 
 #define	PSEUDO_INTRINSIC_INPORT_BUFFER(_fn_postfix, _type_val, _inst_postfix)	\

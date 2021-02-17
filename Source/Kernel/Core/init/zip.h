@@ -182,12 +182,6 @@ ZipInitializeReaderContext(
 	IN PVOID Buffer,
 	IN U32 BufferLength);
 
-static
-BOOLEAN
-KERNELAPI
-ZipInitializeParse(
-	IN ZIP_CONTEXT *ZipContext);
-
 U32
 KERNELAPI
 ZipSetOffset(

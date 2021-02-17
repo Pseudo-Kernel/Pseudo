@@ -1,15 +1,8 @@
 {
     "C_Cpp.default.systemIncludePath": [
-        "${workspaceFolder:OsLoader}/EfiBootLite/include",
+        "${workspaceFolder}/EfiBootLite/include",
     ],
     "cmake.configureSettings": {
         "CMAKE_C_COMPILER": "gcc",
-
-        // NOTE : add -pedantic option to see warnings if you want.
-//        "CMAKE_C_FLAGS": "-masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -std=c11",
-        //"CMAKE_C_FLAGS": "-masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11",
-
-        // UEFI application (Base=0x200000, Subsystem=UEFIApplication, EntryPoint=UefiMain)
-//        "CMAKE_EXE_LINKER_FLAGS": "-Wl,--dll,--shared,--exclude-all-symbols,--image-base,0x200000,--dynamicbase,--subsystem,10,-eUefiMain -fstack-check=no",
     },
 }

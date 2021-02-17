@@ -16,19 +16,25 @@ set(ZIPIMAGE zipimage.exe)
 set(BOOTIMGCREATE boot_image.ps1)
 set(QEMU qemu-system-x86_64.exe)
 
-# Set our target.
-set(TARGET_IMAGE vm.vhd)                  # Our OS filesystem image name
-set(TARGET_KERNEL core.sys)         # Our kernel binary name (same as $(BUILD_RELATIVE_PATH_KERNEL)/)
-set(TARGET_OSLOADER BOOTx64.efi)    # Our efi bootloader binary name (same as $(BUILD_RELATIVE_PATH_OSLOADER)/makefile)
+# Set our build target.
+# Must be equal to target name which is described in (subdirectory path)/CMakeLists.txt (see add_executable() argument!)
+set(BUILD_TARGET_KERNEL Kernel)
+set(BUILD_TARGET_OSLOADER Osloader)
+
+# Set our target filename (outputs).
+set(TARGET_IMAGE_FILE vm.vhd)            # Our OS filesystem image name
+set(TARGET_KERNEL_FILE core.sys)         # Our kernel binary name (same as $(BUILD_RELATIVE_PATH_KERNEL)/)
+set(TARGET_OSLOADER BOOTx64.efi)         # Our efi bootloader binary name (same as $(BUILD_RELATIVE_PATH_OSLOADER)/makefile)
+
 
 # Path of CMakeLists.txt
 set(LIST_PATH_KERNEL ${CURDIR}/../source/kernel)        # CMakeLists.txt path for Kernel project
 set(LIST_PATH_OSLOADER ${CURDIR}/../source/osloader)    # CMakeLists.txt path for OsLoader project
 
 # kernel binary path.
-set(TARGET_PATH_KERNEL ${LIST_PATH_KERNEL}/build/${TARGET_KERNEL})
+set(TARGET_PATH_KERNEL ${LIST_PATH_KERNEL}/build/${TARGET_KERNEL_FILE})
 # osloader binary path.
-set(TARGET_PATH_OSLOADER ${LIST_PATH_OSLOADER}/build/${TARGET_OSLOADER})
+set(TARGET_PATH_OSLOADER ${LIST_PATH_OSLOADER}/build/${TARGET_OSLOADER_FILE})
 
 # Filesystem image work path.
 set(FILESYSTEM_PATH ${CURDIR}/filesystem)
@@ -38,15 +44,15 @@ add_subdirectory(${LIST_PATH_OSLOADER} ${LIST_PATH_OSLOADER}/build)
 add_subdirectory(${LIST_PATH_KERNEL} ${LIST_PATH_KERNEL}/build)
 
 # Diskpart only accepts backslash as path separator.
-set(DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH ${CURDIR}\\${TARGET_IMAGE})
+set(DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH ${CURDIR}\\${TARGET_IMAGE_FILE})
 string(REPLACE "/" "\\" DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}")
 
 
 add_custom_command(
     OUTPUT
-        ${TARGET_IMAGE}                                     # Our target VM image
-        "${FILESYSTEM_PATH}/efi/boot/${TARGET_OSLOADER}"    # Our target Osloader binary
-        "${FILESYSTEM_PATH}/efi/boot/${TARGET_KERNEL}"      # Our target Kernel binary
+        ${TARGET_IMAGE_FILE}                                # Our target VM image
+        "${FILESYSTEM_PATH}/efi/boot/${TARGET_OSLOADER_FILE}"    # Our target Osloader binary
+        "${FILESYSTEM_PATH}/efi/boot/${TARGET_KERNEL_FILE}"      # Our target Kernel binary
 
     # Copy binaries to filesystem path.
     COMMAND ${CMAKE_COMMAND} -E copy "${TARGET_PATH_OSLOADER}" "${FILESYSTEM_PATH}/efi/boot/"
@@ -61,17 +67,23 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E rm -f "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}"
     COMMAND ${POWERSHELL} -ExecutionPolicy RemoteSigned -File ${BOOTIMGCREATE} -BootImagePath "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}" -FilesystemContentsPath "${FILESYSTEM_PATH}"
     WORKING_DIRECTORY "${CURDIR}"
-    DEPENDS "${TARGET_PATH_OSLOADER}" "${TARGET_PATH_KERNEL}"
+#    DEPENDS "${TARGET_PATH_OSLOADER}" "${TARGET_PATH_KERNEL}"
     COMMENT "Creating a VM image..."
 )
 
-add_custom_target(Pseudo_VMImage ALL DEPENDS ${TARGET_IMAGE})
+# Finally add our target for VM image.
+add_custom_target(${PROJECT_NAME} ALL DEPENDS ${TARGET_IMAGE_FILE})
+
+# Add dependency to our VM image build.
+# Build Osloader and Kernel first.
+add_dependencies(${PROJECT_NAME} ${BUILD_TARGET_OSLOADER} ${BUILD_TARGET_KERNEL})
+
 
 # Start our VM.
 #add_custom_command(
-#    TARGET Pseudo_VMImage
+#    TARGET ${PROJECT_NAME}
 #    POST_BUILD
-#    COMMAND "${CURDIR}/QEMU/${QEMU}" -S -gdb tcp:127.0.0.1:7000 -debugcon stdio -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "./OVMF/ovmf-x64/OVMF-pure-efi.fd" -net none -hda ${TARGET_IMAGE}
+#    COMMAND "${CURDIR}/QEMU/${QEMU}" -S -gdb tcp:127.0.0.1:7000 -debugcon stdio -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios "./OVMF/ovmf-x64/OVMF-pure-efi.fd" -net none -hda ${TARGET_IMAGE_FILE}
 #    WORKING_DIRECTORY "${CURDIR}"
 #    COMMENT "Starting VM..."
 #    VERBATIM)

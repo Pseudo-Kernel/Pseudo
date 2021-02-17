@@ -546,8 +546,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 # NOTE : add -pedantic option to see warnings if you want.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -std=c11)
-#    PRIVATE -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O3 -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -std=c11)
+#    PRIVATE -O3 -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.
 # UEFI application (Base=0x200000, Subsystem=UEFIApplication, EntryPoint=UefiMain)

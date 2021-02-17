@@ -281,9 +281,7 @@ BootFonLookupFont(
 	for (TypeInfo = (FON_TYPEINFO_BLOCK *)(ResourceTable + 1); ; )
 	{
 		FON_TYPE_ENTRY *Type = (FON_TYPE_ENTRY *)(TypeInfo + 1);
-		U8 TypeOrNameLength = 0;
 		CHAR8 *String1 = NULL;
-		CHAR8 *TypeOrNameString = NULL;
 
 		// Is end of the table?
 		if (!TypeInfo->TypeId)

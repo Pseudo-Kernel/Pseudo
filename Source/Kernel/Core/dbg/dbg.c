@@ -14,8 +14,6 @@ DbgpNormalTraceN(
 	IN CHAR8 *TraceMessage, 
 	IN SIZE_T Length)
 {
-	CHAR8 *p = TraceMessage;
-
 	if (TraceLevel < DbgPrintTraceLevel)
 		return FALSE;
 
