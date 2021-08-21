@@ -40,22 +40,24 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-//            "program": "${workspaceFolder}/Filesystem/EFI/BOOT/BOOTx64.efi",
-//            "program": "${workspaceFolder}/Filesystem/EFI/BOOT/Core.sys",
-            "program": "${command:cmake.launchTargetPath}",//"${workspaceFolder}/Filesystem/EFI/BOOT/Core.sys",
+            "program": "${workspaceFolder}/Filesystem/EFI/BOOT/BOOTx64.efi",
+            "showDisplayString": true,
+//            "program": "${command:cmake.launchTargetPath}",
             "args": [
                 "--nx", "--nh"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": false,
+            "externalConsole": true, // true
             "MIMode": "gdb",
             "miDebuggerPath": "D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\gdb.exe",
+            "targetArchitecture": "x86_64",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
@@ -68,19 +70,12 @@
                     "text": "set remotetimeout 30",
                 },
                 {
-                    "description": "Let's assume target arch is x86-64.",
-                    "text": "set arch i386:x86-64:intel",
-                },
-                {
                     "description": "Set disassembly syntax to intel-style",
                     "text": "set disassembly-flavor intel",
                 },
 //                {
 //                    "text": "display x/7i $pc-16",
 //                },
-                {
-                    "text": "hb UefiMain",
-                },
                 {
                     "description": "Connect to remote target (QEMU)",
                     "text": "target remote 127.0.0.1:7000",
@@ -89,18 +84,13 @@
                     "description": "Show disassembled instruction from PC",
                     "text": "disassemble $pc, +30",
                 },
-//                {
-//                    // FIXME: Need to replace '\' to '/' because GDB likes linux-style path
-//                    //        rather than windows-style ...
-//                    "text": "file '${workspaceFolder}/Filesystem/EFI/BOOT/BOOTx64.efi'",
-//                    "ignoreFailures": true
-//                },
-//                {
-//                    // FIXME: Need to replace '\' to '/' because GDB likes linux-style path
-//                    //        rather than windows-style ...
-//                    "text": "file '${workspaceFolder}/Filesystem/EFI/BOOT/Core.sys'",
-//                    "ignoreFailures": true
-//                },
+                {
+                    // Add additional symbol file here...
+                    
+                    // add-symbol-file <path> <textaddress>
+                    //"text": "add-symbol-file '${workspaceFolder}/Filesystem/EFI/BOOT/Core.sys' 0x401000",
+                    "text": "add-symbol-file 'D:/Repository/Pseudo/TestExec/Filesystem/EFI/BOOT/Core.sys' 0x401000",
+                },
             ],
             "preLaunchTask": "Start Virtual Machine",
         },

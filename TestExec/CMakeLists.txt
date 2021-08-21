@@ -24,7 +24,7 @@ set(BUILD_TARGET_OSLOADER Osloader)
 # Set our target filename (outputs).
 set(TARGET_IMAGE_FILE vm.vhd)            # Our OS filesystem image name
 set(TARGET_KERNEL_FILE core.sys)         # Our kernel binary name (same as $(BUILD_RELATIVE_PATH_KERNEL)/)
-set(TARGET_OSLOADER BOOTx64.efi)         # Our efi bootloader binary name (same as $(BUILD_RELATIVE_PATH_OSLOADER)/makefile)
+set(TARGET_OSLOADER_FILE BOOTx64.efi)    # Our efi bootloader binary name (same as $(BUILD_RELATIVE_PATH_OSLOADER)/makefile)
 
 
 # Path of CMakeLists.txt

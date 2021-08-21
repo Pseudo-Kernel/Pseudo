@@ -119,13 +119,14 @@ OslMmDumpMemoryMap(
 
 	for (i = 0; i < MapCount; i++)
 	{
-		CHAR16 TypeString[26 + 1];
+		CHAR16 TypeString[26 + 1] = { 0 };
 		UINTN Length;
 		EFI_MEMORY_DESCRIPTOR *MapEntry = (EFI_MEMORY_DESCRIPTOR *)((INT8 *)Map + i * DescriptorSize);
 
 		#define	CASE_COPY_STRING(_copy_to, _val_name)	\
 			case _val_name:								\
-				StrFormat(TypeString, ARRAY_SIZE(TypeString), L"%s", ASCII(_val_name));\
+				Length = StrFormat(TypeString, ARRAY_SIZE(TypeString), L"%s", ASCII(_val_name));\
+				StrTerminate(TypeString, ARRAY_SIZE(TypeString), Length);\
 				break;
 
 		switch (MapEntry->Type)
