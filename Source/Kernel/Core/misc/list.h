@@ -11,28 +11,28 @@ typedef struct _DLIST_ENTRY {
 
 VOID
 KERNELAPI
-InitializeDListHead(
+DListInitializeHead(
 	IN PDLIST_ENTRY Head);
 
 VOID
 KERNELAPI
-InsertDListAfter(
+DListInsertAfter(
 	IN PDLIST_ENTRY Head,
 	IN PDLIST_ENTRY Entry);
 
 VOID
 KERNELAPI
-InsertDListBefore(
+DListInsertBefore(
 	IN PDLIST_ENTRY Head,
 	IN PDLIST_ENTRY Entry);
 
 BOOLEAN
 KERNELAPI
-IsDListEmpty(
+DListIsEmpty(
 	IN PDLIST_ENTRY Head);
 
 VOID
 KERNELAPI
-RemoveDListEntry(
+DListRemoveEntry(
 	IN PDLIST_ENTRY Entry);
 

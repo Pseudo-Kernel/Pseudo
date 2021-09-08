@@ -38,15 +38,19 @@
 #define	FALSE				(0 == 1)
 #endif // !FALSE
 
+#define KEXPORT
+
+
 #define	ARRAY_SIZE(_x)		( sizeof((_x)) / sizeof((_x)[0]) )
 
 #define	ASSERT(_x)			if(!(_x)) { for(;;); } //BootGfxFatalStop("ASSERTION FAILED!"); }
 #define C_ASSERT(_x)		typedef char __C_ASSERT__[(_x)?1:-1]
 
-
+#define COUNTOF(_x)         (sizeof(_x) / sizeof((_x)[0]))
 
 #define	FIELD_OFFSET(_type, _field)					( (UPTR)(&((_type *)0)->_field) )
 #define	CONTAINING_RECORD(_addr, _type, _field)		( (_type *)((UPTR)(_addr) - FIELD_OFFSET(_type, _field)) )
+
 
 
 //

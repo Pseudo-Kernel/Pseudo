@@ -4,7 +4,7 @@
 
 VOID
 KERNELAPI
-InitializeDListHead(
+DListInitializeHead(
 	IN PDLIST_ENTRY Head)
 {
 	// Before : ? - Head - ?
@@ -15,18 +15,10 @@ InitializeDListHead(
 
 VOID
 KERNELAPI
-InsertDListAfter(
+DListInsertAfter(
 	IN PDLIST_ENTRY Head,
 	IN PDLIST_ENTRY Entry)
 {
-	// Entry  : ... - EntryPrev - Entry - EntryNext - ...
-	// Before : Prev - Head - Next
-	// After  : Prev - Head - [Entry - EntryNext - ... - EntryPrev] - Next
-	//
-	// Entry  : ... - 10 -  0 -  1 - ...
-	// Before : ... - 19 - 20 - 11 - ...
-	// After  : ... - 19 - 20 -[ 0 - ... - 10]- 11 - ...
-
 	PDLIST_ENTRY HeadNext = Head->Next;
 	PDLIST_ENTRY EntryPrev = Entry->Prev;
 
@@ -39,14 +31,10 @@ InsertDListAfter(
 
 VOID
 KERNELAPI
-InsertDListBefore(
+DListInsertBefore(
 	IN PDLIST_ENTRY Head,
 	IN PDLIST_ENTRY Entry)
 {
-	// Entry  : ... - EntryPrev - Entry - EntryNext - ...
-	// Before : Prev - Head - Next
-	// After  : Prev - [Entry - EntryNext - ... - EntryPrev] - Head - Next
-
 	PDLIST_ENTRY HeadPrev = Head->Prev;
 	PDLIST_ENTRY EntryPrev = Entry->Prev;
 
@@ -59,7 +47,7 @@ InsertDListBefore(
 
 BOOLEAN
 KERNELAPI
-IsDListEmpty(
+DListIsEmpty(
 	IN PDLIST_ENTRY Head)
 {
 	if (Head->Next == Head->Prev)
@@ -73,7 +61,7 @@ IsDListEmpty(
 
 VOID
 KERNELAPI
-RemoveDListEntry(
+DListRemoveEntry(
 	IN PDLIST_ENTRY Entry)
 {
 	// Before : ... - Prev - Entry - Next - ... 

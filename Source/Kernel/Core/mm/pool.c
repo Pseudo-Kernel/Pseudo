@@ -129,7 +129,7 @@ MiLinkPoolBlock(
 		return FALSE;
 
 	POOL_ASSERT( KeIsSpinLockAcquired(&BlockList->Lock) );
-	InsertDListBefore(&BlockList->BlockListHead, &BlockHeader->BlockList);
+	DListInsertBefore(&BlockList->BlockListHead, &BlockHeader->BlockList);
 
 	return TRUE;
 }
@@ -153,13 +153,13 @@ MiInitializePoolBlockList(
 	PoolObject->AreaSize = AreaSize;
 	PoolObject->Flags = Flags;
 
-	InitializeDListHead(&PoolObject->BlockListHead);
+	DListInitializeHead(&PoolObject->BlockListHead);
 
 	// Initialize the first free.
 	FirstHeader = (PPOOL_HEADER)AreaStart;
 	MiInitializePoolHeader(FirstHeader, TAG4('I', 'N', 'I', 'T'), 0, 0, AreaSize - sizeof(POOL_HEADER), 0);
-	InitializeDListHead(&FirstHeader->BlockList);
-	InsertDListBefore(&PoolObject->BlockListHead, &FirstHeader->BlockList);
+	DListInitializeHead(&FirstHeader->BlockList);
+	DListInsertBefore(&PoolObject->BlockListHead, &FirstHeader->BlockList);
 	MiUpdatePoolHeaderChecksum(FirstHeader);
 
 	return TRUE;
@@ -251,8 +251,8 @@ MmAllocatePool(
 			BlockHeader3 = CONTAINING_RECORD(BlockHeader->BlockList.Next, POOL_HEADER, BlockList);
 
 		MiInitializePoolHeader(BlockHeader2, Tag, Size, (U32)(AlignedSize - Size), BlockSizeUnused, AlignmentShift);
-		InitializeDListHead(&BlockHeader2->BlockList);
-		InsertDListAfter(&BlockHeader->BlockList, &BlockHeader2->BlockList);
+		DListInitializeHead(&BlockHeader2->BlockList);
+		DListInsertAfter(&BlockHeader->BlockList, &BlockHeader2->BlockList);
 
 		// Set previous header.
 		BlockHeader->BlockSizeUnused = BlockHeaderNext
@@ -397,7 +397,7 @@ MmFreePool(
 		BlockRangeTemp = POOL_BLOCK_END(BlockHeaderTemp) - (UPTR)BlockHeaderTemp;
 		ListCurrent = ListCurrent->Next;
 
-		RemoveDListEntry(&BlockHeaderTemp->BlockList);
+		DListRemoveEntry(&BlockHeaderTemp->BlockList);
 
 		// fill the magic number.
 		memset((VOID *)BlockHeaderTemp, 0xee, BlockRangeTemp);

@@ -34,9 +34,11 @@ set(SRC_LIST
     core/init/bootgfx.h
     core/init/preinit.h
     core/init/zip.h
+    core/init/init.h
     core/init/bootgfx.c
     core/init/preinit.c
     core/init/zipread.c
+    core/init/init.c
     # ke
     core/ke/ke.h
     core/ke/lock.h
@@ -45,13 +47,19 @@ set(SRC_LIST
     core/misc/common.h
     core/misc/list.h
     core/misc/misc.h
+    core/misc/bintree.h
     core/misc/common.c
     core/misc/list.c
+    core/misc/bintree.c
     # mm
     core/mm/mminit.h
     core/mm/pool.h
+    core/mm/xadtree.h
+    core/mm/mm.h
     core/mm/mminit.c
     core/mm/pool.c
+    core/mm/xadtree.c
+    core/mm/mm.c
     # root
     core/main.c
     core/stdio.c
