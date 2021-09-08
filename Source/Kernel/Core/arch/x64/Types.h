@@ -46,16 +46,21 @@ typedef unsigned __int64			UPTR64, *PUPTR64;
 typedef PTR64						PTR, *PPTR, **PPPTR;
 typedef SPTR64						SPTR, *PSPTR, **PPSPTR;
 typedef UPTR64						UPTR, *PUPTR, **PPUPTR;
+
+typedef	U64				    		SIZE_T, *PSIZE_T;
+typedef	S64							SSIZE_T, *PSSIZE_T;
 #elif _ARCH_TYPE_ == _ARCH_TYPE_X86_
 typedef PTR32						PTR, *PPTR, **PPPTR;
 typedef SPTR32						SPTR, *PSPTR, **PPSPTR;
 typedef UPTR32						UPTR, *PUPTR, **PPUPTR;
+
+typedef	U32				    		SIZE_T, *PSIZE_T;
+typedef	S32							SSIZE_T, *PSSIZE_T;
 #else
 #error Unknown architecture!
 #endif
 
-typedef	UPTR						SIZE_T, *PSIZE_T;
-typedef	PTR							SSIZE_T, *PSSIZE_T;
+
 
 
 
@@ -63,5 +68,11 @@ typedef	PTR							SSIZE_T, *PSSIZE_T;
 // Other types.
 #ifndef __WINDOWS__
 typedef	U8							BOOLEAN, *PBOOLEAN;
+
+typedef CHAR8                       CHAR, *PCHAR;
+typedef PCHAR                       PSZ;
+typedef S32                         INT;
+typedef U32                         UINT;
+
 #endif
 

@@ -6,6 +6,14 @@
 #define _ARCH_TYPE_X64_                         2
 
 
+#define __STDC_VERSION_C11__                    201112L // ISO/IEC 9899:2011
+#define __STDC_VERSION_C18__                    201710L // ISO/IEC 9899:2018
+
+#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < __STDC_VERSION_C11__)
+#error Compiler must support C11 or higher!
+#endif
+
+
 #ifdef __GNUC__
 #ifdef __i386__
 #define _ARCH_TYPE_                             _ARCH_TYPE_X86_

@@ -2,7 +2,7 @@
 #include <base/base.h>
 #include <init/zip.h>
 
-#define	ZIPTRACE					
+#define	ZIPTRACE(...)
 #define	ZipGetPointer(_zctx)		( (UPTR)((UPTR)(_zctx)->Buffer + (_zctx)->Offset) )
 
 U32

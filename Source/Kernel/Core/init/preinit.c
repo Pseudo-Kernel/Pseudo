@@ -6,13 +6,6 @@
 #include <mm/pool.h>
 #include <mm/mminit.h>
 
-typedef struct _MMPAGE {
-	U64 Vpn;
-	U64 Pfn;
-	U64 Count;
-} MMPAGE, *PMMPAGE;
-
-
 
 OS_LOADER_BLOCK PiLoaderBlockTemporary;
 PREINIT_PAGE_RESERVE PiPageReserve[32]; // Page list which must not be discarded

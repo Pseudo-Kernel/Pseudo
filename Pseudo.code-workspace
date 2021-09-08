@@ -15,7 +15,6 @@
 	],
 
 	"settings": {
-		"terminal.integrated.shell.windows": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
 		"terminal.integrated.windowsEnableConpty": false,
 		"terminal.integrated.env.windows": {
 			// Must include path for Mingw-w64 bin, CMake bin.
@@ -39,5 +38,6 @@
 		"cmake.buildEnvironment": {
 			"VERBOSE": "1"
 		},
+		"editor.detectIndentation": false,
 	},
 }

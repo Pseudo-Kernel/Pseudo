@@ -4,7 +4,7 @@
 
 // http://bytepointer.com/resources/win16_ne_exe_format_win3.0.htm
 
-#define	FONTRACE								//printf
+#define	FONTRACE(...)								//printf
 
 typedef struct _BOOT_GFX {
 	BOOT_GFX_SCREEN Screen;
@@ -281,7 +281,6 @@ BootFonLookupFont(
 	for (TypeInfo = (FON_TYPEINFO_BLOCK *)(ResourceTable + 1); ; )
 	{
 		FON_TYPE_ENTRY *Type = (FON_TYPE_ENTRY *)(TypeInfo + 1);
-		CHAR8 *String1 = NULL;
 
 		// Is end of the table?
 		if (!TypeInfo->TypeId)
@@ -311,8 +310,10 @@ BootFonLookupFont(
 			FONTRACE("Type is 0x%04x\n", TypeInfo->TypeId);
 		}
 
-		if (!(TypeInfo->TypeId & 0x8000))
-			String1 = (CHAR8 *)ResourceTable + TypeInfo->TypeId;
+		//CHAR8 *String1 = NULL;
+        //
+		//if (!(TypeInfo->TypeId & 0x8000))
+		//  String1 = (CHAR8 *)ResourceTable + TypeInfo->TypeId;
 
 		for (i = 0; i < TypeInfo->NumberOfResources; i++)
 		{
