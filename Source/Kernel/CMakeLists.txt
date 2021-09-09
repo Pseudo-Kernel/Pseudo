@@ -56,10 +56,12 @@ set(SRC_LIST
     core/mm/pool.h
     core/mm/xadtree.h
     core/mm/mm.h
+    core/mm/paging.h
     core/mm/mminit.c
     core/mm/pool.c
     core/mm/xadtree.c
     core/mm/mm.c
+    core/mm/paging.c
     # root
     core/main.c
     core/stdio.c

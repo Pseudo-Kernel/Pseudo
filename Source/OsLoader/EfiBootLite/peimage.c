@@ -1,24 +1,26 @@
-/** @file
-	PE32+ File Loader.
-**/
+
+/**
+ * @file peimage.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements PE32+ loader.
+ * @version 0.1
+ * @date 2021-09-10
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
 
 #include "OsLoader.h"
 #include "PeImage.h"
 
 
-//
-// PE image support.
-//
-
 /**
-	Get IMAGE_NT_HEADERS of Image Base.
-
-	@param[in] ImageBase      Base Address of the Image.  
-  
-	@retval Non-NULL          The operation is completed successfully.
-	@retval other             An error occurred during the operation.
-
-**/
+ * @brief Gets IMAGE_NT_HEADERS from image base.
+ * 
+ * @param [in] ImageBase    Image base.
+ * 
+ * @return Non-zero value if succeeds, NULL otherwise.
+ */
 PIMAGE_NT_HEADERS_3264
 EFIAPI
 OslPeImageBaseToNtHeaders(
@@ -39,14 +41,12 @@ OslPeImageBaseToNtHeaders(
 }
 
 /**
-	Determine if the Image Type is AMD64.
-
-	@param[in] NtHeaders      NT Header of the Image.  
-  
-	@retval Not-FALSE         Image Type is AMD64 (x64).
-	@retval FALSE             Not an Image or Image operation.
-
-**/
+ * @brief Determines whether the image type is AMD64.
+ * 
+ * @param [in] NtHeaders    NT header of image.
+ * 
+ * @return TRUE if image type is AMD64, FALSE otherwise.
+ */
 BOOLEAN
 EFIAPI
 OslPeIsImageTypeSupported(
@@ -60,19 +60,19 @@ OslPeIsImageTypeSupported(
 	return FALSE;
 }
 
+
 /**
-	Do Image Fixups.
-
-	@param[in] ImageBase                  Base Address of Image.
-	@param[in] CurrentPreferredBase       Currently Preferred Base Address.
-	@param[in] FixupBase                  New Base Address of Image.
-	@param[in] UseDefaultPreferredBase    If true, Use Preferred Base Address Specified in Header.
-  
-	@retval Non-FALSE                     The operation is completed successfully.
-										Nothing to fixup (Relocation information is not found).
-	@retval FALSE                         An error occurred during the operation.
-
-**/
+ * @brief Do image relocation fixups.
+ * 
+ * @param [in] ImageBase                Image base.
+ * @param [in] CurrentPreferredBase     Currently preferred image base.
+ * @param [in] FixupBase                New base address of image we want to relocate.
+ * @param [in] UseDefaultPreferredBase  If true, default base address is used.
+ * 
+ * @return TRUE     1. The operation is completed successfully.\n
+ *                  2. Nothing to fixup (Relocation information is not found).
+ * @return FALSE    An error occurred during the operation.
+ */
 BOOLEAN
 EFIAPI
 OslPeFixupImage(
@@ -220,17 +220,15 @@ OslPeFixupImage(
 }
 
 /**
-	Loads the PE32+ Image.
-  
-	@param[in] BootServices				Pointer to EFI boot services table.
-	@param[in] FileBuffer                 Buffer which contains file content.
-	@param[in] FileBufferLength           Length of the FileBuffer.
-	@param[out] MappedSize                Size of mapped image.
-
-	@retval Non-NULL                      The operation is completed successfully.
-	@retval NULL                          An error occurred during the operation.
-  
-**/
+ * @brief Loads the PE32+ image.
+ * 
+ * @param [in] FileBuffer           File buffer which contains file content.
+ * @param [in] FileBufferLength     Length of file buffer.
+ * @param [out] MappedSize          Size of mapped image.
+ * 
+ * @return Returns physical address of image base.\n
+ *         Non-zero if succeeds, zero otherwise.
+ */
 EFI_PHYSICAL_ADDRESS
 EFIAPI
 OslPeLoadImage(

@@ -1,10 +1,17 @@
 
+/**
+ * @file bintree.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements binary tree.
+ * @version 0.1
+ * @date 2021-09-10
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
+
 #include <base/base.h>
 
-VOID
-RsBtTrace(
-    IN PSZ Format,
-    ...)
 /**
  * @brief Prints the formatted string.
  * 
@@ -13,23 +20,23 @@ RsBtTrace(
  *
  * @return None.
  */
+VOID
+RsBtTrace(
+    IN PSZ Format,
+    ...)
 {
 #if 0
-	va_list args;
-	CHAR Buffer[512];
+    va_list args;
+    CHAR Buffer[512];
 
-	va_start(args, Format);
-	SIZE_T Length = vsnprintf(Buffer, COUNTOF(Buffer), Format, args);
-	va_end(args);
+    va_start(args, Format);
+    SIZE_T Length = vsnprintf(Buffer, COUNTOF(Buffer), Format, args);
+    va_end(args);
 
-	fwrite(Buffer, Length, 1, stdout);
+    fwrite(Buffer, Length, 1, stdout);
 #endif
 }
 
-VOID
-RsBtTraverse(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *Next)
 /**
  * @brief Traverses and prints the binary tree.
  * 
@@ -38,6 +45,10 @@ RsBtTraverse(
  *
  * @return None.
  */
+VOID
+RsBtTraverse(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_LINK *Next)
 {
     if (!Next)
     {
@@ -60,11 +71,6 @@ RsBtTraverse(
     }
 }
 
-VOID
-RsBtInitialize(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_OPERATIONS *Operations,
-    IN PVOID CallerContext)
 /**
  * @brief Initializes the binary tree.
  * 
@@ -74,6 +80,11 @@ RsBtInitialize(
  *
  * @return None.
  */
+VOID
+RsBtInitialize(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_OPERATIONS *Operations,
+    IN PVOID CallerContext)
 {
     memset(Tree, 0, sizeof(*Tree));
 
@@ -82,11 +93,6 @@ RsBtInitialize(
     Tree->Root = NULL;
 }
 
-inline
-RS_BINARY_TREE_LINK *
-RsBtGetChildNode(
-    IN RS_BINARY_TREE_LINK *Node,
-    IN INT NodeIndex)
 /**
  * @brief Gets the child node of given node.
  * 
@@ -95,6 +101,11 @@ RsBtGetChildNode(
  *
  * @return Child node.
  */
+inline
+RS_BINARY_TREE_LINK *
+RsBtGetChildNode(
+    IN RS_BINARY_TREE_LINK *Node,
+    IN INT NodeIndex)
 {
     if (NodeIndex == 0)
         return Node->LeftChild;
@@ -106,12 +117,6 @@ RsBtGetChildNode(
     return NULL;
 }
 
-inline
-RS_BINARY_TREE_LINK *
-RsBtSetChildNode(
-    IN RS_BINARY_TREE_LINK *Node,
-    IN RS_BINARY_TREE_LINK *NewChild,
-    IN INT NodeIndex)
 /**
  * @brief Sets the child node of given node.
  * 
@@ -121,6 +126,12 @@ RsBtSetChildNode(
  *
  * @return Previous child node.
  */
+inline
+RS_BINARY_TREE_LINK *
+RsBtSetChildNode(
+    IN RS_BINARY_TREE_LINK *Node,
+    IN RS_BINARY_TREE_LINK *NewChild,
+    IN INT NodeIndex)
 {
     RS_BINARY_TREE_LINK *PreviousNode = NULL;
 
@@ -142,10 +153,6 @@ RsBtSetChildNode(
     return PreviousNode;
 }
 
-inline
-INT
-RsBtNodeIndexFromChild(
-    IN RS_BINARY_TREE_LINK *Child)
 /**
  * @brief Gets the node index from child node.
  * 
@@ -154,6 +161,10 @@ RsBtNodeIndexFromChild(
  * @return 0 if child is left child, 1 if right child.
  *         -1 Otherwise (Child has no parent).
  */
+inline
+INT
+RsBtNodeIndexFromChild(
+    IN RS_BINARY_TREE_LINK *Child)
 {
     RS_BINARY_TREE_LINK *Parent = Child->Parent;
 
@@ -175,10 +186,6 @@ RsBtNodeIndexFromChild(
     return -1;
 }
 
-inline
-RS_BINARY_TREE_LINK *
-RsBtGetInorderPredecessor(
-    IN RS_BINARY_TREE_LINK *Node)
 /**
  * @brief Gets the inorder predecessor of given node.
  * 
@@ -186,6 +193,10 @@ RsBtGetInorderPredecessor(
  *
  * @return Inorder predecessor node.
  */
+inline
+RS_BINARY_TREE_LINK *
+RsBtGetInorderPredecessor(
+    IN RS_BINARY_TREE_LINK *Node)
 {
     RS_BINARY_TREE_LINK *Current = Node->LeftChild;
     RS_BINARY_TREE_LINK *Predecessor = NULL;
@@ -199,10 +210,6 @@ RsBtGetInorderPredecessor(
     return Predecessor;
 }
 
-inline
-RS_BINARY_TREE_LINK *
-RsBtGetInorderSuccessor(
-    IN RS_BINARY_TREE_LINK *Node)
 /**
  * @brief Gets the inorder successor of given node.
  * 
@@ -210,6 +217,10 @@ RsBtGetInorderSuccessor(
  *
  * @return Inorder successor node.
  */
+inline
+RS_BINARY_TREE_LINK *
+RsBtGetInorderSuccessor(
+    IN RS_BINARY_TREE_LINK *Node)
 {
     RS_BINARY_TREE_LINK *Current = Node->RightChild;
     RS_BINARY_TREE_LINK *Successor = NULL;
@@ -223,11 +234,6 @@ RsBtGetInorderSuccessor(
     return Successor;
 }
 
-inline
-VOID
-RsBtSetRoot(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *Root)
 /**
  * @brief Sets the root.
  * 
@@ -236,6 +242,11 @@ RsBtSetRoot(
  *
  * @return None.
  */
+inline
+VOID
+RsBtSetRoot(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_LINK *Root)
 {
     Tree->Root = Root;
 
@@ -243,11 +254,6 @@ RsBtSetRoot(
         Root->Parent = NULL;
 }
 
-inline
-BOOLEAN
-RsBtTreeContainsNode(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *Node)
 /**
  * @brief Checks whether the tree contains given node.
  * 
@@ -256,6 +262,11 @@ RsBtTreeContainsNode(
  *
  * @return TRUE if tree contains given node. FALSE otherwise,
  */
+inline
+BOOLEAN
+RsBtTreeContainsNode(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_LINK *Node)
 {
     RS_BINARY_TREE_LINK *Current = Node;
     RS_BINARY_TREE_LINK *Root = NULL;
@@ -272,11 +283,6 @@ RsBtTreeContainsNode(
     return TRUE;
 }
 
-VOID
-RsBtLinkNode(
-    IN RS_BINARY_TREE_LINK *Parent,
-    IN RS_BINARY_TREE_LINK *NewChild,
-    IN INT NodeIndex)
 /**
  * @brief Links child node to parent node.
  * 
@@ -287,6 +293,11 @@ RsBtLinkNode(
  *
  * @return None.
  */
+VOID
+RsBtLinkNode(
+    IN RS_BINARY_TREE_LINK *Parent,
+    IN RS_BINARY_TREE_LINK *NewChild,
+    IN INT NodeIndex)
 {
     if (Parent)
     {
@@ -299,13 +310,6 @@ RsBtLinkNode(
     }
 }
 
-VOID
-RsBtUnlinkNode(
-    IN RS_BINARY_TREE_LINK *Node,
-    IN UINT UnlinkFlags,
-    OUT RS_BINARY_TREE_LINK **PreviousParent,
-    OUT RS_BINARY_TREE_LINK **PreviousLeftChild,
-    OUT RS_BINARY_TREE_LINK **PreviousRightChild)
 /**
  * @brief Unlinks parent or child from given node.
  * 
@@ -320,6 +324,13 @@ RsBtUnlinkNode(
  *
  * @return None.
  */
+VOID
+RsBtUnlinkNode(
+    IN RS_BINARY_TREE_LINK *Node,
+    IN UINT UnlinkFlags,
+    OUT RS_BINARY_TREE_LINK **PreviousParent,
+    OUT RS_BINARY_TREE_LINK **PreviousLeftChild,
+    OUT RS_BINARY_TREE_LINK **PreviousRightChild)
 {
     if (UnlinkFlags & RS_BT_UNLINK_PARENT)
     {
@@ -368,9 +379,6 @@ RsBtUnlinkNode(
     }
 }
 
-BOOLEAN
-RsBtIsLeaf(
-    IN RS_BINARY_TREE_LINK *Node)
 /**
  * @brief Checks whether the given node is a leaf node.
  * 
@@ -378,6 +386,9 @@ RsBtIsLeaf(
  *
  * @return TRUE if node is a leaf node, FALSE otherwise.
  */
+BOOLEAN
+RsBtIsLeaf(
+    IN RS_BINARY_TREE_LINK *Node)
 {
     if (Node->LeftChild || Node->RightChild)
         return FALSE;
@@ -385,10 +396,6 @@ RsBtIsLeaf(
     return TRUE;
 }
 
-BOOLEAN
-RsBtInsertLeaf(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *LeafNode)
 /**
  * @brief Inserts leaf node to given tree.
  * 
@@ -397,6 +404,10 @@ RsBtInsertLeaf(
  *
  * @return TRUE if insertion succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsBtInsertLeaf(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_LINK *LeafNode)
 {
     if (!LeafNode)
         return FALSE;
@@ -452,11 +463,6 @@ RsBtInsertLeaf(
     return TRUE;
 }
 
-BOOLEAN
-RsBtRemoveNode(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *Node,
-    OUT RS_BINARY_TREE_LINK **HeightUpdatePoint)
 /**
  * @brief Removes node from tree.\n
  *        The node will not be deleted unless you call RsBtDeleteNode.
@@ -467,6 +473,11 @@ RsBtRemoveNode(
  *
  * @return TRUE if removal succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsBtRemoveNode(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_LINK *Node,
+    OUT RS_BINARY_TREE_LINK **HeightUpdatePoint)
 {
     if (!Node)
         return FALSE;
@@ -526,49 +537,49 @@ RsBtRemoveNode(
     else
     {
         /*
-		  Case 3. Node has two children.
-		  i) s is not a child of S:
-		         R
-	             |
-		         S   <--- S: Node to be deleted (Node)
-		       /   \
-		      T     U  
-		     / \   / \   
-		     ...  s  ...    <--- s: In-order successor (Successor).
-		           \
-		            c 
-		           / \
-		           ...
-		   
-		         R
-		         |
-		         s   <--- S: Replaced by s.
-		       /   \
-		      T     U  
-		     / \   / \   
-		     ...  c  ...    <--- s: Replaced by c.
-		         / \
-		         ...
-		  
-		   ii) s is child of S:
-		         R
-		         |
-		         S   <--- S: Node to be deleted
-		       /   \
-		      T     s  <--- s: In-order successor.
-		     / \     \   
-		     ...      c 
-		             / \
-		             ...
-		   
-		         R
-		         |
-		         s   <--- S: Replaced by s.
-		       /   \
-		      T     c  <--- s: Replaced by c.
-		     / \   / \   
-		    ...  ...  ...
-		*/
+          Case 3. Node has two children.
+          i) s is not a child of S:
+                 R
+                 |
+                 S   <--- S: Node to be deleted (Node)
+               /   \
+              T     U  
+             / \   / \   
+             ...  s  ...    <--- s: In-order successor (Successor).
+                   \
+                    c 
+                   / \
+                   ...
+           
+                 R
+                 |
+                 s   <--- S: Replaced by s.
+               /   \
+              T     U  
+             / \   / \   
+             ...  c  ...    <--- s: Replaced by c.
+                 / \
+                 ...
+          
+           ii) s is child of S:
+                 R
+                 |
+                 S   <--- S: Node to be deleted
+               /   \
+              T     s  <--- s: In-order successor.
+             / \     \   
+             ...      c 
+                     / \
+                     ...
+           
+                 R
+                 |
+                 s   <--- S: Replaced by s.
+               /   \
+              T     c  <--- s: Replaced by c.
+             / \   / \   
+            ...  ...  ...
+        */
 
         DASSERT(!Successor->LeftChild);
 
@@ -633,10 +644,6 @@ RsBtRemoveNode(
     return TRUE;
 }
 
-inline VOID
-RsBtDeleteNode(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *Node)
 /**
  * @brief Deletes node from tree.
  * 
@@ -645,17 +652,17 @@ RsBtDeleteNode(
  *
  * @return None.
  */
+inline
+VOID
+RsBtDeleteNode(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_BINARY_TREE_LINK *Node)
 {
     DASSERT(!Node->LeftChild && !Node->RightChild && !Node->Parent);
 
     Tree->Operations.DeleteNode(Tree->CallerContext, Node);
 }
 
-BOOLEAN
-RsBtLookup(
-    IN RS_BINARY_TREE *Tree,
-    IN PVOID Key,
-    OUT RS_BINARY_TREE_LINK **LookupNode)
 /**
  * @brief Searches node by given key.
  * 
@@ -665,6 +672,11 @@ RsBtLookup(
  *
  * @return TRUE if lookup succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsBtLookup(
+    IN RS_BINARY_TREE *Tree,
+    IN PVOID Key,
+    OUT RS_BINARY_TREE_LINK **LookupNode)
 {
     INT Index = 0;
     RS_BINARY_TREE_LINK *Node = Tree->Root;
@@ -698,10 +710,6 @@ RsBtLookup(
     return FALSE;
 }
 
-BOOLEAN
-RsBtInsert(
-    IN RS_BINARY_TREE *Tree,
-    IN PVOID Key)
 /**
  * @brief Allocates and inserts node by given key.
  * 
@@ -710,6 +718,10 @@ RsBtInsert(
  *
  * @return TRUE if insertion succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsBtInsert(
+    IN RS_BINARY_TREE *Tree,
+    IN PVOID Key)
 {
     if (RsBtLookup(Tree, Key, NULL))
     {
@@ -738,9 +750,6 @@ RsBtInsert(
     return TRUE;
 }
 
-inline S8
-RsAvlGetBalance(
-    IN RS_AVL_NODE *Node)
 /**
  * @brief Calculates balance factor of given node.
  * 
@@ -748,6 +757,10 @@ RsAvlGetBalance(
  *
  * @return (Height of right subtree) - (Height of left subtree).
  */
+inline
+S8
+RsAvlGetBalance(
+    IN RS_AVL_NODE *Node)
 {
     RS_AVL_NODE *LeftChild = BINARY_TREE_NODE_TO_AVL_NODE(Node->Links.LeftChild);
     RS_AVL_NODE *RightChild = BINARY_TREE_NODE_TO_AVL_NODE(Node->Links.RightChild);
@@ -764,9 +777,6 @@ RsAvlGetBalance(
     return RightHeight - LeftHeight;
 }
 
-inline S8
-RsAvlUpdateHeight(
-    IN RS_AVL_NODE *Node)
 /**
  * @brief Updates height of given node.
  * 
@@ -774,6 +784,10 @@ RsAvlUpdateHeight(
  *
  * @return max((Height of right subtree), (Height of left subtree)) + 1.
  */
+inline
+S8
+RsAvlUpdateHeight(
+    IN RS_AVL_NODE *Node)
 {
     RS_AVL_NODE *LeftChild = BINARY_TREE_NODE_TO_AVL_NODE(Node->Links.LeftChild);
     RS_AVL_NODE *RightChild = BINARY_TREE_NODE_TO_AVL_NODE(Node->Links.RightChild);
@@ -794,10 +808,6 @@ RsAvlUpdateHeight(
     return NewHeight;
 }
 
-VOID RsAvlUpdateHeightAncestors(
-    IN RS_AVL_NODE *Node,
-    IN BOOLEAN StopIfUnbalancedFound,
-    OUT RS_AVL_NODE **FirstUnbalanced)
 /**
  * @brief Updates ancestors height of given node.
  * 
@@ -808,6 +818,11 @@ VOID RsAvlUpdateHeightAncestors(
  *
  * @return None.
  */
+VOID
+RsAvlUpdateHeightAncestors(
+    IN RS_AVL_NODE *Node,
+    IN BOOLEAN StopIfUnbalancedFound,
+    OUT RS_AVL_NODE **FirstUnbalanced)
 {
     RS_AVL_NODE *Unbalanced = NULL;
     S8 Balance = 0;
@@ -835,10 +850,6 @@ VOID RsAvlUpdateHeightAncestors(
         *FirstUnbalanced = Unbalanced;
 }
 
-VOID RsAvlRotate(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_AVL_NODE *Target,
-    IN BOOLEAN RotateRight)
 /**
  * @brief Rotates the tree.
  * 
@@ -849,6 +860,11 @@ VOID RsAvlRotate(
  *
  * @return None.
  */
+VOID
+RsAvlRotate(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_AVL_NODE *Target,
+    IN BOOLEAN RotateRight)
 {
     RS_AVL_NODE *Parent = NULL;
     RS_AVL_NODE *Child = NULL;
@@ -862,9 +878,9 @@ VOID RsAvlRotate(
                 |             |
                 U             V
                / \           / \
-		      V   3   =>    1   U
+              V   3   =>    1   U
              / \               / \
-		    1   2             2   3
+            1   2             2   3
         */
 
         INT NodeIndex = RsBtNodeIndexFromChild(&Target->Links);
@@ -912,9 +928,9 @@ VOID RsAvlRotate(
               |              |
               U              V
              / \            / \    
-		    1   V    =>    U   3
+            1   V    =>    U   3
                / \        / \      
-		      2   3      1   2
+              2   3      1   2
         */
 
         INT NodeIndex = RsBtNodeIndexFromChild(&Target->Links);
@@ -966,11 +982,6 @@ VOID RsAvlRotate(
         RsAvlUpdateHeight(Child);
 }
 
-BOOLEAN
-RsAvlRebalance(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_AVL_NODE *Unbalanced,
-    OUT RS_AVL_NODE **NextUnbalanced)
 /**
  * @brief Rebalances the tree.
  * 
@@ -981,35 +992,40 @@ RsAvlRebalance(
  *
  * @return TRUE if rebalancing performed, FALSE otherwise.
  */
+BOOLEAN
+RsAvlRebalance(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_AVL_NODE *Unbalanced,
+    OUT RS_AVL_NODE **NextUnbalanced)
 {
     /*
        There are 4 cases for rebalancing:
       
                U            U          U            U
               / \          / \        / \          / \                
-	         V   4        V   4      1   V        1   V
-            / \	         / \            / \          / \              
-	       W   3        1   W          W   4        2   W
+             V   4        V   4      1   V        1   V
+            / \          / \            / \          / \              
+           W   3        1   W          W   4        2   W
           / \              / \        / \              / \             
-	     1   2 	          2   3      2   3            3   4
+         1   2            2   3      2   3            3   4
         a) LL case    b) LR case    c) RL case    d) RR case
       
                U               V
               / \            /   \           
-	         V   4    =>    W     U
-            / \	           / \   / \          
-	       W   3          1   2 3   4
+             V   4    =>    W     U
+            / \            / \   / \          
+           W   3          1   2 3   4
           / \                            
-	     1   2
+         1   2
         a) LL case : Right rotation (U).
       
               U              U            W
              / \            / \         /   \     
-	        V   4   =>     W   4  =>   V     U
+            V   4   =>     W   4  =>   V     U
            / \            / \         / \   / \   
-	      1   W          V   3       1   2 3   4
+          1   W          V   3       1   2 3   4
              / \        / \          
-	        2   3      1   2
+            2   3      1   2
         b) LR case : Left rotation (V) -> Right rotation (U).
       
         c) RL case : Right rotation (V) -> Left rotation (U). [Symmetric case of LR]
@@ -1076,11 +1092,6 @@ RsAvlRebalance(
     return TRUE;
 }
 
-BOOLEAN
-RsAvlInsert(
-    IN RS_BINARY_TREE *Tree,
-    IN PVOID Key,
-    OUT RS_BINARY_TREE_LINK **Inserted)
 /**
  * @brief Allocates and inserts node by given key.
  * 
@@ -1091,6 +1102,11 @@ RsAvlInsert(
  *
  * @return TRUE if insertion succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsAvlInsert(
+    IN RS_BINARY_TREE *Tree,
+    IN PVOID Key,
+    OUT RS_BINARY_TREE_LINK **Inserted)
 {
     if (RsBtLookup(Tree, Key, NULL))
     {
@@ -1136,10 +1152,6 @@ RsAvlInsert(
     return TRUE;
 }
 
-BOOLEAN
-RsAvlRemove(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_AVL_NODE *Node)
 /**
  * @brief Removes node from tree.\n
  *        The node will not be deleted unless you call RsAvlDelete.
@@ -1153,6 +1165,10 @@ RsAvlRemove(
  *          as it handles deletion differently.
  *
  */
+BOOLEAN
+RsAvlRemove(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_AVL_NODE *Node)
 {
     RS_BINARY_TREE_LINK *UpdatePoint = NULL;
     if (!RsBtRemoveNode(Tree, &Node->Links, &UpdatePoint))
@@ -1179,10 +1195,6 @@ RsAvlRemove(
     return TRUE;
 }
 
-BOOLEAN
-RsAvlDelete(
-    IN RS_BINARY_TREE *Tree,
-    IN RS_AVL_NODE *Node)
 /**
  * @brief Deletes node from tree.
  * 
@@ -1191,6 +1203,10 @@ RsAvlDelete(
  *
  * @return TRUE if deletion succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsAvlDelete(
+    IN RS_BINARY_TREE *Tree,
+    IN RS_AVL_NODE *Node)
 {
     if (Node->Links.Parent ||
         Node->Links.LeftChild ||
@@ -1208,10 +1224,6 @@ RsAvlDelete(
     return TRUE;
 }
 
-BOOLEAN
-RsAvlDeleteByKey(
-    IN RS_BINARY_TREE *Tree,
-    IN PVOID Key)
 /**
  * @brief Perform search-remove-delete for node from tree.
  * 
@@ -1220,6 +1232,10 @@ RsAvlDeleteByKey(
  *
  * @return TRUE if deletion succeeds, FALSE otherwise.
  */
+BOOLEAN
+RsAvlDeleteByKey(
+    IN RS_BINARY_TREE *Tree,
+    IN PVOID Key)
 {
     RS_BINARY_TREE_LINK *Node = NULL;
     if (!RsBtLookup(Tree, Key, &Node))

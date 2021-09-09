@@ -14,7 +14,8 @@ PiPreInitialize(
 	IN U32 LoaderBlockSize);
 
 
-typedef struct _PREINIT_PAGE_RESERVE {
+typedef struct _PREINIT_PAGE_RESERVE
+{
 	UPTR BaseAddress;
 	SIZE_T Size;
 } PREINIT_PAGE_RESERVE;

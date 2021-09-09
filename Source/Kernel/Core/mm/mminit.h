@@ -3,70 +3,43 @@
 
 #define	REQUIREMENT_MEMORY_SIZE			0x2000000
 
-#define	PAGE_SHIFT				12
-#define	PAGE_SIZE				(1 << PAGE_SHIFT)
-
-#define	SIZE_TO_PAGES(_sz)		( ((_sz) + (PAGE_SIZE - 1)) >> PAGE_SHIFT )
-#define	PAGES_TO_SIZE(_cnt)		( (_cnt) << PAGE_SHIFT )
-
 
 //
-// Flags for PML4E, PDPTE, PDE, PTE. (4K paging)
+// Defines initial virtual memory map.
 //
 
-#define	PAGE_EXECUTE_DISABLE	(1ULL << 63)
-#define	PAGE_PRESENT			(1 << 0)
-#define	PAGE_WRITABLE			(1 << 1)
-#define	PAGE_USER				(1 << 2)
-#define	PAGE_WRITE_THROUGH		(1 << 3)
-#define	PAGE_CACHE_DISABLED		(1 << 4)
+#define KERNEL_VA_SIZE_LOADER_SPACE                     0x0000000100000000ULL // 4G
 
-#define	PAGE_ACCESSED			(1 << 5)
-#define	PAGE_ATTRIBUTE			(1 << 7) // for PTE with 4K paging only
-
-// for PTE with 4K, PDE with 2M, PDPTE with 1G paging
-#define	PAGE_DIRTY				(1 << 6) // PDPTE with 1G paging, 
-#define	PAGE_LARGE				(1 << 7) // PDPTE with 1G paging, PDE with 2M paging
-#define	PAGE_GLOBAL				(1 << 8)
-
-#define	PAGE_PHYADDR_MASK		0x7ffffffff000ULL
+#define KERNEL_VA_START_LOADER_SPACE                    0xffff800000000000ULL // Used in initialization
+#define KERNEL_VA_END_LOADER_SPACE                      (KERNEL_VA_START_LOADER_SPACE + KERNEL_VA_SIZE_LOADER_SPACE)
 
 
-INLINE
-BOOLEAN
-KERNELAPI
-MmIsCanonicalAddress(
-	IN PVOID VirtualAddress)
-{
-	UPTR p = (UPTR)VirtualAddress;
-	UPTR Msb48 = 0x800000000000ULL;
-	U16 HighPart = (U16)(p >> 48);
-	U16 Compare = 0;
+#define KERNEL_VA_SIZE_ASLR_GAP                         0x0000008000000000ULL // 512G
+#define KENREL_VA_SIZE_PAD_LIST                         0x0000080000000000ULL // 8T (128 byte per each entry)
+#define KENREL_VA_SIZE_VAD_LIST                         0x0000080000000000ULL // 8T (128 byte per each entry)
+#define KERNEL_VA_SIZE_KERNEL_POOL                      0x0000080000000000ULL // 8T (Paged + NonPaged)
+#define KERNEL_VA_SIZE_PXE_AREA                         0x0000010000000000ULL // 1T (PT + PD + PDPT + PML4T + Gap)
 
-	Compare = !!(p & Msb48);
-	Compare = ~Compare;
-
-	return !!(HighPart == Compare);
-}
-
-typedef union _X64_VIRTUAL_ADDRESS {
-	U64 Va;
-	struct
-	{
-		U64 Offset : 12;
-		U64 Table : 9;
-		U64 Directory : 9;
-		U64 DirectoryPtr : 9;
-		U64 PML4 : 9;
-		U64 SignExtended : 16;
-	} Bits;
-} X64_VIRTUAL_ADDRESS;
+#define KERNEL_VA_START_KERNEL_POOL                     0xffffa00000000000ULL
+#define KERNEL_VA_END_KERNEL_POOL                       (KERNEL_VA_START_KERNEL_POOL + KERNEL_VA_SIZE_KERNEL_POOL)
+#define KERNEL_VA_START_PAD_LIST                        0xffffb00000000000ULL
+#define KERNEL_VA_END_PAD_LIST                          (KERNEL_VA_START_PAD_LIST + KENREL_VA_PAD_LIST_SIZE)
+#define KERNEL_VA_START_VAD_LIST                        0xffffc00000000000ULL
+#define KERNEL_VA_END_VAD_LIST                          (KERNEL_VA_START_VAD_LIST + KENREL_VA_VAD_LIST_SIZE)
+#define KERNEL_VA_START_PXE_AREA                        0xffffd00000000000ULL
+#define KERNEL_VA_END_PXE_AREA                          (KERNEL_VA_START_PXE_AREA + KERNEL_VA_SIZE_PXE_AREA)
 
 
+#define KERNEL_VA_SIZE_PT                               (8 * (1ULL << 36))
+#define KERNEL_VA_SIZE_PD                               (8 * (1ULL << 27))
+#define KERNEL_VA_SIZE_PDPT                             (8 * (1ULL << 18))
+#define KERNEL_VA_SIZE_PML4                             (8 * (1ULL << 9))
 
-#define	MM_PDPTES_PER_PML4		512
-#define	MM_PDES_PER_PDPTE		512
-#define	MM_PTES_PER_PDE			512
+#define KERNEL_VA_PT_BASE                               (KERNEL_VA_START_PXE_AREA + 0)
+#define KERNEL_VA_PD_BASE                               (KERNEL_VA_PT_BASE + KERNEL_VA_SIZE_PT)
+#define KERNEL_VA_PDPT_BASE                             (KERNEL_VA_PD_BASE + KERNEL_VA_SIZE_PD)
+#define KERNEL_VA_PML4_BASE                             (KERNEL_VA_PDPT_BASE + KERNEL_VA_SIZE_PDPT)
+
 
 
 BOOLEAN

@@ -1,12 +1,23 @@
-/** @file
-	Transfer-to-Kernel Routines.
-**/
-#include "OsLoader.h"
 
 /**
-	Halts the system.
-	This function is called when returned from the kernel entry point.
-**/
+ * @file oskernel.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements transfer-to-kernel routines.
+ * @version 0.1
+ * @date 2019-08-24
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
+
+#include "OsLoader.h"
+
+
+/**
+ * @brief Halts the system.
+ * 
+ * @return None.
+ */
 VOID
 EFIAPI
 OslReturnedFromKernel(
@@ -20,14 +31,12 @@ OslReturnedFromKernel(
 
 
 /**
-	Transfer to the kernel.
-
-	@param[in] LoaderBlock    The loader block which contains OS loader information.
-  
-	@retval Not-FALSE         The operation is completed successfully.
-	@retval FALSE             An error occurred during the operation.
-
-**/
+ * @brief Transfers control to the kernel.
+ * 
+ * @param [in] LoaderBlock  The loader block which contains OS loader information.
+ * 
+ * @return This function only returns FALSE if kernel returns (fatal).
+ */
 BOOLEAN
 EFIAPI
 OslTransferToKernel(

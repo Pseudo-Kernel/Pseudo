@@ -1,4 +1,16 @@
 
+/**
+ * @file sformat.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements string helper routines.
+ * @version 0.1
+ * @date 2021-09-10
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
+
+
 #include <Base.h>
 #include "SFormat.h"
 

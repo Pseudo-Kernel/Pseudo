@@ -38,6 +38,17 @@
 		"cmake.buildEnvironment": {
 			"VERBOSE": "1"
 		},
-		"editor.detectIndentation": false,
-	},
+        "editor.detectIndentation": false,
+        "doxdocgen.generic.authorEmail": "sandbox.isolated@gmail.com",
+        "doxdocgen.generic.authorName": "Pseudo-Kernel",
+    },
+    "extensions": {
+        "recommendations": [
+            "cschlosser.doxdocgen",
+            "ms-vscode.cmake-tools",
+            "twxs.cmake",
+            "ms-vscode.cpptools",
+            "ms-vscode.cpptools-extension-pack"
+        ]
+    },
 }

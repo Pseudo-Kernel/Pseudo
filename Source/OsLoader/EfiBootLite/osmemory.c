@@ -1,19 +1,26 @@
-/** @file
-	Memory-Related Routines.
-**/
+
+
+/**
+ * @file osmemory.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements memory map related routines.
+ * @version 0.1
+ * @date 2019-09-10
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
 
 #include "OsLoader.h"
 
-//static UINT8 OslGlobalMemoryMap[0x1000]; // dummy
 
 /**
-	Frees the memory map.
-
-	@param[in] LoaderBlock    The loader block which contains OS loader information.
-
-	@retval None.
-
-**/
+ * @brief Frees the memory map.
+ * 
+ * @param [in] LoaderBlock  The loader block which contains OS loader information.
+ * 
+ * @return None.
+ */
 VOID
 EFIAPI
 OslMmFreeMemoryMap(
@@ -31,14 +38,13 @@ OslMmFreeMemoryMap(
 }
 
 /**
-	Allocates and querys the memory map.
-
-	@param[in] LoaderBlock    The loader block which contains OS loader information.
-
-	@retval EFI_SUCCESS       The operation is completed successfully.
-	@retval other             An error occurred during the operation.
-
-**/
+ * @brief Allocates and querys the memory map.
+ * 
+ * @param [in] LoaderBlock  The loader block which contains OS loader information.
+ * 
+ * @return EFI_SUCCESS      The operation is completed successfully.
+ * @return else             An error occurred during the operation.
+ */
 EFI_STATUS
 EFIAPI
 OslMmQueryMemoryMap (
@@ -83,16 +89,16 @@ OslMmQueryMemoryMap (
 	return EFI_SUCCESS;
 }
 
+
 /**
-	Prints the memory map.
-
-	@param[in] Map            Pointer of memory descriptor list.
-	@param[in] MemoryMapSize  Size of memory descriptors.
-	@param[in] DescriptorSize Size of memory descriptor entry.
-
-	@retval                   None.
-
-**/
+ * @brief Prints the memory map.
+ * 
+ * @param [in] Map              Pointer to memory descriptor list.
+ * @param [in] MemoryMapSize    Size of memory descriptors.
+ * @param [in] DescriptorSize   Size of memory descriptor entry.
+ * 
+ * @return None. 
+ */
 VOID
 EFIAPI
 OslMmDumpMemoryMap(
@@ -176,24 +182,3 @@ OslMmDumpMemoryMap(
 	TRACE(L"\r\n");
 }
 
-#if 0
-/**
-	Allocates 4-Level Paging Structures.
-
-	@param[in] LoaderBlock    The loader block which contains OS loader information.
-
-	@retval FALSE             An error occurred during the operation.
-	@retval other             The operation is completed successfully.
-
-**/
-EFI_STATUS
-EFIAPI
-OslX64PreparePaging(
-	IN OS_LOADER_BLOCK *LoaderBlock)
-{
-	EFI_BOOT_SERVICES *BootServices = LoaderBlock->Base.BootServices;
-
-
-//	BootServices->AllocatePages(AllocateAnyPages, EfiLoaderData, )
-}
-#endif
