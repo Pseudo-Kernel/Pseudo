@@ -17,11 +17,18 @@ set(SRC_LIST
     # root
     EfiBootLite/oskernel.c
     EfiBootLite/osmemory.c
-    EfiBootLite/peimage.c
+    EfiBootLite/osmisc.c
+    EfiBootLite/ospeimage.c
+    EfiBootLite/osdebug.c
     EfiBootLite/sformat.c
     EfiBootLite/uefimain.c
     EfiBootLite/loader/osloader.h
     EfiBootLite/loader/peimage.h
+    EfiBootLite/loader/oskernel.h
+    EfiBootLite/loader/osmemory.h
+    EfiBootLite/loader/osmisc.h
+    EfiBootLite/loader/ospeimage.h
+    EfiBootLite/loader/osdebug.h
     EfiBootLite/loader/sformat.h
     # headers in UEFI package.
     EfiBootLite/include/base.h

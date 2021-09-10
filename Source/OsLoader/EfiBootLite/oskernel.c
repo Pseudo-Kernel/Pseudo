@@ -11,6 +11,8 @@
  */
 
 #include "OsLoader.h"
+#include "ospeimage.h"
+#include "oskernel.h"
 
 
 /**
@@ -35,7 +37,7 @@ OslReturnedFromKernel(
  * 
  * @param [in] LoaderBlock  The loader block which contains OS loader information.
  * 
- * @return This function only returns FALSE if kernel returns (fatal).
+ * @return This function only returns FALSE if kernel is not loaded.
  */
 BOOLEAN
 EFIAPI
@@ -55,7 +57,7 @@ OslTransferToKernel(
 	StartEntry = (PKERNEL_START_ENTRY)(
 		KernelBase + Nt3264->Nt64.OptionalHeader.AddressOfEntryPoint);
 
-	// Start the Kernel!
+	// Start the kernel!
 	StartEntry(KernelBase, (UINT64)LoaderBlock, sizeof(OS_LOADER_BLOCK), 0);
 
 	OslReturnedFromKernel();

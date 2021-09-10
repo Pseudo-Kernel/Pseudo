@@ -1,9 +1,8 @@
 
-
 /**
  * @file osmemory.c
  * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
- * @brief Implements memory map related routines.
+ * @brief Implements memory related routines.
  * @version 0.1
  * @date 2019-09-10
  * 
@@ -12,7 +11,73 @@
  */
 
 #include "OsLoader.h"
+#include "osmisc.h"
+#include "osdebug.h"
+#include "osmemory.h"
 
+
+/**
+ * @brief Allocates physical pages below 4GB.
+ * 
+ * @param [in] Size                 Size to allocate.
+ * @param [in,out] Address          Pointer to caller-supplied variable which specifies preferred address.\n
+ * @param [in] AddressSpecified     If AddressSpecified != FALSE, EfiAllocatePages tries to allocate page at preferred address.\n
+ *                                  if AddressSpecified == FALSE, EfiAllocatePages determines address automatically.\n
+ *                                  Allocated address will be copied to *Address. Zero means allocation failure.
+ * 
+ * @return EFI_SUCCESS  The operation is completed successfully.
+ * @return else         An error occurred during the operation.
+ */
+EFI_STATUS
+EFIAPI
+EfiAllocatePages(
+    IN UINTN Size, 
+    IN OUT EFI_PHYSICAL_ADDRESS *Address, 
+    IN BOOLEAN AddressSpecified)
+{
+    EFI_PHYSICAL_ADDRESS TargetAddress;
+    EFI_ALLOCATE_TYPE AllocateType;
+    EFI_STATUS Status;
+
+    if (AddressSpecified)
+    {
+        TargetAddress = *Address;
+        AllocateType = AllocateAddress;
+    }
+    else
+    {
+        TargetAddress = (EFI_PHYSICAL_ADDRESS)0xffff0000;
+        AllocateType = AllocateMaxAddress;
+    }
+    
+    Status = gBS->AllocatePages(AllocateType, EfiLoaderData, EFI_SIZE_TO_PAGES(Size), &TargetAddress);
+
+    if (Status == EFI_SUCCESS)
+        *Address = TargetAddress;
+    else
+        *Address = 0;
+
+    return Status;
+}
+
+
+/**
+ * @brief Frees the page.
+ * 
+ * @param [in] Address      4K-aligned address which we want to free.
+ * @param [in] Size         Size to free.
+ * 
+ * @return EFI_SUCCESS      The operation is completed successfully.
+ * @return else             An error occurred during the operation.
+ */
+EFI_STATUS
+EFIAPI
+EfiFreePages(
+    IN EFI_PHYSICAL_ADDRESS Address, 
+    IN UINTN Size)
+{
+    return gBS->FreePages(Address, EFI_SIZE_TO_PAGES(Size));
+}
 
 /**
  * @brief Frees the memory map.

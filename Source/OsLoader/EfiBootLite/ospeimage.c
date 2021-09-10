@@ -1,6 +1,6 @@
 
 /**
- * @file peimage.c
+ * @file ospeimage.c
  * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
  * @brief Implements PE32+ loader.
  * @version 0.1
@@ -11,7 +11,10 @@
  */
 
 #include "OsLoader.h"
-#include "PeImage.h"
+#include "osmisc.h"
+#include "osdebug.h"
+#include "osmemory.h"
+#include "ospeimage.h"
 
 
 /**

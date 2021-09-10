@@ -11,6 +11,12 @@
  */
 
 #include "OsLoader.h"
+#include "osmisc.h"
+#include "osdebug.h"
+#include "osmemory.h"
+#include "ospeimage.h"
+#include "oskernel.h"
+
 
 EFI_GUID gEfiFileInfoGuid = { 0x09576E92, 0x6D3F, 0x11D2,{ 0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B } };
 EFI_GUID gEfiSimpleFileSystemProtocolGuid = { 0x964E5B22, 0x6459, 0x11D2,{ 0x8E, 0x39, 0x00, 0xA0, 0xC9, 0x69, 0x72, 0x3B } };
@@ -22,6 +28,8 @@ EFI_GUID gEfiSimpleTextOutProtocolGuid = { 0x387477C2, 0x69C7, 0x11D2,{ 0x8E, 0x
 EFI_GUID gEfiGraphicsOutputProtocolGuid = { 0x9042A9DE, 0x23DC, 0x4A38,{ 0x96, 0xFB, 0x7A, 0xDE, 0xD0, 0x80, 0x51, 0x6A } };
 EFI_GUID gEfiHiiFontProtocolGuid = { 0xe9ca4775, 0x8657, 0x47fc,{ 0x97, 0xe7, 0x7e, 0xd6, 0x5a, 0x08, 0x43, 0x24 } };
 EFI_GUID gEfiUgaDrawProtocolGuid = { 0x982C298B, 0xF4FA, 0x41CB,{ 0xB8, 0x38, 0x77, 0xAA, 0x68, 0x8F, 0xB8, 0x39 } };
+EFI_GUID gEfiRngProtocolGuid = { 0x3152bca5, 0xeade, 0x433d, {0x86, 0x2e, 0xc0, 0x1c, 0xdc, 0x29, 0x1f, 0x44} };
+
 
 EFI_GUID gEfiAcpi20TableGuid = EFI_ACPI_20_TABLE_GUID;
 
@@ -36,30 +44,6 @@ EFI_SIMPLE_TEXT_INPUT_PROTOCOL *gConIn = NULL;
 EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *gConOut = NULL;
 
 
-/**
- * @brief Prints the formatted string.
- * 
- * @param [in] Format   Printf-like format string.
- * @param [in] ...      Arguments.
- * 
- * @return None.
- */
-VOID
-Trace(
-    IN CHAR16 *Format,
-    ...)
-{
-    CHAR16 Buffer[PRINT_MAX_BUFFER + 1];
-    VA_LIST List;
-    UINTN Length;
-
-    VA_START(List, Format);
-    Length = StrFormatV(Buffer, ARRAY_SIZE(Buffer) - 1, Format, List);
-    VA_END(List);
-
-    StrTerminate(Buffer, ARRAY_SIZE(Buffer), Length);
-    gConOut->OutputString(gConOut, Buffer);
-}
 
 /**
  * @brief Initializes the loader block.
@@ -80,9 +64,9 @@ OslInitializeLoaderBlock(
     EFI_PHYSICAL_ADDRESS TempBase = 0;
     EFI_PHYSICAL_ADDRESS ShadowBase = 0;
     EFI_PHYSICAL_ADDRESS KernelStackBase = 0;
-    const UINTN TempSize = 0x800000; // 4M
+    const UINTN TempSize = 0x800000; // 8M
     const UINTN ShadowSize = 0x100000; // 1M
-    const UINTN KernelStackSize = 0x20000; // 128K
+    const UINTN KernelStackSize = 0x100000; // 1M
 
     EFI_STATUS Status;
     UINTN Offset;
@@ -118,6 +102,8 @@ OslInitializeLoaderBlock(
     gBS->SetMem((void *)KernelStackBase, KernelStackSize, 0);
 
 
+    LoaderBlock->LoaderData.OffsetToVirtualAddress = 0;
+
     LoaderBlock->LoaderData.TempBase = TempBase;
     LoaderBlock->LoaderData.TempSize = TempSize;
     LoaderBlock->LoaderData.ShadowBase = ShadowBase;
@@ -126,94 +112,6 @@ OslInitializeLoaderBlock(
     LoaderBlock->LoaderData.StackSize = KernelStackSize;
 
     return EFI_SUCCESS;
-}
-
-
-/**
- * @brief Allocates physical pages below 4GB.
- * 
- * @param [in] Size                 Size to allocate.
- * @param [in,out] Address          Pointer to caller-supplied variable which specifies preferred address.\n
- * @param [in] AddressSpecified     If AddressSpecified != FALSE, EfiAllocatePages tries to allocate page at preferred address.\n
- *                                  if AddressSpecified == FALSE, EfiAllocatePages determines address automatically.\n
- *                                  Allocated address will be copied to *Address. Zero means allocation failure.
- * 
- * @return EFI_SUCCESS  The operation is completed successfully.
- * @return else         An error occurred during the operation.
- */
-EFI_STATUS
-EFIAPI
-EfiAllocatePages(
-    IN UINTN Size, 
-    IN OUT EFI_PHYSICAL_ADDRESS *Address, 
-    IN BOOLEAN AddressSpecified)
-{
-    EFI_PHYSICAL_ADDRESS TargetAddress;
-    EFI_ALLOCATE_TYPE AllocateType;
-    EFI_STATUS Status;
-
-    if (AddressSpecified)
-    {
-        TargetAddress = *Address;
-        AllocateType = AllocateAddress;
-    }
-    else
-    {
-        TargetAddress = (EFI_PHYSICAL_ADDRESS)0xffff0000;
-        AllocateType = AllocateMaxAddress;
-    }
-    
-    Status = gBS->AllocatePages(AllocateType, EfiLoaderData, EFI_SIZE_TO_PAGES(Size), &TargetAddress);
-
-    if (Status == EFI_SUCCESS)
-        *Address = TargetAddress;
-    else
-        *Address = 0;
-
-    return Status;
-}
-
-
-/**
- * @brief Frees the page.
- * 
- * @param [in] Address      4K-aligned address which we want to free.
- * @param [in] Size         Size to free.
- * 
- * @return EFI_SUCCESS      The operation is completed successfully.
- * @return else             An error occurred during the operation.
- */
-EFI_STATUS
-EFIAPI
-EfiFreePages(
-    IN EFI_PHYSICAL_ADDRESS Address, 
-    IN UINTN Size)
-{
-    return gBS->FreePages(Address, EFI_SIZE_TO_PAGES(Size));
-}
-
-
-/**
- * @brief Determines whether the two GUIDs are equal.
- * 
- * @param [in] Guid1    GUID to compare.
- * @param [in] Guid2    GUID to compare.
- * 
- * @return TRUE if equal, FALSE otherwise. 
- */
-BOOLEAN
-EFIAPI
-EfiIsEqualGuid(
-    IN EFI_GUID *Guid1,
-    IN EFI_GUID *Guid2)
-{
-    UINT64 *p1 = (UINT64 *)Guid1;
-    UINT64 *p2 = (UINT64 *)Guid2;
-
-    if (sizeof(*Guid1) != 0x10)
-        return FALSE;
-
-    return (p1[0] == p2[0] && p1[1] == p2[1]);
 }
 
 /**
@@ -261,7 +159,6 @@ OslOpenBootPartition(
 
     return EFI_SUCCESS;
 }
-
 
 /**
  * @brief Loads the file to memory.
@@ -393,103 +290,6 @@ OslLoadBootFiles(
     OslDbgWaitEnterKey(LoaderBlock, NULL);
 
     return TRUE;
-}
-
-
-/**
- * @brief Waits for enter key input.
- * 
- * @param [in] LoaderBlock  Loader block.
- * @param [in] Message      Message to be printed.
- * 
- * @return None.
- */
-VOID
-EFIAPI
-OslDbgWaitEnterKey(
-    IN OS_LOADER_BLOCK *LoaderBlock, 
-    IN CHAR16 *Message)
-{
-    if(IS_DEBUG_MODE(LoaderBlock))
-    {
-        if(!Message)
-            TRACE(L"DBG: Press Enter Key to Continue\r");
-        else
-            TRACE(Message);
-
-        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
-
-        // 79 chars
-        TRACE(L"                                        "
-              L"                                       \r");
-    }
-}
-
-/**
- * @brief Dumps low 1M area to disk.
- * 
- * @param [in] LoaderBlock  Loader block.
- * 
- * @return TRUE if succeeds, FALSE otherwise.
- */
-BOOLEAN
-EFIAPI
-OslDbgDumpLowMemoryToDisk(
-    IN OS_LOADER_BLOCK *LoaderBlock)
-{
-    EFI_FILE *RootDirectory = LoaderBlock->Base.RootDirectory;
-    EFI_FILE *DumpImage = NULL;
-    EFI_STATUS Status = EFI_SUCCESS;
-
-    UINTN BufferSize = 0;
-
-    do
-    {
-        Status = RootDirectory->Open(
-            RootDirectory,
-            &DumpImage,
-            L"Efi\\Boot\\Dump_00000000_000FFFFF.bin",
-            EFI_FILE_MODE_CREATE | EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE,
-            0
-        );
-
-        if (Status != EFI_SUCCESS)
-        {
-            TRACEF(L"Cannot create the dump file (0x%lx)\r\n", (UINT64)Status);
-            break;
-        }
-
-        //
-        // Dump Area : 0x00000000 - 0x000fffff.
-        //
-
-        BufferSize = 0x100000;
-
-        Status = DumpImage->Write(DumpImage, &BufferSize, (void *)LoaderBlock->LoaderData.ShadowBase);
-        if (Status != EFI_SUCCESS || !BufferSize)
-        {
-            TRACEF(L"Cannot write to the dump file (0x%lx)\r\n", (UINT64)Status);
-            break;
-        }
-
-        if (BufferSize != 0x100000)
-        {
-            TRACEF(L"Dump requested 0x%08x but only written 0x%08x - 0x%08x\r\n",
-                0x100000, 0, BufferSize - 1);
-        }
-
-        //
-        // Flush and close.
-        //
-
-        DumpImage->Flush(DumpImage);
-        DumpImage->Close(DumpImage);
-
-        return TRUE;
-
-    } while (FALSE);
-
-    return FALSE;
 }
 
 /**
@@ -814,89 +614,6 @@ OslQuerySwitchVideoModes(
     }
 
     return Found;
-}
-
-/**
- * @brief Wait for single keystroke.
- * 
- * @param [in] ScanCode             Scancode to wait.
- * @param [in] UnicodeCharacter     Unicode character for scancode.\n
- *                                  If specified ScanCode == 0, UnicodeCharacter will be used.
- * @param [in] Timeout              Timeout in microseconds.
- * 
- * @return TRUE if succeeds, FALSE otherwise.
- */
-BOOLEAN
-EFIAPI
-OslWaitForKeyInput(
-    IN UINT16 ScanCode,
-    IN CHAR16 UnicodeCharacter,
-    IN UINT64 Timeout)
-{
-    EFI_INPUT_KEY Key;
-    EFI_EVENT TimerEvent;
-    EFI_STATUS Status;
-    EFI_EVENT WaitEvents[2];
-    BOOLEAN BreakLoop;
-    BOOLEAN Result;
-
-    Status = gBS->CreateEvent(EVT_TIMER, 0, NULL, NULL, &TimerEvent);
-
-    if (Status != EFI_SUCCESS)
-    {
-        return FALSE;
-    }
-
-    // SetTimer requires 100ns-unit timeout.
-    Status = gBS->SetTimer(TimerEvent, TimerRelative, Timeout * 10);
-
-    if (Status != EFI_SUCCESS)
-    {
-        gBS->CloseEvent(TimerEvent);
-        return FALSE;
-    }
-
-    WaitEvents[0] = TimerEvent;
-    WaitEvents[1] = gConIn->WaitForKey;
-    BreakLoop = Result = FALSE;
-
-    do
-    {
-        UINTN Index;
-
-        Status = gBS->WaitForEvent(ARRAY_SIZE(WaitEvents), WaitEvents, &Index);
-        if (Status != EFI_SUCCESS)
-        {
-            break;
-        }
-
-        switch (Index)
-        {
-        case 0:
-            // Timeout!
-            BreakLoop = TRUE;
-            break;
-        case 1:
-            // Key was pressed!
-            gConIn->ReadKeyStroke(gConIn, &Key);
-            // TRACEF("Key.ScanCode 0x%02X, Key.UCh 0x%04X\r\n", Key.ScanCode, Key.UnicodeChar);
-
-            if (Key.ScanCode == ScanCode)
-            {
-                if (Key.ScanCode != 0 ||
-                    (Key.ScanCode == 0 && Key.UnicodeChar == UnicodeCharacter))
-                {
-                    BreakLoop = TRUE;
-                    Result = TRUE;
-                }
-            }
-            break;
-        }
-    } while (!BreakLoop);
-
-    gBS->CloseEvent(TimerEvent);
-
-    return Result;
 }
 
 
