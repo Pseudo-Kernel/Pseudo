@@ -33,11 +33,11 @@ OslPeImageBaseToNtHeaders(
 	PIMAGE_NT_HEADERS_3264 NtHeaders;
 
 	DosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-	if(DosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+	if (DosHeader->e_magic != IMAGE_DOS_SIGNATURE)
 		return NULL;
 
 	NtHeaders = (PIMAGE_NT_HEADERS_3264)((CHAR8 *)ImageBase + DosHeader->e_lfanew);
-	if(NtHeaders->Nt32.Signature != IMAGE_NT_SIGNATURE)
+	if (NtHeaders->Nt32.Signature != IMAGE_NT_SIGNATURE)
 		return NULL;
 
 	return NtHeaders;
@@ -55,7 +55,7 @@ EFIAPI
 OslPeIsImageTypeSupported(
 	IN PIMAGE_NT_HEADERS_3264 NtHeaders)
 {
-	if(NtHeaders->Nt32.Signature == IMAGE_NT_SIGNATURE && 
+	if (NtHeaders->Nt32.Signature == IMAGE_NT_SIGNATURE && 
 		NtHeaders->Nt32.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC && 
 		NtHeaders->Nt32.FileHeader.Machine == IMAGE_FILE_MACHINE_AMD64)
 		return TRUE;
@@ -93,10 +93,10 @@ OslPeFixupImage(
 	DTRACEF(&OslLoaderBlock, L"Fixup Image at 0x%016lX\r\n", ImageBase);
 
 	Nt = OslPeImageBaseToNtHeaders((void *)ImageBase);
-	if(!Nt)
+	if (!Nt)
 		return FALSE;
 
-	if(!OslPeIsImageTypeSupported(Nt))
+	if (!OslPeIsImageTypeSupported(Nt))
 		return FALSE;
 
 	ImageDefaultBase = Nt->Nt64.OptionalHeader.ImageBase;
@@ -107,7 +107,7 @@ OslPeFixupImage(
 
 	DTRACEF(&OslLoaderBlock, L"Default ImageBase 0x%016lX\r\n", Nt->Nt64.OptionalHeader.ImageBase);
 
-	if(DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress)
+	if (DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress)
 	{
 		PIMAGE_BASE_RELOCATION Reloc;
 		PIMAGE_BASE_RELOCATION RelocCurr;
@@ -122,12 +122,12 @@ OslPeFixupImage(
 		// Check all the records before fixup.
 		//
 
-		for(RelocCurr = Reloc; ; )
+		for (RelocCurr = Reloc; ; )
 		{
 			TypeOffset = (PIMAGE_TYPE_OFFSET)(RelocCurr + 1);
 			Count = (RelocCurr->SizeOfBlock - sizeof(*RelocCurr)) / sizeof(*TypeOffset);
 
-			for(i = 0; i < Count; i++)
+			for (i = 0; i < Count; i++)
 			{
 				UINT16 Type = TypeOffset[i].s.Type;
 
@@ -163,7 +163,7 @@ OslPeFixupImage(
 			TypeOffset = (PIMAGE_TYPE_OFFSET)(RelocCurr + 1);
 			Count = (RelocCurr->SizeOfBlock - sizeof(*RelocCurr)) / sizeof(*TypeOffset);
 
-			for(i = 0; i < Count; i++)
+			for (i = 0; i < Count; i++)
 			{
 				union
 				{
@@ -228,6 +228,7 @@ OslPeFixupImage(
  * @param [in] FileBuffer           File buffer which contains file content.
  * @param [in] FileBufferLength     Length of file buffer.
  * @param [out] MappedSize          Size of mapped image.
+ * @param [in] FixupBase            Fixup base address. If zero is specified, default image base will be used.
  * 
  * @return Returns physical address of image base.\n
  *         Non-zero if succeeds, zero otherwise.
@@ -237,7 +238,8 @@ EFIAPI
 OslPeLoadImage(
 	IN VOID *FileBuffer, 
 	IN UINTN FileBufferLength, 
-	OUT UINTN *MappedSize)
+	OUT UINTN *MappedSize,
+    IN UINT64 FixupBase)
 {
 	PIMAGE_NT_HEADERS_3264 Nt;
 	PIMAGE_SECTION_HEADER SectionHeader;
@@ -283,22 +285,20 @@ OslPeLoadImage(
 	DTRACEF(&OslLoaderBlock, L"SizeOfImage = 0x%lX\r\n", SizeOfImage);
 
 	BaseAddress = Nt->Nt64.OptionalHeader.ImageBase;
-	AllocationStatus = EfiAllocatePages(SizeOfImage, &BaseAddress, TRUE);
+	AllocationStatus = OslAllocatePages(SizeOfImage, &BaseAddress, TRUE, OsKernelImage);
 
 	if (AllocationStatus != EFI_SUCCESS)
 	{
 		DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages at Preferred Base 0x%p\r\n", BaseAddress);
-		// Not a failure, keep going
 
-		AllocationStatus = EfiAllocatePages(SizeOfImage, &BaseAddress, FALSE);
+		// Not a failure, keep going
+		AllocationStatus = OslAllocatePages(SizeOfImage, &BaseAddress, FALSE, OsKernelImage);
 		if(AllocationStatus != EFI_SUCCESS)
 		{
 			DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages\r\n");
 			return 0;
 		}
 	}
-
-	gBS->SetMem((void *)BaseAddress, SizeOfImage, 0);
 
 	//
 	// Copy the headers and section data.
@@ -344,7 +344,7 @@ OslPeLoadImage(
 		{
 			// Section out of bounds.
 			DTRACEF(&OslLoaderBlock, L"Section[%d] out of bounds\r\n", i);
-			EfiFreePages(BaseAddress, SizeOfImage);
+			OslFreePages(BaseAddress, SizeOfImage);
 			return 0;
 		}
 
@@ -355,12 +355,12 @@ OslPeLoadImage(
 		gBS->CopyMem((void *)Destination, (void *)Source, SectionRawSize);
 	}
 
-	// [18-10-16] BUGFIX : Invalid fixup
-	if (!OslPeFixupImage(BaseAddress, (EFI_PHYSICAL_ADDRESS)0, BaseAddress, TRUE))
+    BOOLEAN UseFixupBase = !!FixupBase;
+	if (!OslPeFixupImage(BaseAddress, (EFI_PHYSICAL_ADDRESS)FixupBase, BaseAddress, UseFixupBase))
 	{
 		// Relocation failed.
 		DTRACEF(&OslLoaderBlock, L"Failed to fixup image\r\n", i);
-		EfiFreePages(BaseAddress, SizeOfImage);
+		OslFreePages(BaseAddress, SizeOfImage);
 		return 0;
 	}
 

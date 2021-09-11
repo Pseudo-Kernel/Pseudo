@@ -8,6 +8,8 @@
  * 
  * @copyright Copyright (c) 2021
  * 
+ * @todo Setting up paging mode before transfer control to kernel...
+ * 
  */
 
 #include "OsLoader.h"
@@ -48,6 +50,7 @@ EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *gConOut = NULL;
 /**
  * @brief Initializes the loader block.
  * 
+ * @param [out] LoaderBlock Pointer to loader block to be initialized.
  * @param [in] ImageHandle  The firmware allocated handle for EFI image.
  * @param [in] SystemTable  Pointer to the EFI system table.
  * 
@@ -57,59 +60,67 @@ EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *gConOut = NULL;
 EFI_STATUS
 EFIAPI
 OslInitializeLoaderBlock(
+    IN  OS_LOADER_BLOCK   *LoaderBlock,
     IN  EFI_HANDLE        ImageHandle,
     IN  EFI_SYSTEM_TABLE  *SystemTable)
 {
-    OS_LOADER_BLOCK *LoaderBlock = &OslLoaderBlock;
-    EFI_PHYSICAL_ADDRESS TempBase = 0;
+    EFI_PHYSICAL_ADDRESS PreInitPoolBase = 0;
     EFI_PHYSICAL_ADDRESS ShadowBase = 0;
     EFI_PHYSICAL_ADDRESS KernelStackBase = 0;
-    const UINTN TempSize = 0x800000; // 8M
-    const UINTN ShadowSize = 0x100000; // 1M
-    const UINTN KernelStackSize = 0x100000; // 1M
+    EFI_PHYSICAL_ADDRESS PxeInitPoolBase = 0;
 
-    EFI_STATUS Status;
-    UINTN Offset;
+    UINTN PreInitPoolSize = OSL_LOADER_PREINIT_POOL_SIZE;
+    UINTN ShadowSize = OSL_LOADER_LOW_1M_SHADOW_SIZE;
+    UINTN KernelStackSize = OSL_LOADER_KERNEL_STACK_SIZE;
+    UINTN PxeInitPoolSize = OSL_LOADER_PXE_INIT_POOL_SIZE;
+
+    EFI_STATUS Status = EFI_SUCCESS;
 
     TRACE(L"LoaderBlock 0x%p\r\n", LoaderBlock);
-
-    gBS->SetMem((void *)LoaderBlock, sizeof(*LoaderBlock), 0);
 
     LoaderBlock->Base.ImageHandle = ImageHandle;
     LoaderBlock->Base.SystemTable = SystemTable;
     LoaderBlock->Base.BootServices = SystemTable->BootServices;
     LoaderBlock->Base.RuntimeServices = SystemTable->RuntimeServices;
 
-    Status = EfiAllocatePages(TempSize, &TempBase, FALSE);
+    Status = OslAllocatePages(PreInitPoolSize, &PreInitPoolBase, FALSE, OsPreInitPool);
     if (Status != EFI_SUCCESS)
         return Status;
 
-    gBS->SetMem((void *)TempBase, TempSize, 0);
-
-    Status = EfiAllocatePages(ShadowSize, &ShadowBase, FALSE);
+    Status = OslAllocatePages(ShadowSize, &ShadowBase, FALSE, OsLowMemory1M);
     if (Status != EFI_SUCCESS)
         return Status;
 
     // Copy the shadow 1M (0x00000 to 0xfffff)
-    for (Offset = 0; Offset < ShadowSize; Offset++)
+    for (UINTN Offset = 0; Offset < ShadowSize; Offset++)
         *((CHAR8 *)ShadowBase + Offset) = *((CHAR8 *)0 + Offset);
 
-
-    Status = EfiAllocatePages(KernelStackSize, &KernelStackBase, FALSE);
+    Status = OslAllocatePages(KernelStackSize, &KernelStackBase, FALSE, OsKernelStack);
     if (Status != EFI_SUCCESS)
         return Status;
 
-    gBS->SetMem((void *)KernelStackBase, KernelStackSize, 0);
+    Status = OslAllocatePages(PxeInitPoolSize, &PxeInitPoolBase, FALSE, OsPagingPxePool);
+    if (Status != EFI_SUCCESS)
+        return Status;
 
+    // Get random number from RNG.
+    Status = OslGetRandom(LoaderBlock->LoaderData.Random, sizeof(LoaderBlock->LoaderData.Random));
+    if (Status != EFI_SUCCESS)
+    {
+        TRACE(L"WARNING: Cannot get random\r\n");
+    }
 
-    LoaderBlock->LoaderData.OffsetToVirtualAddress = 0;
-
-    LoaderBlock->LoaderData.TempBase = TempBase;
-    LoaderBlock->LoaderData.TempSize = TempSize;
+    LoaderBlock->LoaderData.PreInitPoolBase = PreInitPoolBase;
+    LoaderBlock->LoaderData.PreInitPoolSize = PreInitPoolSize;
     LoaderBlock->LoaderData.ShadowBase = ShadowBase;
     LoaderBlock->LoaderData.ShadowSize = ShadowSize;
     LoaderBlock->LoaderData.KernelStackBase = KernelStackBase;
     LoaderBlock->LoaderData.StackSize = KernelStackSize;
+    LoaderBlock->LoaderData.PxeInitPoolBase = PxeInitPoolBase;
+    LoaderBlock->LoaderData.PxeInitPoolSize = PxeInitPoolSize;
+    LoaderBlock->LoaderData.PxeInitPoolSizeUsed = 0;
+    LoaderBlock->LoaderData.PML4TBase = 0;
+    LoaderBlock->LoaderData.RPML4TBase = 0;
 
     return EFI_SUCCESS;
 }
@@ -163,10 +174,12 @@ OslOpenBootPartition(
 /**
  * @brief Loads the file to memory.
  * 
- * @param [in] LoaderBlock  Loader block.
- * @param [in] FilePath     File path.
- * @param [out] Buffer      Caller-supplied pointer to receive file buffer.
- * @param [out] Size        Caller-supplied pointer to receive file size.
+ * @param [in] LoaderBlock      Loader block.
+ * @param [in] FilePath         File path.
+ * @param [in] BufferMemoryType Specifies memory type when the file buffer is allocated.\n
+ *                              If zero is specified, EfiLoaderData will be used.
+ * @param [out] Buffer          Caller-supplied pointer to receive file buffer.
+ * @param [out] Size            Caller-supplied pointer to receive file size.
  * 
  * @return TRUE if succeeds, FALSE otherwise.
  */
@@ -175,6 +188,7 @@ EFIAPI
 OslLoadFile(
     IN OS_LOADER_BLOCK *LoaderBlock, 
     IN CHAR16 *FilePath, 
+    IN OS_MEMORY_TYPE BufferMemoryType,
     OUT VOID **Buffer, 
     OUT UINTN *Size)
 {
@@ -201,14 +215,11 @@ OslLoadFile(
         // This returns required FileInfoSize with error.
         TargetFile->GetInfo(TargetFile, &gEfiFileInfoGuid, &FileInfoSize, NULL);
 
-        Status = gBS->AllocatePages(
-            AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES(FileInfoSize), &FileInfo);
-
+        Status = OslAllocatePages(FileInfoSize, &FileInfo, FALSE, OsTemporaryData);
         if (Status != EFI_SUCCESS)
             break;
 
         Status = TargetFile->GetInfo(TargetFile, &gEfiFileInfoGuid, &FileInfoSize, (void *)FileInfo);
-
         if (Status != EFI_SUCCESS)
             break;
 
@@ -218,9 +229,7 @@ OslLoadFile(
 
         FileBufferSize = ((EFI_FILE_INFO *)FileInfo)->FileSize;
 
-
-        Status = gBS->AllocatePages(
-            AllocateAnyPages, EfiLoaderData, EFI_SIZE_TO_PAGES(FileBufferSize), &FileBuffer);
+        Status = OslAllocatePages(FileBufferSize, &FileBuffer, FALSE, BufferMemoryType);
         if (Status != EFI_SUCCESS)
         {
             TRACEF(L"Failed to Allocate the Memory (%d Pages)\r\n", EFI_SIZE_TO_PAGES(FileBufferSize));
@@ -235,7 +244,7 @@ OslLoadFile(
         if (FileBufferSize >= 0x100000000ULL)
             break;
 
-        gBS->FreePages(FileInfo, EFI_SIZE_TO_PAGES(FileInfoSize));
+        OslFreePages(FileInfo, FileInfoSize);
 
         *Buffer = (VOID *)FileBuffer;
         *Size = FileBufferSize;
@@ -245,10 +254,10 @@ OslLoadFile(
     } while (FALSE);
 
     if (FileInfo)
-        gBS->FreePages(FileInfo, EFI_SIZE_TO_PAGES(FileInfoSize));
+        OslFreePages(FileInfo, FileInfoSize);
 
     if (FileBuffer)
-        gBS->FreePages(FileBuffer, EFI_SIZE_TO_PAGES(FileBufferSize));
+        OslFreePages(FileBuffer, FileBufferSize);
 
     return FALSE;
 }
@@ -267,21 +276,30 @@ OslLoadBootFiles(
 {
     UINTN FileBufferSize = 0;
     EFI_PHYSICAL_ADDRESS FileBuffer = 0;
-    EFI_PHYSICAL_ADDRESS KernelPhysicalBase = 0;
-    UINTN MappedSize = 0;
 
-    if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\Core.sys", (VOID **)&FileBuffer, &FileBufferSize))
+    if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\Core.sys", OsTemporaryData, (VOID **)&FileBuffer, &FileBufferSize))
         return FALSE;
 
-    KernelPhysicalBase = OslPeLoadImage((void *)FileBuffer, FileBufferSize, &MappedSize);
-    gBS->FreePages(FileBuffer, EFI_SIZE_TO_PAGES(FileBufferSize));
+    // Calculate virtual base.
+    UINT64 Random1 = *(UINT64 *)LoaderBlock->LoaderData.Random;
+    UINT64 Random2 = *(UINT64 *)&LoaderBlock->LoaderData.Random[8];
+    UINT32 Value1 = (UINT32)((Random1 * 0xc0c75f942f9aebca) >> 32);
+    UINT32 Value2 = (UINT32)((Random2 * 0xfd74c63348a7c25f) >> 32);
+    UINT64 Result = Value1 | ((UINT64)Value2 << 32);
+    UINT64 VirtualBase = ((Result % KERNEL_VA_SIZE_LOADER_SPACE_ASLR_GAP) & ~(EFI_PAGE_SIZE - 1))
+        + KERNEL_VA_START_LOADER_SPACE;
 
-    if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\init.bin", (VOID **)&FileBuffer, &FileBufferSize))
+    UINTN MappedSize = 0;
+    EFI_PHYSICAL_ADDRESS KernelPhysicalBase = OslPeLoadImage((void *)FileBuffer, FileBufferSize, &MappedSize, VirtualBase);
+    OslFreePages(FileBuffer, FileBufferSize);
+
+    if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\init.bin", OsBootImage, (VOID **)&FileBuffer, &FileBufferSize))
     {
-        gBS->FreePages(KernelPhysicalBase, EFI_SIZE_TO_PAGES(MappedSize));
+        OslFreePages(KernelPhysicalBase, MappedSize);
         return FALSE;
     }
 
+    LoaderBlock->LoaderData.OffsetToVirtualBase = VirtualBase - KernelPhysicalBase;
     LoaderBlock->LoaderData.KernelPhysicalBase = KernelPhysicalBase;
     LoaderBlock->LoaderData.MappedSize = MappedSize;
     LoaderBlock->LoaderData.BootImageBase = FileBuffer;
@@ -301,7 +319,7 @@ OslLoadBootFiles(
  */
 VOID *
 EFIAPI
-EfiLookupConfigurationTable(
+OslLookupConfigurationTable(
     IN EFI_GUID *Guid)
 {
     UINTN i;
@@ -333,7 +351,7 @@ OslQueryConfigurationTables(
     //  gEfiSmbios3TableGuid
     //  #error FIXME: Must implement query ACPI tables and SMBIOS tables!!!!
 
-    VOID *AcpiTable = EfiLookupConfigurationTable(&gEfiAcpi20TableGuid);
+    VOID *AcpiTable = OslLookupConfigurationTable(&gEfiAcpi20TableGuid);
 
     LoaderBlock->Configuration.AcpiTable = (EFI_PHYSICAL_ADDRESS)AcpiTable;
 
@@ -499,7 +517,7 @@ OslQuerySwitchVideoModes(
             break;
         }
 
-        if (EfiAllocatePages(VideoModeBufferLength, &VideoModeBuffer, FALSE)
+        if (OslAllocatePages(VideoModeBufferLength, &VideoModeBuffer, FALSE, OsTemporaryData)
             != EFI_SUCCESS)
             break;
 
@@ -610,7 +628,7 @@ OslQuerySwitchVideoModes(
     if (!Found)
     {
         if(VideoModeBuffer)
-            EfiFreePages(VideoModeBuffer, VideoModeBufferLength);
+            OslFreePages(VideoModeBuffer, VideoModeBufferLength);
     }
 
     return Found;
@@ -661,7 +679,7 @@ UefiMain(
     // Initialize our Loader Block.
     //
 
-    Status = OslInitializeLoaderBlock(ImageHandle, SystemTable);
+    Status = OslInitializeLoaderBlock(&OslLoaderBlock, ImageHandle, SystemTable);
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to Initialize\r\n");
@@ -744,7 +762,7 @@ UefiMain(
 
     TRACE(L"Query Memory Map...\r\n");
 
-    Status = OslMmQueryMemoryMap(&OslLoaderBlock);
+    Status = OslQueryMemoryMap(&OslLoaderBlock);
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to query memory map");
@@ -752,7 +770,7 @@ UefiMain(
         return Status;
     }
 
-    OslMmDumpMemoryMap(
+    OslDumpMemoryMap(
         OslLoaderBlock.Memory.Map,
         OslLoaderBlock.Memory.MapCount * OslLoaderBlock.Memory.DescriptorSize,
         OslLoaderBlock.Memory.DescriptorSize);
@@ -775,7 +793,7 @@ UefiMain(
     // Query the memory map once again because memory map may change by calling other UEFI service calls.
     //
 
-    Status = OslMmQueryMemoryMap(&OslLoaderBlock);
+    Status = OslQueryMemoryMap(&OslLoaderBlock);
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to query memory map");
@@ -799,6 +817,19 @@ UefiMain(
 
         return Status;
     }
+
+    //
+    // Setup our paging structure.
+    //
+
+    if (!OslSetupPaging(&OslLoaderBlock))
+    {
+        return EFI_NOT_STARTED;
+    }
+
+    //
+    // Transfer control to the kernel.
+    //
 
     if (!OslTransferToKernel(&OslLoaderBlock))
     {

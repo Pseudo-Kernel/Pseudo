@@ -8,10 +8,11 @@
 // Defines initial virtual memory map.
 //
 
-#define KERNEL_VA_SIZE_LOADER_SPACE                     0x0000000100000000ULL // 4G
+#define KERNEL_VA_SIZE_LOADER_SPACE                     0x0000001000000000ULL // 64G
+#define KERNEL_VA_SIZE_LOADER_SPACE_ASLR_GAP            0x0000008000000000ULL // 512G
 
-#define KERNEL_VA_START_LOADER_SPACE                    0xffff800000000000ULL // Used in initialization
-#define KERNEL_VA_END_LOADER_SPACE                      (KERNEL_VA_START_LOADER_SPACE + KERNEL_VA_SIZE_LOADER_SPACE)
+#define KERNEL_VA_START_LOADER_SPACE                    0xffff8f0000000000ULL // Used in initialization
+#define KERNEL_VA_END_LOADER_SPACE                      (KERNEL_VA_START_LOADER_SPACE + KERNEL_VA_SIZE_LOADER_SPACE + KERNEL_VA_SIZE_LOADER_SPACE_ASLR_GAP)
 
 
 #define KERNEL_VA_SIZE_ASLR_GAP                         0x0000008000000000ULL // 512G

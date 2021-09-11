@@ -18,5 +18,6 @@ EFIAPI
 OslPeLoadImage(
     IN VOID *FileBuffer,
     IN UINTN FileBufferLength,
-    OUT UINTN *MappedSize);
+    OUT UINTN *MappedSize,
+    IN UINT64 FixupBase);
 

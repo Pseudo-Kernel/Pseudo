@@ -23,12 +23,12 @@
 VOID
 EFIAPI
 OslReturnedFromKernel(
-	VOID)
+    VOID)
 {
-	for (;;)
-	{
-		__asm__ __volatile__("hlt" : : : "memory");
-	}
+    for (;;)
+    {
+        __asm__ __volatile__("hlt" : : : "memory");
+    }
 }
 
 
@@ -42,25 +42,46 @@ OslReturnedFromKernel(
 BOOLEAN
 EFIAPI
 OslTransferToKernel(
-	IN OS_LOADER_BLOCK *LoaderBlock)
+    IN OS_LOADER_BLOCK *LoaderBlock)
 {
-	IMAGE_NT_HEADERS_3264 *Nt3264;
-	EFI_PHYSICAL_ADDRESS KernelBase;
-	PKERNEL_START_ENTRY StartEntry;
+    EFI_VIRTUAL_ADDRESS KernelBase = 
+        LoaderBlock->LoaderData.KernelPhysicalBase
+        + LoaderBlock->LoaderData.OffsetToVirtualBase;
+    UINT64 *KernelStackTop = (UINT64 *)(
+        LoaderBlock->LoaderData.KernelStackBase
+        + LoaderBlock->LoaderData.OffsetToVirtualBase
+        + LoaderBlock->LoaderData.StackSize);
 
-	KernelBase = LoaderBlock->LoaderData.KernelPhysicalBase;
-	Nt3264 = OslPeImageBaseToNtHeaders((void *)KernelBase);
+    IMAGE_NT_HEADERS_3264 *Nt3264 = OslPeImageBaseToNtHeaders((void *)KernelBase);
 
-	if (!Nt3264)
-		return FALSE;
+    if (!Nt3264)
+        return FALSE;
 
-	StartEntry = (PKERNEL_START_ENTRY)(
-		KernelBase + Nt3264->Nt64.OptionalHeader.AddressOfEntryPoint);
+    PKERNEL_START_ENTRY StartEntry = (PKERNEL_START_ENTRY)(
+        KernelBase + Nt3264->Nt64.OptionalHeader.AddressOfEntryPoint);
+    UINT64 *StackPointer = KernelStackTop - 5;
 
-	// Start the kernel!
-	StartEntry(KernelBase, (UINT64)LoaderBlock, sizeof(OS_LOADER_BLOCK), 0);
+    __asm__ __volatile__
+    (
+        "mov rax, %0\n\t"
+        "mov r10, %1\n\t"
+        "mov rcx, %2\n\t"
+        "mov rdx, %3\n\t"
+        "mov r8, %4\n\t"
+        "mov r9, %5\n\t"
+        "xchg rsp, r10\n\t" // stack switch!
+        "push rax\n\t"
+        "ret\n\t"
+        :
+        : "m"(StartEntry), "m"(StackPointer),
+          "m"(KernelBase), "r"(LoaderBlock), "r"(sizeof(*LoaderBlock)), "n"(0)
+        :
+    );
 
-	OslReturnedFromKernel();
+    // Start the kernel!
+    //StartEntry(KernelBase, (UINT64)LoaderBlock, sizeof(OS_LOADER_BLOCK), 0);
 
-	return FALSE;
+    OslReturnedFromKernel();
+
+    return FALSE;
 }

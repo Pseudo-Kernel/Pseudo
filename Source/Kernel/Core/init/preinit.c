@@ -21,7 +21,7 @@ ZIP_CONTEXT PiBootImageContext; // Boot image context
 	PiPageReserveCount++;											\
 }
 
-
+#if 0
 __attribute__((naked))
 VOID
 KERNELAPI
@@ -50,6 +50,7 @@ PiPreStackSwitch(
 		: "memory"
 	);
 }
+#endif
 
 VOID
 KERNELAPI
@@ -74,7 +75,7 @@ PiPreInitialize(
 	LoaderBlockTemp->Base.RootDirectory = NULL;
 
 	PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.KernelPhysicalBase, LoaderBlockTemp->LoaderData.MappedSize);
-	PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.TempBase, LoaderBlockTemp->LoaderData.TempSize);
+	PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.PreInitPoolBase, LoaderBlockTemp->LoaderData.PreInitPoolSize);
 	PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.ShadowBase, LoaderBlockTemp->LoaderData.ShadowSize);
 	PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.BootImageBase, LoaderBlockTemp->LoaderData.BootImageSize);
 	PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.VideoModeBase, LoaderBlockTemp->LoaderData.VideoModeSize);
@@ -120,14 +121,14 @@ PiPreInitialize(
 	// Initialize the memory mapping.
 	//
 
-	MiInitializeMemoryMap(
-		LoaderBlock->Memory.Map, 
-		LoaderBlock->Memory.MapCount, 
-		LoaderBlock->Memory.DescriptorSize, 
-		PiPageReserve, 
-		PiPageReserveCount);
+//	MiInitializeMemoryMap(
+//		LoaderBlock->Memory.Map, 
+//		LoaderBlock->Memory.MapCount, 
+//		LoaderBlock->Memory.DescriptorSize, 
+//		PiPageReserve, 
+//		PiPageReserveCount);
 
-	BootGfxPrintTextFormat("Memory mapping done.\n");
+	BootGfxPrintTextFormat("Test!\n");
 
 	for (;;)
 	{

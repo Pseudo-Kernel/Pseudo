@@ -46,13 +46,17 @@ typedef struct _OS_LOADER_BLOCK {
 		UPTR MapCount;
 		UPTR MapKey;
 		UPTR DescriptorSize;
+        UPTR MapSize;
 		U32 DescriptorVersion;
 	} Memory;
 
 	struct
 	{
-		EFI_PHYSICAL_ADDRESS TempBase;
-		SIZE_T TempSize;
+        U8 Random[128];
+        EFI_VIRTUAL_ADDRESS OffsetToVirtualBase;
+
+ 		EFI_PHYSICAL_ADDRESS PreInitPoolBase;
+		SIZE_T PreInitPoolSize;
 
 		EFI_PHYSICAL_ADDRESS ShadowBase; // Low 1M Shadow
 		SIZE_T ShadowSize;
@@ -65,6 +69,13 @@ typedef struct _OS_LOADER_BLOCK {
 
 		EFI_PHYSICAL_ADDRESS BootImageBase;
 		SIZE_T BootImageSize;
+
+        EFI_PHYSICAL_ADDRESS PxeInitPoolBase;
+        SIZE_T PxeInitPoolSize;
+        SIZE_T PxeInitPoolSizeUsed;
+
+        EFI_PHYSICAL_ADDRESS PML4TBase;
+        EFI_PHYSICAL_ADDRESS RPML4TBase;
 
 		//
 		// Video Modes.

@@ -424,7 +424,7 @@ MiPreInitialize(
 	IN OS_LOADER_BLOCK *LoaderBlock)
 {
 	return MiInitializePoolBlockList(&MiPoolList[PoolTypeNonPagedPreInit],
-		LoaderBlock->LoaderData.TempBase, LoaderBlock->LoaderData.TempSize, 0);
+		LoaderBlock->LoaderData.PreInitPoolBase, LoaderBlock->LoaderData.PreInitPoolSize, 0);
 }
 
 

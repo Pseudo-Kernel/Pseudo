@@ -15,7 +15,8 @@ EfiIsEqualGuid(
 EFI_STATUS
 EFIAPI
 OslGetRandom(
-    OUT UINT64 *Random);
+    OUT UINT8 *Buffer,
+    IN UINTN BufferLength);
 
 BOOLEAN
 EFIAPI

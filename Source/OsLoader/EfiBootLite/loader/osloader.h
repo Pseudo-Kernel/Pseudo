@@ -1,6 +1,5 @@
-/** @file
-  Header for Base Definitions.
-**/
+
+#pragma once
 
 // Define the OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600 to fix screen resolution. 
 #define OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600
@@ -108,6 +107,12 @@ typedef struct _OS_VIDEO_MODE_RECORD
     // UCHAR ModeInfo[SizeOfInfo];
 } OS_VIDEO_MODE_RECORD, *POS_VIDEO_MODE_RECORD;
 
+
+#define OSL_LOADER_PREINIT_POOL_SIZE            0x800000 // 8M
+#define OSL_LOADER_LOW_1M_SHADOW_SIZE           0x100000 // 1M
+#define OSL_LOADER_KERNEL_STACK_SIZE            0x100000 // 1M
+#define OSL_LOADER_PXE_INIT_POOL_SIZE           0x1000000 // 16M
+
 typedef struct _OS_LOADER_BLOCK
 {
     struct
@@ -137,15 +142,17 @@ typedef struct _OS_LOADER_BLOCK
         UINTN MapCount;
         UINTN MapKey;
         UINTN DescriptorSize;
+        UINTN MapSize;
         UINT32 DescriptorVersion;
     } Memory;
 
     struct
     {
-        EFI_VIRTUAL_ADDRESS OffsetToVirtualAddress;
+        UINT8 Random[128];
+        EFI_VIRTUAL_ADDRESS OffsetToVirtualBase;
 
-        EFI_PHYSICAL_ADDRESS TempBase;
-        UINTN TempSize;
+        EFI_PHYSICAL_ADDRESS PreInitPoolBase;
+        UINTN PreInitPoolSize;
 
         EFI_PHYSICAL_ADDRESS ShadowBase; // Low 1M Shadow
         UINTN ShadowSize;
@@ -158,6 +165,13 @@ typedef struct _OS_LOADER_BLOCK
 
         EFI_PHYSICAL_ADDRESS BootImageBase;
         UINTN BootImageSize;
+
+        EFI_PHYSICAL_ADDRESS PxeInitPoolBase;
+        UINTN PxeInitPoolSize;
+        UINTN PxeInitPoolSizeUsed;
+
+        EFI_PHYSICAL_ADDRESS PML4TBase;
+        EFI_PHYSICAL_ADDRESS RPML4TBase;
 
         //
         // Video Modes.
@@ -195,114 +209,14 @@ extern OS_LOADER_BLOCK OslLoaderBlock;
 extern EFI_GUID gEfiRngProtocolGuid;
 
 
-#if 0
-
 //
-// X64 Paging Structures.
+// Loader space.
 //
 
-typedef union _X64_PML4E {
-    struct
-    {
-        UINT64 Present : 1;
-        UINT64 Writable : 1;
-        UINT64 User : 1;
-        UINT64 WriteThru : 1;
-        UINT64 CacheDisable : 1;
-        UINT64 Accessed : 1;
-        UINT64 Ignored1 : 1;
-        UINT64 ReservedZero : 1;
-        UINT64 Ignored2 : 4;
-        UINT64 PDPT : 40;
-        UINT64 Ignored3 : 11;
-        UINT64 ExecuteDisable : 1;
-    } b;
-    UINT64 Value;
-} X64_PML4E;
+#define KERNEL_VA_SIZE_LOADER_SPACE                     0x0000001000000000ULL // 64G
+#define KERNEL_VA_SIZE_LOADER_SPACE_ASLR_GAP            0x0000008000000000ULL // 512G
 
-typedef union _X64_PDPTE {
-    struct
-    {
-        UINT64 Present : 1;
-        UINT64 Writable : 1;
-        UINT64 User : 1;
-        UINT64 WriteThru : 1;
-        UINT64 CacheDisable : 1;
-        UINT64 Accessed : 1;
-        UINT64 Ignored1 : 1;
-        UINT64 ReservedZero : 1;
-        UINT64 Ignored2 : 4;
-        UINT64 PDPT : 40;
-        UINT64 Ignored3 : 11;
-        UINT64 ExecuteDisable : 1;
-    } b;
-    UINT64 Value;
-} X64_PDPTE;
-
-typedef union _X64_PDE {
-    struct
-    {
-        UINT64 Present : 1;
-        UINT64 Writable : 1;
-        UINT64 User : 1;
-        UINT64 WriteThru : 1;
-        UINT64 CacheDisable : 1;
-        UINT64 Accessed : 1;
-        UINT64 Ignored1 : 1;
-        UINT64 ReservedZero : 1;
-        UINT64 Ignored2 : 4;
-        UINT64 PDPT : 40;
-        UINT64 Ignored3 : 11;
-        UINT64 ExecuteDisable : 1;
-    } b;
-    UINT64 Value;
-} X64_PDE;
-
-typedef union _X64_PDE_2MB {
-    struct
-    {
-        UINT64 Present : 1;
-        UINT64 Writable : 1;
-        UINT64 User : 1;
-        UINT64 WriteThru : 1;
-        UINT64 CacheDisable : 1;
-        UINT64 Accessed : 1;
-        UINT64 Dirty : 1;
-        UINT64 PageSize2M : 1; // must be 1
-        UINT32 Global : 1;
-        UINT64 Ignored1 : 3;
-        UINT64 PAT : 1;
-        UINT64 Reserved : 8;
-        UINT64 BaseAddress : 31;
-        UINT64 Ignored3 : 7;
-        UINT64 ProtectionKey : 4;
-        UINT64 ExecuteDisable : 1;
-    } b;
-    UINT64 Value;
-} X64_PDE_2MB;
-
-typedef union _X64_PTE {
-    struct
-    {
-        UINT64 Present : 1;
-        UINT64 Writable : 1;
-        UINT64 User : 1;
-        UINT64 WriteThru : 1;
-        UINT64 CacheDisable : 1;
-        UINT64 Accessed : 1;
-        UINT64 Dirty : 1;
-        UINT64 PAT : 1;
-        UINT64 Global : 1;
-        UINT64 Ignored2 : 3;
-        UINT64 BaseAddress : 40;
-        UINT64 Ignored3 : 7;
-        UINT64 ProtectionKey : 4;
-        UINT64 ExecuteDisable : 1;
-    } b;
-    UINT64 Value;
-} X64_PTE;
-
-#endif
-
+#define KERNEL_VA_START_LOADER_SPACE                    0xffff8f0000000000ULL // Used in initialization
+#define KERNEL_VA_END_LOADER_SPACE                      (KERNEL_VA_START_LOADER_SPACE + KERNEL_VA_SIZE_LOADER_SPACE + KERNEL_VA_SIZE_LOADER_SPACE_ASLR_GAP)
 
 

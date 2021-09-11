@@ -40,7 +40,8 @@ EfiIsEqualGuid(
 /**
  * @brief Gets the 64-bit random value.
  * 
- * @param [in] LoaderBlock  Loader block.
+ * @param [out] Buffer      Pointer to caller-supplied buffer to receive random values.
+ * @param [in] BufferLength Size of buffer in bytes.
  * 
  * @return EFI_SUCCESS      The operation is completed successfully.
  * @return else             An error occurred during the operation.
@@ -48,7 +49,8 @@ EfiIsEqualGuid(
 EFI_STATUS
 EFIAPI
 OslGetRandom(
-    OUT UINT64 *Random)
+    OUT UINT8 *Buffer,
+    IN UINTN BufferLength)
 {
     EFI_RNG_PROTOCOL *RngProtocol = NULL;
     EFI_STATUS Status = EFI_SUCCESS;
@@ -57,7 +59,7 @@ OslGetRandom(
     if (Status != EFI_SUCCESS)
         return Status;
 
-    Status = RngProtocol->GetRNG(RngProtocol, NULL, sizeof(*Random), (UINT8 *)Random);
+    Status = RngProtocol->GetRNG(RngProtocol, NULL, BufferLength, Buffer);
     if (Status != EFI_SUCCESS)
         return Status;
 
