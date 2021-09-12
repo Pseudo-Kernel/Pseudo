@@ -8,15 +8,26 @@
  * 
  * @copyright Copyright (c) 2021
  * 
+ * @todo There are many works to do:\n
+ *       - Pool initialization
+ *       - Interrupt registration and dispatch
+ *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
  */
 
 #include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 
-#pragma comment(linker, "/Entry:KiKernelStart")
-
-
+/**
+ * @brief Kernel main entry point.
+ * 
+ * @param LoadedBase            Kernel base.
+ * @param LoaderBlock           Loader block provided by Osloader.
+ * @param SizeOfLoaderBlock     Size of loader block.
+ * @param Reserved              Reserved. Currently zero.
+ * 
+ * @return This function never returns.
+ */
 U64
 KERNELAPI
 KiKernelStart(
@@ -32,8 +43,6 @@ KiKernelStart(
 	DbgTraceF(TraceLevelDebug, "%s (%p, %p, %X, %p)\n",
 		__FUNCTION__, LoadedBase, LoaderBlock, SizeOfLoaderBlock, Reserved);
 
-	//UPTR SafeStackTop = LoaderBlock->LoaderData.KernelStackBase + LoaderBlock->LoaderData.StackSize - 0x10;
-	//PiPreStackSwitch(LoaderBlock, SizeOfLoaderBlock, (PVOID)SafeStackTop);
     PiPreInitialize(LoaderBlock, SizeOfLoaderBlock);
 
 	for (;;)

@@ -89,7 +89,7 @@
                     
                     // add-symbol-file <path> <textaddress>
                     //"text": "add-symbol-file '${workspaceFolder}/Filesystem/EFI/BOOT/Core.sys' 0x401000",
-                    "text": "add-symbol-file 'D:/Repository/Pseudo/TestExec/Filesystem/EFI/BOOT/Core.sys' 0xffff8f0000000000",
+                    "text": "add-symbol-file 'D:/Repository/Pseudo/TestExec/Filesystem/EFI/BOOT/Core.sys' 0xffff8f0000001000",
                 },
             ],
             "preLaunchTask": "Start Virtual Machine",

@@ -258,28 +258,6 @@ OslDumpMemoryMap(
 	TRACE(L"\r\n");
 }
 
-
-
-#if 0
-#define PAGE_LOWER_MAP_GET(_map, _idx, _lower_map)  {           \
-    /* _entry type must be (U64 *) */                           \
-    if(!( (_map)[_idx] & PAGE_PRESENT ))    {                   \
-        (_lower_map) = MmAllocatePool(PoolTypeNonPagedPreInit,  \
-            PAGE_SIZE, PAGE_SIZE, TAG4('I', 'N', 'I', 'T'));    \
-        DbgTraceF(TraceLevelDebug, "Allocated %s = 0x%llx\n",   \
-            _ASCII(_lower_map), (U64)(_lower_map));             \
-        if(!(_lower_map)) {                                     \
-            BootGfxFatalStop("Failed to create page mapping");  \
-        }                                                       \
-        memset((_lower_map), 0, PAGE_SIZE);                     \
-        /* New entry */                                         \
-        (_map)[_idx] = ((UPTR)(_lower_map)) |                   \
-            PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;           \
-    }                                                           \
-    (_lower_map) = (U64 *)((_map)[_idx] & PAGE_PHYADDR_MASK);   \
-}                                                               
-#endif
-
 /**
  * @brief Allocates the 512-entry of PXE.
  * 
@@ -322,6 +300,21 @@ OslResetPxePool(
     LoaderBlock->LoaderData.PxeInitPoolSizeUsed = 0;
 }
 
+/**
+ * @brief Sets virtual-to-physical page mapping.\n
+ *        Reverse mapping (physical-to-virtual) is also allowed.\n
+ * 
+ * @param [in] PML4TBase        Base address of PML4T.
+ * @param [in] VirtualAddress   Virtual address.
+ * @param [in] PhysicalAddress  Physical address.
+ * @param [in] Size             Map size.
+ * @param [in] PteFlags         PTE flags to be specified.
+ * @param [in] ReverseMapping   Sets virtual-to-physical mapping to PML4T if FALSE.\n
+ *                              Otherwise, sets physical-to-virtual mapping.\n
+ *                              PML4T will be treated as reverse mapping table of PML4T.
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
 BOOLEAN
 EFIAPI
 OslArchX64SetPageMapping(
@@ -449,9 +442,85 @@ OslArchX64SetPageMapping(
             DestinationPageNumber++;
         }
     }
+
+    return TRUE;
+}
+
+/**
+ * @brief Clears virtual-to-physical page mapping.\n
+ * 
+ * @param [in] PML4TBase        Base address of PML4T.
+ * @param [in] VirtualAddress   Virtual address.
+ * @param [in] Size             Map size.
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
+BOOLEAN
+EFIAPI
+OslArchX64SetPageMappingNotPresent(
+    IN UINT64 *PML4TBase, 
+    IN EFI_VIRTUAL_ADDRESS VirtualAddress, 
+    IN UINT64 Size)
+{
+    UINT64 PageCount = EFI_SIZE_TO_PAGES(Size);
+    UINT64 VfnStart = ARCH_X64_VA_TO_4K_VFN(VirtualAddress);
+    UINT64 SourcePageNumber = VfnStart;
+
+    for (UINT64 i = 0; i < PageCount; )
+    {
+        UINT64 PML4TEi = ARCH_X64_VFN_TO_PML4EI(SourcePageNumber);
+        UINT64 PDPTEi = ARCH_X64_VFN_TO_PDPTEI(SourcePageNumber);
+        UINT64 PDEi = ARCH_X64_VFN_TO_PDEI(SourcePageNumber);
+        UINT64 PTEi = ARCH_X64_VFN_TO_PTEI(SourcePageNumber);
+
+        UINT64 PML4TE = PML4TBase[PML4TEi];
+        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PML4T -> PDPT
+        UINT64 *PDPTBase = (UINT64 *)(PML4TE & ARCH_X64_PXE_4K_BASE_MASK);
+        UINT64 PDPTE = PDPTBase[PDPTEi];
+        if (!(PDPTE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PDPT -> PD
+        UINT64 *PDBase = (UINT64 *)(PDPTE & ARCH_X64_PXE_4K_BASE_MASK);
+        UINT64 PDE = PDBase[PDEi];
+        if (!(PDE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PD -> PT
+        UINT64 *PTBase = (UINT64 *)(PDE & ARCH_X64_PXE_4K_BASE_MASK);
+        UINT64 PTE = PTBase[PTEi];
+
+        // Clear present bit
+        PTE &= ~ARCH_X64_PXE_PRESENT;
+
+        PTBase[PTEi] = PTE;
+
+        i++;
+        SourcePageNumber++;
+    }
+
+    return TRUE;
 }
 
 
+/**
+ * @brief Checks whether the virtual-to-physical is exists.\n
+ * 
+ * @param [in] PML4TBase        Base address of PML4T.
+ * @param [in] VirtualAddress   Virtual address.
+ * @param [in] Size             Map size.
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
 BOOLEAN
 EFIAPI
 OslArchX64IsPageMappingExists(
@@ -519,6 +588,13 @@ OslArchX64IsPageMappingExists(
     return TRUE;
 }
 
+/**
+ * @brief Converts EFI_MEMORY_DESCRIPTOR.Attribute to PXE flag.
+ * 
+ * @param [in] Attribute    Attribute
+ * 
+ * @return PXE flag. 
+ */
 UINT64
 EFIAPI
 OslArchX64EfiMapAttributeToPxeFlag(
@@ -565,6 +641,11 @@ OslArchX64EfiMapAttributeToPxeFlag(
     return PxeFlag;
 }
 
+/**
+ * @brief Reads CR3 register.
+ * 
+ * @return Value of CR3 register.
+ */
 __attribute__((naked))
 UINT64
 EFIAPI
@@ -581,6 +662,14 @@ OslArchX64GetCr3(
     );
 }
 
+/**
+ * @brief Writes to CR3 register.\n
+ *        This will invalidate the TLB.
+ * 
+ * @param [in] Cr3  New value of CR3.
+ * 
+ * @return None.
+ */
 __attribute__((naked))
 VOID
 EFIAPI
@@ -660,7 +749,7 @@ OslSetupPaging(
         }
         else
         {
-            // Virtual-to-physical mapping.
+            // Virtual-to-physical mapping (identity mapping).
             if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 
                 Size, PxeFlag, FALSE))
             {
@@ -668,6 +757,10 @@ OslSetupPaging(
             }
         }
 	}
+
+    //
+    // Map video framebuffer.
+    //
 
     UINT64 FramebufferBase = LoaderBlock->LoaderData.VideoFramebufferBase;
     UINTN FramebufferSize = LoaderBlock->LoaderData.VideoFramebufferSize;
@@ -683,11 +776,17 @@ OslSetupPaging(
         }
     }
 
+    //
+    // Prevent null page from getting accessed.
+    //
+
+    if (!OslArchX64SetPageMappingNotPresent((UINT64 *)PML4TBase, 0, EFI_PAGE_SIZE))
+    {
+        return FALSE;
+    }
+
     LoaderBlock->LoaderData.PML4TBase = PML4TBase;
     LoaderBlock->LoaderData.RPML4TBase = RPML4TBase;
-
-    // Set our page mapping. This will invalidate the TLB.
-    OslArchX64SetCr3(PML4TBase);
 
     return TRUE;
 }

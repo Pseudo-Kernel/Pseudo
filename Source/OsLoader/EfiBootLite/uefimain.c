@@ -8,8 +8,6 @@
  * 
  * @copyright Copyright (c) 2021
  * 
- * @todo Setting up paging mode before transfer control to kernel...
- * 
  */
 
 #include "OsLoader.h"
@@ -517,7 +515,7 @@ OslQuerySwitchVideoModes(
             break;
         }
 
-        if (OslAllocatePages(VideoModeBufferLength, &VideoModeBuffer, FALSE, OsTemporaryData)
+        if (OslAllocatePages(VideoModeBufferLength, &VideoModeBuffer, FALSE, OsLoaderData)
             != EFI_SUCCESS)
             break;
 
@@ -802,6 +800,17 @@ UefiMain(
     }
 
     //
+    // Setup our paging structure.
+    //
+
+    if (!OslSetupPaging(&OslLoaderBlock))
+    {
+        TRACEF(L"Failed to setup paging structure");
+        gBS->Stall(5 * 1000 * 1000);
+        return EFI_NOT_STARTED;
+    }
+
+    //
     // Exit the Boot Services.
     // Any service calls must be prohibited because it can change the memory map.
     //
@@ -816,15 +825,6 @@ UefiMain(
         OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
 
         return Status;
-    }
-
-    //
-    // Setup our paging structure.
-    //
-
-    if (!OslSetupPaging(&OslLoaderBlock))
-    {
-        return EFI_NOT_STARTED;
     }
 
     //

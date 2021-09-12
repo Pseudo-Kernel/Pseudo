@@ -355,8 +355,15 @@ OslPeLoadImage(
 		gBS->CopyMem((void *)Destination, (void *)Source, SectionRawSize);
 	}
 
-    BOOLEAN UseFixupBase = !!FixupBase;
-	if (!OslPeFixupImage(BaseAddress, (EFI_PHYSICAL_ADDRESS)FixupBase, BaseAddress, UseFixupBase))
+    EFI_PHYSICAL_ADDRESS TargetFixupBase = BaseAddress;
+    BOOLEAN UseFixupBase = FALSE;
+    if (FixupBase)
+    {
+        UseFixupBase = TRUE;
+        TargetFixupBase = FixupBase;
+    }
+
+	if (!OslPeFixupImage(BaseAddress, 0, TargetFixupBase, UseFixupBase))
 	{
 		// Relocation failed.
 		DTRACEF(&OslLoaderBlock, L"Failed to fixup image\r\n", i);

@@ -58,8 +58,6 @@ PiPreInitialize(
 	IN OS_LOADER_BLOCK *LoaderBlock,
 	IN U32 LoaderBlockSize)
 {
-	OS_LOADER_BLOCK *LoaderBlockTemp;
-
 	DbgTraceF(TraceLevelDebug, "%s (%p, %X)\n", __FUNCTION__, LoaderBlock, LoaderBlockSize);
 
 	if (sizeof(*LoaderBlock) != LoaderBlockSize)
@@ -67,8 +65,10 @@ PiPreInitialize(
 		BootGfxFatalStop("Loader block size mismatch\n");
 	}
 
-	LoaderBlockTemp = &PiLoaderBlockTemporary;
+	OS_LOADER_BLOCK *LoaderBlockTemp = &PiLoaderBlockTemporary;
 	*LoaderBlockTemp = *LoaderBlock;
+
+    U64 OffsetToVirtualBase = LoaderBlockTemp->LoaderData.OffsetToVirtualBase;
 
 	LoaderBlockTemp->Base.BootServices = NULL;
 	LoaderBlockTemp->Base.ImageHandle = NULL;
@@ -96,7 +96,7 @@ PiPreInitialize(
 	//
 
 	if (!ZipInitializeReaderContext(&PiBootImageContext,
-		(VOID *)LoaderBlockTemp->LoaderData.BootImageBase,
+		(PVOID)(LoaderBlockTemp->LoaderData.BootImageBase + OffsetToVirtualBase),
 		(U32)LoaderBlockTemp->LoaderData.BootImageSize))
 	{
 		BootGfxFatalStop("Invalid boot image");
@@ -104,10 +104,11 @@ PiPreInitialize(
 
 	//
 	// Initialize the pre-init graphics.
+    // Note that we use physical address of framebuffer because it is identity mapped.
 	//
 
 	if (!BootGfxInitialize(
-		(PVOID)LoaderBlockTemp->LoaderData.VideoModeBase,
+		(PVOID)(LoaderBlockTemp->LoaderData.VideoModeBase + OffsetToVirtualBase),
 		(U32)LoaderBlockTemp->LoaderData.VideoModeSize,
 		LoaderBlockTemp->LoaderData.VideoModeSelected,
 		(PVOID)LoaderBlockTemp->LoaderData.VideoFramebufferBase,

@@ -212,3 +212,15 @@ EFIAPI
 OslSetupPaging(
     IN OS_LOADER_BLOCK *LoaderBlock);
 
+
+
+UINT64
+EFIAPI
+OslArchX64GetCr3(
+    VOID);
+
+VOID
+EFIAPI
+OslArchX64SetCr3(
+    IN UINT64 Cr3);
+

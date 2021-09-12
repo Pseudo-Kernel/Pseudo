@@ -12,6 +12,7 @@
 
 #include "OsLoader.h"
 #include "ospeimage.h"
+#include "osmemory.h"
 #include "oskernel.h"
 
 
@@ -31,7 +32,6 @@ OslReturnedFromKernel(
     }
 }
 
-
 /**
  * @brief Transfers control to the kernel.
  * 
@@ -44,6 +44,9 @@ EFIAPI
 OslTransferToKernel(
     IN OS_LOADER_BLOCK *LoaderBlock)
 {
+    // Set our page mapping. This will invalidate the TLB.
+    OslArchX64SetCr3(LoaderBlock->LoaderData.PML4TBase);
+
     EFI_VIRTUAL_ADDRESS KernelBase = 
         LoaderBlock->LoaderData.KernelPhysicalBase
         + LoaderBlock->LoaderData.OffsetToVirtualBase;
@@ -61,25 +64,24 @@ OslTransferToKernel(
         KernelBase + Nt3264->Nt64.OptionalHeader.AddressOfEntryPoint);
     UINT64 *StackPointer = KernelStackTop - 5;
 
+    UINT32 LoaderBlockSize = sizeof(*LoaderBlock);
+
     __asm__ __volatile__
     (
         "mov rax, %0\n\t"
         "mov r10, %1\n\t"
         "mov rcx, %2\n\t"
         "mov rdx, %3\n\t"
-        "mov r8, %4\n\t"
+        "mov r8d, %4\n\t"
         "mov r9, %5\n\t"
         "xchg rsp, r10\n\t" // stack switch!
         "push rax\n\t"
         "ret\n\t"
         :
         : "m"(StartEntry), "m"(StackPointer),
-          "m"(KernelBase), "r"(LoaderBlock), "r"(sizeof(*LoaderBlock)), "n"(0)
+          "m"(KernelBase), "m"(LoaderBlock), "m"(LoaderBlockSize), "n"(0)
         :
     );
-
-    // Start the kernel!
-    //StartEntry(KernelBase, (UINT64)LoaderBlock, sizeof(OS_LOADER_BLOCK), 0);
 
     OslReturnedFromKernel();
 

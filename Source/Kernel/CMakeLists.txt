@@ -12,6 +12,9 @@ project(
 set(TARGET_NAME core)           # Output file name
 set(TARGET_EXTENSION .sys)      # Output file extension
 
+# Kernel image base.
+set(KERNEL_IMAGE_BASE 0xffff8f0000000000)
+
 # List our source files.
 set(SRC_LIST
     # arch
@@ -84,7 +87,7 @@ target_compile_options(
 # Native application (Base=0x400000, Subsystem=Native, EntryPoint=KiKernelStart)
 target_link_options(
     ${PROJECT_NAME}
-    PRIVATE -Wl,--dll,--shared,--exclude-all-symbols,--image-base,0x400000,--dynamicbase,--subsystem,native,-eKiKernelStart -fstack-check=no -nodefaultlibs -nostdlib)
+    PRIVATE -Wl,--dll,--shared,--exclude-all-symbols,--image-base,${KERNEL_IMAGE_BASE},--dynamicbase,--subsystem,native,-eKiKernelStart -fstack-check=no -nodefaultlibs -nostdlib)
 
 # Generate assembly listings.
 add_custom_command(
