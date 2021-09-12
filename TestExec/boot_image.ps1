@@ -1,42 +1,43 @@
 
 param (
     # Fully-qualified path
-    [Parameter(Mandatory = $true)] [string]$BootImagePath,
-    [Parameter(Mandatory = $true)] [string]$FilesystemContentsPath,
-    [string]$AssignDriveLetterTemporary = ""
+    [Parameter(Mandatory)] [string]$BootImagePath,
+    [Parameter(Mandatory)] [string]$FilesystemContentsPath,
+    [string]$AssignDriveLetterTemporary = "",
+    [string]$WorkingDirectory = ""
 )
 
+$LogHeader = "Unelevated"
+
 try {
-<#    if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).
+    # Checks whether the process is elevated.
+    if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).
         IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
         if ([int](Get-CimInstance -Class Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber) -ge 6000) {
-            $CommandLine = [string]::Format('-File "{0}" -{1} "{2}" -{3} "{4}" -{5} "{6}"',
-                $MyInvocation.PSCommandPath,
+            # Start elevated powershell.
+            $CommandLine = [string]::Format('-ExecutionPolicy RemoteSigned -File "{0}" -{1} "{2}" -{3} "{4}" -{5} "{6}" -{7} "{8}"',
+                $PSCommandPath,
                 "BootImagePath", $BootImagePath, 
                 "FilesystemContentsPath", $FilesystemContentsPath, 
-                "AssignDriveLetterTemporary", $AssignDriveLetterTemporary);
+                "AssignDriveLetterTemporary", $AssignDriveLetterTemporary,
+                "WorkingDirectory", $WorkingDirectory);
 
-    #        $CommandLine = "-File `"" + $MyInvocation.MyCommand.Path + "`" " + $MyInvocation.UnboundArgument
-            Start-Process -FilePath PowerShell.exe -Verb Runas -ArgumentList $CommandLine -Wait
+            # Using -WorkingDirectory in Start-Process not works when starting elevated process.
+            $Process = Start-Process -FilePath PowerShell.exe -Verb Runas -ArgumentList $CommandLine -Wait -PassThru -ErrorAction Stop
+            if ($Process.ExitCode -ne 0) {
+                throw [string]::Format("elevated process returned error 0x{0:x}", $Process.ExitCode)
+            }
             Exit
         }
-    }#>
-
-    <#
-    if (!$AssertElevated) {
-        $CommandLine = [string]::Format('-File "{0}" -{1} "{2}" -{3} "{4}" -{5} "{6}" -{7} "{8}"',
-        $MyInvocation.PSCommandPath
-            $MyInvocation.MyCommand.Path, 
-            "BootImagePath", $BootImagePath, 
-            "FilesystemContentsPath", $FilesystemContentsPath, 
-            "AssignDriveLetterTemporary", $AssignDriveLetterTemporary, 
-            "AssertElevated", $true);
-
-        $ElevatedProcess = Start-Process -FilePath PowerShell.exe -Verb Runas
-            -ArgumentList $CommandLine -Wait
-        exit $ElevatedProcess.ExitCode
     }
-    #>
+
+    $LogHeader = "Elevated"
+
+    if (![string]::IsNullOrWhiteSpace($WorkingDirectory) -and 
+        ![string]::IsNullOrEmpty($WorkingDirectory)) {
+        "WorkingDirectory specified = $WorkingDirectory"
+        Set-Location $WorkingDirectory
+    }
 
     if ([string]::IsNullOrWhiteSpace($AssignDriveLetterTemporary) -or 
         [string]::IsNullOrEmpty($AssignDriveLetterTemporary)) {
@@ -93,7 +94,7 @@ detach vdisk
     # NOTE : it is better to use diskpart /s <filename> rather than using stdin directly
     #        because of credential problem. (example: failed to write UAC-elevated process' stdin)
     $ScriptCreateImage | Out-File -FilePath $ScriptPath_CreateImage -Encoding ascii -Force
-    $Process = Start-Process -FilePath "diskpart" -ArgumentList ("/s", $ScriptPath_CreateImage) -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop
+    $Process = Start-Process -FilePath "diskpart" -ArgumentList ("/s", $ScriptPath_CreateImage) -Wait -PassThru -ErrorAction Stop -NoNewWindow
     if ($Process.ExitCode -ne 0) {
         throw [string]::Format("diskpart returned error 0x{0:x}", $Process.ExitCode)
     }
@@ -103,7 +104,7 @@ detach vdisk
 
     # Detach the image from partition manager.
     $ScriptDetachImage | Out-File -FilePath $ScriptPath_DetachImage -Encoding ascii -Force
-    $Process = Start-Process -FilePath "diskpart" -ArgumentList ("/s", $ScriptPath_DetachImage) -Wait -PassThru -WindowStyle Hidden -ErrorAction Stop
+    $Process = Start-Process -FilePath "diskpart" -ArgumentList ("/s", $ScriptPath_DetachImage) -Wait -PassThru -ErrorAction Stop -NoNewWindow
     if ($Process.ExitCode -ne 0) {
         throw [string]::Format("diskpart returned error 0x{0:x}", $Process.ExitCode)
     }
@@ -111,8 +112,15 @@ detach vdisk
     # Clean up
     Remove-Item -Path $ScriptPath_CreateImage -ErrorAction Ignore
     Remove-Item -Path $ScriptPath_DetachImage -ErrorAction Ignore
+
 } catch {
-    $Error[0].Exception
+    $ErrorMessage = "[$(Get-Date)] [$LogHeader] Exception thrown: " + $Error[0].Exception
+
+    # Log the error message.
+    $ErrorMessage
+    $ErrorLogPath = [System.IO.Path]::Combine($PWD, "boot_image_build_error.log")
+    $ErrorMessage | Out-File -FilePath $ErrorLogPath -Encoding ascii -Append -Force
+
     Exit 1
 }
 

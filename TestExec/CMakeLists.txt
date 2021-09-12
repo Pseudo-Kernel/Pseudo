@@ -50,9 +50,9 @@ string(REPLACE "/" "\\" DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH "${DISKPART_ACCEPT
 
 add_custom_command(
     OUTPUT
-        ${TARGET_IMAGE_FILE}                                # Our target VM image
-        "${FILESYSTEM_PATH}/efi/boot/${TARGET_OSLOADER_FILE}"    # Our target Osloader binary
-        "${FILESYSTEM_PATH}/efi/boot/${TARGET_KERNEL_FILE}"      # Our target Kernel binary
+        ${TARGET_IMAGE_FILE}                                    # Our target VM image
+        "${FILESYSTEM_PATH}/efi/boot/${TARGET_OSLOADER_FILE}"   # Our target Osloader binary
+        "${FILESYSTEM_PATH}/efi/boot/${TARGET_KERNEL_FILE}"     # Our target Kernel binary
 
     # Copy binaries to filesystem path.
     COMMAND ${CMAKE_COMMAND} -E copy "${TARGET_PATH_OSLOADER}" "${FILESYSTEM_PATH}/efi/boot/"
@@ -65,7 +65,9 @@ add_custom_command(
     # Finally, create the FAT32 harddisk image (with GPT partition).
     # NOTE : BootImagePath - Full path for our harddisk image to create. Only backslash is accepted for path separator (because windows wants it).
     COMMAND ${CMAKE_COMMAND} -E rm -f "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}"
-    COMMAND ${POWERSHELL} -ExecutionPolicy RemoteSigned -File ${BOOTIMGCREATE} -BootImagePath "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}" -FilesystemContentsPath "${FILESYSTEM_PATH}"
+    COMMAND ${POWERSHELL} -ExecutionPolicy RemoteSigned -File ${BOOTIMGCREATE} -BootImagePath "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}" -FilesystemContentsPath "${FILESYSTEM_PATH}" -AssignDriveLetterTemporary "X" -WorkingDirectory "${CURDIR}"
+    #COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${TARGET_IMAGE_FILE}
+
     WORKING_DIRECTORY "${CURDIR}"
 #    DEPENDS "${TARGET_PATH_OSLOADER}" "${TARGET_PATH_KERNEL}"
     COMMENT "Creating a VM image..."
