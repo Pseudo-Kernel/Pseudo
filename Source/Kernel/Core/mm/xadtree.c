@@ -2,10 +2,9 @@
 #include <base/base.h>
 #include <base/gerror.h>
 #include <mm/xadtree.h>
+#include <mm/pool.h>
+#include <mm/mm.h>
 
-
-#define	MM_ALLOC(_size)				NULL//malloc(_size)
-#define	MM_FREE(_ptr)				//free(_ptr)
 
 VOID
 MiXadInitialize(
@@ -39,16 +38,22 @@ MiXadInitialize(
 
 MMXAD *
 MiXadAllocate(
-	IN PVOID CallerContext)
+	IN XAD_CONTEXT *CallerContext)
 /**
  * @brief Allocates and initializes XAD structure.
  * 
- * @param [in] CallerContext    Currently zero.
+ * @param [in] CallerContext    Caller context.
  *
  * @return XAD pointer.
  */
 {
-	MMXAD *Xad = MM_ALLOC(sizeof(MMXAD));
+    U32 Type = PoolTypeNonPagedPreInit;
+    if (!CallerContext->UsePreInitPool)
+    {
+        Type = PoolTypeNonPaged;
+    }
+
+	MMXAD *Xad = MmAllocatePool(Type, sizeof(MMXAD), 8, 0);
 
 	MiXadInitialize(Xad, 0, 0);
 
@@ -70,7 +75,7 @@ MiXadDelete(
 {
 	DListRemoveEntry(&Xad->Links);
 
-	MM_FREE(Xad);
+	MmFreePool(Xad);
 }
 
 ADDRESS *

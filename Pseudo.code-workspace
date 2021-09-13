@@ -17,30 +17,13 @@
 	"settings": {
 		"terminal.integrated.windowsEnableConpty": false,
 		"terminal.integrated.env.windows": {
-			// Must include path for Mingw-w64 bin, CMake bin.
+			// CONFIG: Must include path for Mingw-w64 bin, CMake bin.
 			"PATH": "${env:PATH};D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin;C:\\CMake\\bin;"
 		},
 
-		"files.exclude": {
-			"**/*.s": true,
-			"**/*.i": true,
-			"**/*.d": true,
-			"**/*.o": true,
-			"**/*.vcxproj*": true,
-		},
-
+        // C/C++ extension settings
 		"C_Cpp.default.cStandard": "c11",
-		"C_Cpp.default.intelliSenseMode": "gcc-x64",
-		"files.associations": {
-			"*.h": "c",
-			"*.c": "c",
-		},
-		"cmake.buildEnvironment": {
-			"VERBOSE": "1"
-		},
-        "editor.detectIndentation": false,
-        "doxdocgen.generic.authorEmail": "sandbox.isolated@gmail.com",
-        "doxdocgen.generic.authorName": "Pseudo-Kernel",
+		"C_Cpp.default.intelliSenseMode": "windows-gcc-x64",
         "C_Cpp.files.exclude": {
 			"**/*.s": true,
 			"**/*.i": true,
@@ -49,6 +32,28 @@
 			"**/*.vcxproj*": true,
             "**/.vscode": true
         },
+        "C_Cpp.autoAddFileAssociations": false,
+        // CONFIG: Compiler path
+        "C_Cpp.default.compilerPath": "D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\gcc.exe",
+
+		"files.exclude": {
+			"**/*.s": true,
+			"**/*.i": true,
+			"**/*.d": true,
+			"**/*.o": true,
+			"**/*.vcxproj*": true,
+		},
+		"files.associations": {
+			"*.h": "c",
+			"*.c": "c",
+		},
+
+		"cmake.buildEnvironment": {
+			"VERBOSE": "1"
+		},
+        "editor.detectIndentation": false,
+        "doxdocgen.generic.authorEmail": "sandbox.isolated@gmail.com",
+        "doxdocgen.generic.authorName": "Pseudo-Kernel",
     },
     "extensions": {
         "recommendations": [

@@ -4,6 +4,17 @@
 #include <base/base.h>
 #include <mm/xadtree.h>
 
+typedef struct _XAD_CONTEXT
+{
+    BOOLEAN UsePreInitPool;
+} XAD_CONTEXT;
+
+extern MMXAD_TREE MiPadTree; //!< Physical address tree.
+extern MMXAD_TREE MiVadTree; //!< Virtual address tree for shared kernel space.
+
+extern XAD_CONTEXT MiXadContext;
+
+extern BOOLEAN MiXadInitialized;
 
 typedef enum _PAD_TYPE
 {
@@ -26,15 +37,35 @@ typedef enum _PAD_TYPE
 	PadFirmwarePersistentMemory,
 
 	PadInUse,									//!< Address is currently in use.
+    PadInitialReserved,
 
-    PadMaximum,
+	// Inherits OS_MEMORY_TYPE in Osloader.
+    PadOsTemporaryData = (int)0x80000000,
+    PadOsLoaderData,
+    PadOsLowMemory1M,
+    PadOsKernelImage,
+    PadOsKernelStack,
+    PadOsBootImage,
+    PadOsPreInitPool,
+    PadOsPagingPxePool,
 } PAD_TYPE;
 
 typedef enum _VAD_TYPE
 {
-    VadReserved,	//!< Address is reserved.
-    VadFree,		//!< Address is free to use.
-    VadInUse,		//!< Address is currently in use.
+    VadReserved,	    //!< Address is reserved.
+    VadInitialReserved, //!< Address is reserved for initial use.
+    VadFree,		    //!< Address is free to use.
+    VadInUse,		    //!< Address is currently in use.
+
+	// Inherits OS_MEMORY_TYPE in Osloader.
+    VadOsTemporaryData = (int)0x80000000,
+    VadOsLoaderData,
+    VadOsLowMemory1M,
+    VadOsKernelImage,
+    VadOsKernelStack,
+    VadOsBootImage,
+    VadOsPreInitPool,
+    VadOsPagingPxePool,
 } VAD_TYPE;
 
 typedef struct _PHYSICAL_ADDRESSES
@@ -54,6 +85,14 @@ typedef struct _PHYSICAL_ADDRESSES
 //MmInitialize(
 //	VOID);
 
+ESTATUS
+MmAllocateVirtualMemory2(
+    IN PVOID ReservedZero,
+    IN OUT PTR *Address,
+    IN SIZE_T Size,
+    IN VAD_TYPE SourceType,
+    IN VAD_TYPE Type);
+
 KEXPORT
 ESTATUS
 MmAllocateVirtualMemory(
@@ -66,6 +105,13 @@ ESTATUS
 MmFreeVirtualMemory(
 	IN PTR Address,
 	IN SIZE_T Size);
+
+ESTATUS
+MmAllocatePhysicalMemory2(
+    IN OUT PTR *Address,
+    IN SIZE_T Size,
+    IN PAD_TYPE SourceType,
+    IN PAD_TYPE Type);
 
 KEXPORT
 ESTATUS

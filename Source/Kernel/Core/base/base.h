@@ -27,6 +27,8 @@ typedef	struct _GUID {
 #include <base/firmware.h>
 #include <base/osloader.h>
 #include <base/stdio.h>
+#include <base/gerror.h>
+
 #include <init/preinit.h>
 
 #include <misc/misc.h>

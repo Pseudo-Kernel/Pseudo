@@ -56,11 +56,9 @@ typedef struct _POOL_BLOCK_LIST {
 	DLIST_ENTRY BlockListHead;
 } POOL_BLOCK_LIST, *PPOOL_BLOCK_LIST;
 
+extern POOL_BLOCK_LIST MiPoolList[PoolTypeMaximum];
 
-BOOLEAN
-KERNELAPI
-MiPreInitialize(
-	IN OS_LOADER_BLOCK *LoaderBlock);
+
 
 BOOLEAN
 KERNELAPI

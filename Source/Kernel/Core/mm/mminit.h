@@ -42,19 +42,19 @@
 #define KERNEL_VA_PML4_BASE                             (KERNEL_VA_PDPT_BASE + KERNEL_VA_SIZE_PDPT)
 
 
-
 BOOLEAN
 KERNELAPI
 MiDiscardFirmwareMemory(
 	VOID);
 
-VOID
+BOOLEAN
 KERNELAPI
-MiInitializeMemoryMap(
-	IN PVOID MemoryMap,
-	IN SIZE_T MapCount,
-	IN SIZE_T DescriptorSize,
-	IN struct _PREINIT_PAGE_RESERVE *PageReserveList,
-	IN SIZE_T ReserveListCount);
+MiPrePoolInitialize(
+	IN OS_LOADER_BLOCK *LoaderBlock);
+
+ESTATUS
+KERNELAPI
+MiPreInitialize(
+    IN OS_LOADER_BLOCK *LoaderBlock);
 
 

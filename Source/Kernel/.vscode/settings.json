@@ -1,9 +1,8 @@
 {
     "C_Cpp.default.systemIncludePath": [
-        "${workspaceFolder}/core",
+        "${workspaceFolder}/core/**",
     ],
     "cmake.configureSettings": {
         "CMAKE_C_COMPILER": "gcc",
     },
-    "C_Cpp.errorSquiggles": "Disabled",
 }

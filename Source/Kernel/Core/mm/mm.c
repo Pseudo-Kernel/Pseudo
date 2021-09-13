@@ -16,6 +16,9 @@
 
 MMXAD_TREE MiPadTree; //!< Physical address tree.
 MMXAD_TREE MiVadTree; //!< Virtual address tree for shared kernel space.
+BOOLEAN MiXadInitialized = FALSE;
+
+XAD_CONTEXT MiXadContext;
 
 
 
@@ -45,7 +48,13 @@ MmAllocateVirtualMemory2(
         return E_INVALID_PARAMETER;
     }
 
-    if (SourceType != VadFree)
+    if (SourceType == VadInitialReserved && MiXadInitialized)
+    {
+        // Cannot allocate reserved area because XAD is already initialized
+        return E_INVALID_PARAMETER;
+    }
+
+    if (SourceType != VadFree && SourceType != VadInitialReserved)
     {
         return E_INVALID_PARAMETER;
     }
@@ -91,6 +100,12 @@ MmAllocateVirtualMemory2(
     {
         MmXadReleaseLock(&MiVadTree);
         return Status;
+    }
+
+    if (SourceType == VadInitialReserved)
+    {
+        // Override previous type.
+        XadTemp->PrevType = VadFree;
     }
 
     MmXadReleaseLock(&MiVadTree);
@@ -155,6 +170,13 @@ MmFreeVirtualMemory(
         return Status;
     }
 
+    if (Xad->Address.Type == VadFree || Xad->Address.Type == VadInitialReserved)
+    {
+        // Already freed
+        MmXadReleaseLock(&MiVadTree);
+        return Status;
+    }
+
     SIZE_T FreeSize = RoundupSize ? RoundupSize :
         Xad->Address.Range.End - Xad->Address.Range.Start;
 
@@ -198,7 +220,7 @@ MmAllocatePhysicalMemory2(
         return E_INVALID_PARAMETER;
     }
 
-    if (SourceType != PadFree)
+    if (SourceType != PadFree && SourceType != PadInitialReserved)
     {
         return E_INVALID_PARAMETER;
     }
@@ -244,6 +266,12 @@ MmAllocatePhysicalMemory2(
     {
         MmXadReleaseLock(&MiPadTree);
         return Status;
+    }
+
+    if (SourceType == PadInitialReserved)
+    {
+        // Override previous type.
+        XadTemp->PrevType = PadFree;
     }
 
     MmXadReleaseLock(&MiPadTree);
@@ -308,7 +336,7 @@ MmFreePhysicalMemory(
         return Status;
     }
 
-    if (Xad->Address.Type == PadFree)
+    if (Xad->Address.Type == PadFree || Xad->Address.Type == PadInitialReserved)
     {
         // Already freed
         MmXadReleaseLock(&MiPadTree);
@@ -532,17 +560,48 @@ ESTATUS
 MiMapMemory(
     IN U64 *ToplevelPageTable,
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
-    IN PTR VirtualAddress)
+    IN VIRTUAL_ADDRESS VirtualAddress, 
+    IN U64 Flags, 
+    IN BOOLEAN AllowNonDefaultPageSize)
 {
-    return E_NOT_IMPLEMENTED;
+    if (PhysicalAddresses->PhysicalAddressCount > 
+        PhysicalAddresses->PhysicalAddressMaximumCount)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    if (PhysicalAddresses->Mapped)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    VIRTUAL_ADDRESS TargetVirtualAddress = PhysicalAddresses->StartingVirtualAddress;
+    for (U32 i = 0; i < PhysicalAddresses->PhysicalAddressCount; i++)
+    {
+        ADDRESS_RANGE Range = PhysicalAddresses->PhysicalAddresses[i].Range;
+        SIZE_T Size = Range.End - Range.Start;
+
+        // @todo: Revert page mapping if fails
+        ASSERT(MiArchX64SetPageMapping(ToplevelPageTable, TargetVirtualAddress, 
+            Range.Start, Size, Flags, FALSE, AllowNonDefaultPageSize));
+
+        TargetVirtualAddress += Size;
+    }
+
+    PhysicalAddresses->Mapped = TRUE;
+
+    return E_SUCCESS;
 }
 
 KEXPORT
 ESTATUS
 MmMapMemory(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
-    IN PTR VirtualAddress)
+    IN VIRTUAL_ADDRESS VirtualAddress,
+    IN U64 Flags, 
+    IN BOOLEAN AllowNonDefaultPageSize)
 {
-    return MiMapMemory(MiPML4TBase, PhysicalAddresses, VirtualAddress);
+    return MiMapMemory(MiPML4TBase, PhysicalAddresses, 
+        VirtualAddress, Flags, AllowNonDefaultPageSize);
 }
 

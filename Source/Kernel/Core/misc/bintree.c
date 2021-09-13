@@ -8,6 +8,7 @@
  * 
  * @copyright Copyright (c) 2021
  * 
+ * @todo Fix RsBtTrace crash bug (addresss 0xffff8f00000049b8)
  */
 
 #include <base/base.h>
@@ -25,16 +26,15 @@ RsBtTrace(
     IN PSZ Format,
     ...)
 {
-#if 0
-    va_list args;
-    CHAR Buffer[512];
+    va_list List;
+    CHAR8 Buffer[512];
+    SIZE_T Length;
 
-    va_start(args, Format);
-    SIZE_T Length = vsnprintf(Buffer, COUNTOF(Buffer), Format, args);
-    va_end(args);
+	va_start(List, Format);
+	Length = ClStrFormatU8V(Buffer, COUNTOF(Buffer), Format, List);
+	va_end(List);
 
-    fwrite(Buffer, Length, 1, stdout);
-#endif
+    DbgTraceN(TraceLevelDebug, Buffer, Length);
 }
 
 /**

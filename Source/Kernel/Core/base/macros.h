@@ -30,7 +30,7 @@
 // Misc.
 //
 
-#define	NULL				((void *)0)
+#define	NULL				(0)
 #ifndef TRUE
 #define	TRUE				(1 == 1)
 #endif // !TRUE

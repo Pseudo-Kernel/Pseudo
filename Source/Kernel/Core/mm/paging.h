@@ -2,86 +2,111 @@
 #pragma once
 
 
-#define	PAGE_SHIFT				12
-#define	PAGE_SIZE				(1 << PAGE_SHIFT)
+#define PAGE_SHIFT              12
+#define PAGE_SIZE               (1 << PAGE_SHIFT)
+#define PAGE_MASK               (PAGE_SIZE - 1)
 
-#define	SIZE_TO_PAGES(_sz)		( ((_sz) + (PAGE_SIZE - 1)) >> PAGE_SHIFT )
-#define	PAGES_TO_SIZE(_cnt)		( (_cnt) << PAGE_SHIFT )
+#define PAGE_SHIFT_2M           21
+#define PAGE_SIZE_2M            (1 << PAGE_SHIFT_2M)
+#define PAGE_MASK_2M            (PAGE_SIZE_2M - 1)
 
+#define PAGE_SHIFT_1G           30
+#define PAGE_SIZE_1G            (1 << PAGE_SHIFT_1G)
+#define PAGE_MASK_1G            (PAGE_SIZE_1G - 1)
+
+#define SIZE_TO_PAGES(_sz)      ( ((_sz) + PAGE_MASK) >> PAGE_SHIFT )
+#define PAGES_TO_SIZE(_cnt)     ( (_cnt) << PAGE_SHIFT )
+
+#define SIZE_TO_PAGES_2M(_sz)   ( ((_sz) + PAGE_MASK_2M) >> PAGE_SHIFT_2M )
+#define PAGES_TO_SIZE_2M(_cnt)  ( (_cnt) << PAGE_SHIFT_2M )
+
+#define SIZE_TO_PAGES_1G(_sz)   ( ((_sz) + PAGE_MASK_1G) >> PAGE_SHIFT_1G )
+#define PAGES_TO_SIZE_1G(_cnt)  ( (_cnt) << PAGE_SHIFT_1G )
 
 //
 // Flags for PML4E, PDPTE, PDE, PTE. (4K paging)
 //
 
-#define	PAGE_EXECUTE_DISABLE	(1ULL << 63)
-#define	PAGE_PRESENT			(1 << 0)
-#define	PAGE_WRITABLE			(1 << 1)
-#define	PAGE_USER				(1 << 2)
-#define	PAGE_WRITE_THROUGH		(1 << 3)
-#define	PAGE_CACHE_DISABLED		(1 << 4)
+#define PAGE_TO_PAGE_NUMBER_4K(_va)             (((U64)(_va)) >> PAGE_SHIFT)
 
-#define	PAGE_ACCESSED			(1 << 5)
-#define	PAGE_ATTRIBUTE			(1 << 7) // for PTE with 4K paging only
+#define ARCH_X64_PAGE_NUMBER_TO_PML4EI(_va)     ((((U64)(_va)) >> 27) & 0x1ff)
+#define ARCH_X64_PAGE_NUMBER_TO_PDPTEI(_va)     ((((U64)(_va)) >> 18) & 0x1ff)
+#define ARCH_X64_PAGE_NUMBER_TO_PDEI(_va)       ((((U64)(_va)) >> 9) & 0x1ff)
+#define ARCH_X64_PAGE_NUMBER_TO_PTEI(_va)       ((((U64)(_va)) >> 0) & 0x1ff)
 
-// for PTE with 4K, PDE with 2M, PDPTE with 1G paging
-#define	PAGE_DIRTY				(1 << 6) // PDPTE with 1G paging, 
-#define	PAGE_LARGE				(1 << 7) // PDPTE with 1G paging, PDE with 2M paging
-#define	PAGE_GLOBAL				(1 << 8)
+#define ARCH_X64_ADDRESS_TO_PML4EI(_va)         ARCH_X64_PAGE_NUMBER_TO_PML4EI( PAGE_TO_PAGE_NUMBER_4K(_va) )
+#define ARCH_X64_ADDRESS_TO_PDPTEI(_va)         ARCH_X64_PAGE_NUMBER_TO_PDPTEI( PAGE_TO_PAGE_NUMBER_4K(_va) )
+#define ARCH_X64_ADDRESS_TO_PDEI(_va)           ARCH_X64_PAGE_NUMBER_TO_PDEI( PAGE_TO_PAGE_NUMBER_4K(_va) )
+#define ARCH_X64_ADDRESS_TO_PTEI(_va)           ARCH_X64_PAGE_NUMBER_TO_PTEI( PAGE_TO_PAGE_NUMBER_4K(_va) )
+#define ARCH_X64_ADDRESS_TO_OFFSET(_va)         (((U64)(_va)) & PAGE_MASK)
 
-#define	PAGE_PHYADDR_MASK		0x7ffffffff000ULL
+#define ARCH_X64_PXE_PRESENT                    (1ULL << 0)
+#define ARCH_X64_PXE_WRITABLE                   (1ULL << 1)
+#define ARCH_X64_PXE_USER                       (1ULL << 2)
+#define ARCH_X64_PXE_WRITE_THROUGH              (1ULL << 3)
+#define ARCH_X64_PXE_CACHE_DISABLED             (1ULL << 4)
+#define ARCH_X64_PXE_LARGE_SIZE                 (1ULL << 7)
+#define ARCH_X64_PXE_EXECUTE_DISABLED           (1ULL << 63)
+
+#define ARCH_X64_PXE_4K_BASE_MASK               0x000ffffffffff000ULL // [51:12], 4K
+#define ARCH_X64_PXE_2M_BASE_MASK               0x000fffffffe00000ULL // [51:21], 2M
+
+
+
+
+
+
+
+
+
 
 
 INLINE
 BOOLEAN
 KERNELAPI
 MmIsCanonicalAddress(
-	IN PVOID VirtualAddress)
+    IN PVOID VirtualAddress)
 {
-	UPTR p = (UPTR)VirtualAddress;
-	UPTR Msb48 = 0x800000000000ULL;
-	U16 HighPart = (U16)(p >> 48);
-	U16 Compare = 0;
+    UPTR p = (UPTR)VirtualAddress;
+    UPTR Msb48 = 0x800000000000ULL;
+    U16 HighPart = (U16)(p >> 48);
+    U16 Compare = 0;
 
-	Compare = !!(p & Msb48);
-	Compare = ~Compare;
+    Compare = !!(p & Msb48);
+    Compare = ~Compare;
 
-	return !!(HighPart == Compare);
+    return !!(HighPart == Compare);
 }
 
-typedef union _X64_VIRTUAL_ADDRESS {
-	U64 Va;
-	struct
-	{
-		U64 Offset : 12;
-		U64 Table : 9;
-		U64 Directory : 9;
-		U64 DirectoryPtr : 9;
-		U64 PML4 : 9;
-		U64 SignExtended : 16;
-	} Bits;
-} X64_VIRTUAL_ADDRESS;
-
-
-
-#define	MM_PDPTES_PER_PML4		512
-#define	MM_PDES_PER_PDPTE		512
-#define	MM_PTES_PER_PDE			512
 
 
 extern U64 *MiPML4TBase; //!< PML4 table base.
 
 
-VOID
+BOOLEAN
 KERNELAPI
-MiArchX64AddPageMapping(
-	IN U64 *PML4Base, 
-	IN UPTR VirtualAddress, 
-	IN UPTR PhysicalAddress, 
-	IN SIZE_T Size, 
-	IN UPTR PteFlag, 
-	IN BOOLEAN IgnoreAlignment, 
-	IN BOOLEAN IgnoreIfExists);
+MiArchX64SetPageMapping(
+    IN U64 *PML4TBase, 
+    IN VIRTUAL_ADDRESS VirtualAddress, 
+    IN PHYSICAL_ADDRESS PhysicalAddress, 
+    IN SIZE_T Size, 
+    IN U64 PteFlags,
+    IN BOOLEAN ReverseMapping,
+    IN BOOLEAN AllowNonDefaultPageSize);
 
+BOOLEAN
+KERNELAPI
+MiArchX64SetPageMappingNotPresent(
+    IN U64 *PML4TBase, 
+    IN VIRTUAL_ADDRESS VirtualAddress, 
+    IN SIZE_T Size);
+
+BOOLEAN
+KERNELAPI
+MiArchX64IsPageMappingExists(
+    IN U64 *PML4TBase, 
+    IN EFI_VIRTUAL_ADDRESS VirtualAddress, 
+    IN SIZE_T Size);
 
 
 

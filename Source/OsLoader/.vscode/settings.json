@@ -1,6 +1,6 @@
 {
     "C_Cpp.default.systemIncludePath": [
-        "${workspaceFolder}/EfiBootLite/include",
+        "${workspaceFolder}/EfiBootLite/include/**",
     ],
     "cmake.configureSettings": {
         "CMAKE_C_COMPILER": "gcc",

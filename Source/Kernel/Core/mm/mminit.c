@@ -16,6 +16,7 @@
 #include <mm/pool.h>
 #include <mm/mminit.h>
 #include <mm/paging.h>
+#include <mm/mm.h>
 
 
 UPTR MiLoaderSpaceStart;
@@ -67,13 +68,13 @@ MiEfiMapAttributeToPxeFlag(
     U64 PxeFlag = 0;
 
     if (Attribute & EFI_MEMORY_UC)
-        PxeFlag |= PAGE_CACHE_DISABLED;
+        PxeFlag |= ARCH_X64_PXE_CACHE_DISABLED;
 
     if (Attribute & EFI_MEMORY_WC) // Write-Coalescing
         ;
 
     if (Attribute & EFI_MEMORY_WT) // Write-Through
-        PxeFlag |= PAGE_WRITE_THROUGH;
+        PxeFlag |= ARCH_X64_PXE_WRITE_THROUGH;
 
     if (Attribute & EFI_MEMORY_WB) // Write-Back
         ;
@@ -82,13 +83,13 @@ MiEfiMapAttributeToPxeFlag(
         ;
 
     if (!(Attribute & EFI_MEMORY_WP)) // Write-Protected
-        PxeFlag |= PAGE_WRITABLE;
+        PxeFlag |= ARCH_X64_PXE_WRITABLE;
 
     if (Attribute & EFI_MEMORY_RP) // Read-Protected
         ;
 
     if (Attribute & EFI_MEMORY_XP) // Execute-Protected
-        PxeFlag |= PAGE_EXECUTE_DISABLE;
+        PxeFlag |= ARCH_X64_PXE_EXECUTE_DISABLED;
 
     if (Attribute & EFI_MEMORY_RO) // ????
         ;
@@ -105,174 +106,128 @@ MiEfiMapAttributeToPxeFlag(
     return PxeFlag;
 }
 
-VOID
+
+BOOLEAN
 KERNELAPI
-MiInitializeMemoryMap(
-    IN PVOID MemoryMap,
-    IN SIZE_T MapCount,
-    IN SIZE_T DescriptorSize, 
-    IN struct _PREINIT_PAGE_RESERVE *PageReserveList, 
-    IN SIZE_T ReserveListCount)
+MiPrePoolInitialize(
+    IN OS_LOADER_BLOCK *LoaderBlock)
 {
-    // Initialize the memory map.
+    PTR PreInitPoolBase = LoaderBlock->LoaderData.PreInitPoolBase
+        + LoaderBlock->LoaderData.OffsetToVirtualBase;
 
-    EFI_MEMORY_DESCRIPTOR *Entry;
-    SIZE_T SystemMemoryUsable = 0;
-    U64 *PML4;
+    return MiInitializePoolBlockList(&MiPoolList[PoolTypeNonPagedPreInit],
+        PreInitPoolBase, LoaderBlock->LoaderData.PreInitPoolSize, 0);
+}
 
-    Entry = (EFI_MEMORY_DESCRIPTOR *)MemoryMap;
-    for (SIZE_T i = 0; i < MapCount; i++)
+ESTATUS
+KERNELAPI
+MiPreInitialize(
+    IN OS_LOADER_BLOCK *LoaderBlock)
+{
+    //
+    // Initialize the pre-init pool.
+    //
+
+    if (!MiPrePoolInitialize(LoaderBlock))
     {
-        switch (Entry->Type)
-        {
-        case EfiLoaderCode:
-        case EfiBootServicesCode:
-        case EfiBootServicesData:
-        case EfiConventionalMemory:
-            // Usable
-            SystemMemoryUsable += Entry->NumberOfPages;
-            break;
-
-        case EfiLoaderData:
-            // Usable data or reserved by bootloader
-            SystemMemoryUsable += Entry->NumberOfPages;
-            break;
-
-        case EfiRuntimeServicesCode:
-        case EfiRuntimeServicesData:
-        case EfiACPIReclaimMemory:
-        case EfiACPIMemoryNVS:
-        case EfiPersistentMemory:
-            // Usable but already used
-            SystemMemoryUsable += Entry->NumberOfPages;
-            break;
-
-        case EfiUnusableMemory:
-        case EfiMemoryMappedIO:
-        case EfiMemoryMappedIOPortSpace:
-        case EfiPalCode:
-        default: // vendor-specific
-            // Unusable
-            break;
-        }
-
-
-        // Move to the next entry.
-        Entry = (EFI_MEMORY_DESCRIPTOR *)((UPTR)Entry + DescriptorSize);
-    }
-
-    SystemMemoryUsable <<= PAGE_SHIFT;
-
-//    MiLoaderSpaceStart = KERNEL_VASL_START_LOADER_SPACE;
-//    MiLoaderSpaceEnd = KERNEL_VASL_END_LOADER_SPACE;
-//    MiPfnMetadataStart = KERNEL_VASL_START_PFN_METADATA;
-//    MiPfnMetadataEnd = KERNEL_VASL_END_PFN_METADATA;
-//    MiPfnListStart = KERNEL_VASL_START_PFN_LIST;
-//    MiPfnListEnd = KERNEL_VASL_END_PFN_LIST;
-//    MiVadListStart = KERNEL_VASL_START_VAD_LIST;
-//    MiVadListEnd = KERNEL_VASL_END_VAD_LIST;
-//    MiPteListStart = KERNEL_VASL_START_PTE_LIST;
-//    MiPteListEnd = KERNEL_VASL_END_PTE_LIST;
-//    MiSystemPoolStart = KERNEL_VASL_START_SYSTEM_POOL;
-//    MiSystemPoolEnd = KERNEL_VASL_START_SYSTEM_POOL + (SystemMemoryUsable * 15) / 100; // dynamic
-//    MiSystemPoolEnd &= ~(PAGE_SIZE - 1);
-
-    DbgTraceF(TraceLevelEvent, "Usable memory %d bytes\n", SystemMemoryUsable);
-//    DbgTraceF(TraceLevelEvent, "Range List (Start, End):\n");
-//    DbgTraceF(TraceLevelEvent, "LoaderSpace       = 0x%p, 0x%p\n", MiLoaderSpaceStart, MiLoaderSpaceEnd);
-//    DbgTraceF(TraceLevelEvent, "PfnMetadata       = 0x%p, 0x%p\n", MiPfnMetadataStart, MiPfnMetadataEnd);
-//    DbgTraceF(TraceLevelEvent, "PfnListStart      = 0x%p, 0x%p\n", MiPfnListStart, MiPfnListEnd);
-//    DbgTraceF(TraceLevelEvent, "VadListStart      = 0x%p, 0x%p\n", MiVadListStart, MiVadListEnd);
-//    DbgTraceF(TraceLevelEvent, "PteListStart      = 0x%p, 0x%p\n", MiPteListStart, MiPteListEnd);
-//    DbgTraceF(TraceLevelEvent, "SystemPoolStart   = 0x%p, 0x%p\n", MiSystemPoolStart, MiSystemPoolEnd);
-    DbgTraceF(TraceLevelEvent, "\n");
-
-    if (SystemMemoryUsable < REQUIREMENT_MEMORY_SIZE)
-    {
-        BootGfxFatalStop("Not enough system memory (Expected = %lld, Current = %lld)",
-            (SIZE_T)REQUIREMENT_MEMORY_SIZE, SystemMemoryUsable);
+        return E_PREINIT_POOL_INIT_FAILED;
     }
 
 
-    // 512 entries of PML4E.
-    PML4 = MmAllocatePool(PoolTypeNonPagedPreInit, PAGE_SIZE, PAGE_SIZE, TAG4('I', 'N', 'I', 'T'));
-    memset(PML4, 0, PAGE_SIZE);
+    //
+    // Initialize the PAD/VAD tree.
+    //
 
-    if (!PML4)
+    MiXadContext.UsePreInitPool = TRUE;
+
+    if (!MmXadInitializeTree(&MiPadTree, &MiXadContext) || 
+        !MmXadInitializeTree(&MiVadTree, &MiXadContext))
     {
-        BootGfxFatalStop("Failed to allocate PML4");
+        return E_FAILED;
     }
 
     //
-    // Following address ranges must be identity mapped:
-    // 1. Address described in PageReserveList[]
-    // 2. Address which is used by firmware, ACPI, or device.
-    //    (EfiACPIReclaimMemory, EfiACPIMemoryNVS, EfiPersistentMemory, EfiMemoryMappedIO, 
-    //     EfiMemoryMappedIOPortSpace, EfiPalCode, EfiRuntimeServicesCode, EfiRuntimeServicesData, 
-    //     EfiUnusableMemory, other vendor-specific types)
+    // Initialize address ranges.
     //
 
-    DbgTraceF(TraceLevelDebug, "Page reserve list count = %lld\n", ReserveListCount);
+    ADDRESS PhysicalRange = {
+        .Range.Start = 0,
+        .Range.End = 0xfffffffffffff000ULL,
+        .Type = PadInitialReserved,
+    };
 
-    for (SIZE_T i = 0; i < ReserveListCount; i++)
+    ESTATUS Status = MmXadInsertAddress(&MiPadTree, NULL, &PhysicalRange);
+    if (!E_IS_SUCCESS(Status))
     {
-        DbgTraceF(TraceLevelDebug, "Adding identity page mapping 0x%llX, size 0x%llX\n",
-            PageReserveList[i].BaseAddress, PageReserveList[i].Size);
-
-        MiArchX64AddPageMapping(
-            PML4, 
-            PageReserveList[i].BaseAddress, 
-            PageReserveList[i].BaseAddress,
-            PageReserveList[i].Size, 
-            PAGE_PRESENT | PAGE_WRITABLE, 
-            TRUE,
-            FALSE);
+        return Status;
     }
 
-    Entry = (EFI_MEMORY_DESCRIPTOR *)MemoryMap;
-    for (SIZE_T i = 0; i < MapCount; i++)
+    ADDRESS VirtualRange = {
+        .Range.Start = 0,
+        .Range.End = 0xfffffffffffff000ULL,
+        .Type = VadInitialReserved,
+    };
+
+    Status = MmXadInsertAddress(&MiVadTree, NULL, &VirtualRange);
+    if (!E_IS_SUCCESS(Status))
     {
-        switch (Entry->Type)
+        return Status;
+    }
+
+    //
+    // Allocates memory by memory map info.
+    //
+
+    EFI_MEMORY_DESCRIPTOR *Descriptor = LoaderBlock->Memory.Map;
+    U32 Count = LoaderBlock->Memory.MapCount;
+    PTR OffsetToVirtualBase = LoaderBlock->LoaderData.OffsetToVirtualBase;
+    for (U32 i = 0; i < Count; i++)
+    {
+        PTR NewAddress = Descriptor->PhysicalStart;
+        SIZE_T Size = PAGES_TO_SIZE(Descriptor->NumberOfPages);
+        Status = MmAllocatePhysicalMemory2(&NewAddress, Size, PadInitialReserved, Descriptor->Type);
+
+        if (!E_IS_SUCCESS(Status))
         {
-        case EfiLoaderCode:
-        case EfiBootServicesCode:
-        case EfiBootServicesData:
-        case EfiConventionalMemory:
-        case EfiLoaderData:
-            break;
-
-        case EfiRuntimeServicesCode:
-        case EfiRuntimeServicesData:
-        case EfiACPIReclaimMemory:
-        case EfiACPIMemoryNVS:
-        case EfiPersistentMemory:
-        case EfiUnusableMemory:
-        case EfiMemoryMappedIO:
-        case EfiMemoryMappedIOPortSpace:
-        case EfiPalCode:
-        default: // vendor-specific
-            // Identity mapping
-            DbgTraceF(TraceLevelDebug, 
-                "Adding page mapping physical 0x%llX -> virtual 0x%llX, size 0x%llX, attributes 0x%llX\n",
-                Entry->PhysicalStart, Entry->PhysicalStart, PAGES_TO_SIZE(Entry->NumberOfPages),
-                Entry->Attribute);
-
-            MiArchX64AddPageMapping(
-                PML4,
-                Entry->PhysicalStart, // normally Entry->VirtualStart == 0
-                Entry->PhysicalStart,
-                PAGES_TO_SIZE(Entry->NumberOfPages),
-                MiEfiMapAttributeToPxeFlag(Entry->Attribute) | PAGE_PRESENT, 
-                TRUE,
-                FALSE);
-            break;
+            return Status;
         }
 
+        // VAD_TYPE inherits EFI_MEMORY_TYPE.
+        U32 Type = Descriptor->Type; 
+        if (Type == VadOsBootImage ||
+            Type == VadOsKernelImage ||
+            Type == VadOsKernelStack ||
+            Type == VadOsLoaderData ||
+            Type == VadOsLowMemory1M ||
+            Type == VadOsPagingPxePool ||
+            Type == VadOsPreInitPool ||
+            Type == VadOsTemporaryData)
+        {
+            NewAddress = Descriptor->PhysicalStart + OffsetToVirtualBase;
 
-        // Move to the next entry.
-        Entry = (EFI_MEMORY_DESCRIPTOR *)((UPTR)Entry + DescriptorSize);
+            Status = MmAllocateVirtualMemory2(NULL, &NewAddress, Size, VadInitialReserved, Descriptor->Type);
+            if (!E_IS_SUCCESS(Status))
+            {
+                return Status;
+            }
+        }    
     }
 
-    DbgTraceF(TraceLevelDebug, "Identity mapping done.\n");
+    MiXadContext.UsePreInitPool = FALSE;
+    MiXadInitialized = TRUE;
+
+#if 1
+    DbgTrace(TraceLevelDebug, "\n");
+
+    DbgTrace(TraceLevelDebug, "Listing PAD tree...\n");
+    RsBtTraverse(&MiPadTree.Tree, NULL);
+    DbgTrace(TraceLevelDebug, "\n");
+
+    DbgTrace(TraceLevelDebug, "Listing VAD tree...\n");
+    RsBtTraverse(&MiVadTree.Tree, NULL);
+    DbgTrace(TraceLevelDebug, "\n");
+#endif
+
+    return E_SUCCESS;
 }
 

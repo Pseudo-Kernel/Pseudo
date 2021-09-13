@@ -12,6 +12,9 @@ typedef enum _ESTATUS
 	E_LOOKUP_FAILED,
     E_BUFFER_TOO_SMALL,
 	E_NOT_ENOUGH_MEMORY,
+
+    // System initialization error codes.
+    E_PREINIT_POOL_INIT_FAILED,
 } ESTATUS;
 
 #define	E_IS_SUCCESS(_err)		((_err) == E_SUCCESS)

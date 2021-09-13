@@ -1,6 +1,8 @@
 
 #include <base/base.h>
 #include <ke/ke.h>
+#include <mm/paging.h>
+#include <mm/mm.h>
 #include <mm/pool.h>
 
 
@@ -14,11 +16,11 @@ typedef struct _POOL_INITIAL_PARAMETERS {
 } POOL_INITIAL_PARAMETERS;
 
 POOL_INITIAL_PARAMETERS MiInitialPoolParameters[] = {
-    { PoolTypeNonPaged,        0xffff800000000000, 0x0000000000000000, 0, },
-    { PoolTypePaged,           0xffff800000000000, 0x0000000000000000, 0, },
-    { PoolTypeNonPagedNx,      0xffff800000000000, 0x0000000000000000, 0, },
-    { PoolTypePagedNx,         0xffff800000000000, 0x0000000000000000, 0, },
-    { PoolTypeNonPagedPreInit, 0xffff800000000000, 0x0000000000000000, 0, },
+    { PoolTypeNonPaged,        0, 0, 0, },
+    { PoolTypePaged,           0, 0, 0, },
+    { PoolTypeNonPagedNx,      0, 0, 0, },
+    { PoolTypePagedNx,         0, 0, 0, },
+    { PoolTypeNonPagedPreInit, 0, 0, 0, },
 };
 
 #define POOL_ASSERT(_cond)  DASSERT(_cond)
@@ -418,18 +420,6 @@ MmFreePool(
     KeReleaseSpinLock(&BlockList->Lock);
 }
 
-BOOLEAN
-KERNELAPI
-MiPreInitialize(
-    IN OS_LOADER_BLOCK *LoaderBlock)
-{
-    PTR PreInitPoolBase = 
-        LoaderBlock->LoaderData.PreInitPoolBase
-        + LoaderBlock->LoaderData.OffsetToVirtualBase;
-
-    return MiInitializePoolBlockList(&MiPoolList[PoolTypeNonPagedPreInit],
-        PreInitPoolBase, LoaderBlock->LoaderData.PreInitPoolSize, 0);
-}
 
 
 #if 0

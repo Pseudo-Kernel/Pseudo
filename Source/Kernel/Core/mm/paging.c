@@ -18,86 +18,303 @@
 U64 *MiPML4TBase; //!< PML4 table base.
 
 
-
-#define PAGE_LOWER_MAP_GET(_map, _idx, _lower_map)  {           \
-    /* _entry type must be (U64 *) */                           \
-    if(!( (_map)[_idx] & PAGE_PRESENT ))    {                   \
-        (_lower_map) = MmAllocatePool(PoolTypeNonPagedPreInit,  \
-            PAGE_SIZE, PAGE_SIZE, TAG4('I', 'N', 'I', 'T'));    \
-        DbgTraceF(TraceLevelDebug, "Allocated %s = 0x%llx\n",   \
-            _ASCII(_lower_map), (U64)(_lower_map));             \
-        if(!(_lower_map)) {                                     \
-            BootGfxFatalStop("Failed to create page mapping");  \
-        }                                                       \
-        memset((_lower_map), 0, PAGE_SIZE);                     \
-        /* New entry */                                         \
-        (_map)[_idx] = ((UPTR)(_lower_map)) |                   \
-            PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;           \
-    }                                                           \
-    (_lower_map) = (U64 *)((_map)[_idx] & PAGE_PHYADDR_MASK);   \
-}                                                               \
-
-VOID
+U64 *
 KERNELAPI
-MiArchX64AddPageMapping(
-    IN U64 *PML4Base, 
-    IN UPTR VirtualAddress, 
-    IN UPTR PhysicalAddress, 
-    IN SIZE_T Size, 
-    IN UPTR PteFlag, 
-    IN BOOLEAN IgnoreAlignment, 
-    IN BOOLEAN IgnoreIfExists)
+MiAllocatePxe(
+    VOID)
 {
-    UPTR VaStart;
-    UPTR VaEnd;
-    X64_VIRTUAL_ADDRESS Va;
-    UPTR Pa;
+    return 0;
+}
 
-    DbgTraceF(TraceLevelDebug, "%s (%llX, %llX, %llX, %llX, %llX, %d, %d)\n", __FUNCTION__, 
-        PML4Base, VirtualAddress, PhysicalAddress, Size, PteFlag, IgnoreAlignment, IgnoreIfExists);
+/**
+ * @brief Sets virtual-to-physical page mapping.\n
+ *        Reverse mapping (physical-to-virtual) is also allowed.\n
+ * 
+ * @param [in] PML4TBase                Base address of PML4T.
+ * @param [in] VirtualAddress           Virtual address.
+ * @param [in] PhysicalAddress          Physical address.
+ * @param [in] Size                     Map size.
+ * @param [in] PteFlags                 PTE flags to be specified.
+ * @param [in] ReverseMapping           Sets virtual-to-physical mapping to PML4T if FALSE.\n
+ *                                      Otherwise, sets physical-to-virtual mapping.\n
+ *                                      PML4T will be treated as reverse mapping table of PML4T.
+ * @param [in] AllowNonDefaultPageSize  If TRUE, non-default page size is allowed.\n
+ *                                      For page size, not only the 4K but also 2M will be used.\n
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
+BOOLEAN
+KERNELAPI
+MiArchX64SetPageMapping(
+    IN U64 *PML4TBase, 
+    IN VIRTUAL_ADDRESS VirtualAddress, 
+    IN PHYSICAL_ADDRESS PhysicalAddress, 
+    IN SIZE_T Size, 
+    IN U64 PteFlags,
+    IN BOOLEAN ReverseMapping,
+    IN BOOLEAN AllowNonDefaultPageSize)
+{
+    U64 PageCount = SIZE_TO_PAGES(Size);
 
-    VaStart = VirtualAddress;
-    VaEnd = VirtualAddress + Size;
-    Pa = PhysicalAddress;
+    U64 VfnStart = PAGE_TO_PAGE_NUMBER_4K(VirtualAddress);
+    U64 PfnStart = PAGE_TO_PAGE_NUMBER_4K(PhysicalAddress);
 
-    if (IgnoreAlignment)
+    U64 SourcePageNumber = VfnStart;
+    U64 DestinationPageNumber = PfnStart;
+
+    U64 PxeDefaultFlags = ARCH_X64_PXE_PRESENT | ARCH_X64_PXE_USER | ARCH_X64_PXE_WRITABLE;
+
+    if (ReverseMapping)
     {
-        VaStart &= ~(PAGE_SIZE - 1);
-        VaEnd = (VaEnd + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
-        Pa &= ~(PAGE_SIZE - 1);
+        // Physical-to-virtual mapping.
+        SourcePageNumber = PfnStart;
+        DestinationPageNumber = VfnStart;
+
+        PxeDefaultFlags = ARCH_X64_PXE_PRESENT;
     }
 
-    DASSERT(!(VaStart & (PAGE_SIZE - 1)));
-    DASSERT(!(Pa & (PAGE_SIZE - 1)));
+    U64 PageCount2M = SIZE_TO_PAGES(PAGE_SIZE_2M);
 
-    PteFlag &= ~PAGE_PHYADDR_MASK;
-
-    for (Va.Va = VaStart; Va.Va < VaEnd; Va.Va += PAGE_SIZE)
+    for (U64 i = 0; i < PageCount; )
     {
-        U64 *PDPT;
-        U64 *PD;
-        U64 *PT;
+        BOOLEAN UseMapping2M = FALSE;
 
-        // PML4 -> PDPT
-        PAGE_LOWER_MAP_GET(PML4Base, Va.Bits.PML4, PDPT);
-
-        // PDPT -> PD
-        PAGE_LOWER_MAP_GET(PDPT, Va.Bits.DirectoryPtr, PD);
-
-        // PD -> PT
-        PAGE_LOWER_MAP_GET(PD, Va.Bits.Directory, PT);
-
-        if (PT[Va.Bits.Table] & PAGE_PRESENT)
+        if (AllowNonDefaultPageSize && 
+            !(SourcePageNumber & (PageCount2M - 1)) && 
+            !(DestinationPageNumber & (PageCount2M - 1)) && 
+            i + PageCount2M <= PageCount)
         {
-            if (!IgnoreIfExists)
-            {
-                DASSERT(FALSE);
-            }
+            // Both source and destination are 2M-size aligned.
+            UseMapping2M = TRUE;
         }
 
-        PT[Va.Bits.Table] = Pa | PteFlag;
+        //
+        // Set address mapping.
+        //
 
-        Pa += PAGE_SIZE;
+        U64 *NewTableBase = NULL;
+
+        U64 PML4TEi = ARCH_X64_PAGE_NUMBER_TO_PML4EI(SourcePageNumber);
+        U64 PDPTEi = ARCH_X64_PAGE_NUMBER_TO_PDPTEI(SourcePageNumber);
+        U64 PDEi = ARCH_X64_PAGE_NUMBER_TO_PDEI(SourcePageNumber);
+        U64 PTEi = ARCH_X64_PAGE_NUMBER_TO_PTEI(SourcePageNumber);
+
+        U64 PML4TE = PML4TBase[PML4TEi];
+        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
+        {
+            // Allocate new PDPTEs
+            NewTableBase = (U64 *)MiAllocatePxe();
+            if (!NewTableBase)
+                return FALSE;
+
+            PML4TE = PxeDefaultFlags | ((U64)NewTableBase & ARCH_X64_PXE_4K_BASE_MASK);
+            PML4TBase[PML4TEi] = PML4TE;
+        }
+
+        // PML4T -> PDPT
+        U64 *PDPTBase = (U64 *)(PML4TE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PDPTE = PDPTBase[PDPTEi];
+        if (!(PDPTE & ARCH_X64_PXE_PRESENT))
+        {
+            // Allocate new PDEs
+            NewTableBase = (U64 *)MiAllocatePxe();
+            if (!NewTableBase)
+                return FALSE;
+
+            PDPTE = PxeDefaultFlags | ((U64)NewTableBase & ARCH_X64_PXE_4K_BASE_MASK);
+            PDPTBase[PDPTEi] = PDPTE;
+        }
+
+        // PDPT -> PD
+        U64 *PDBase = (U64 *)(PDPTE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PDE = PDBase[PDEi];
+        if (!(PDE & ARCH_X64_PXE_PRESENT))
+        {
+            // Allocate new PDEs
+            NewTableBase = (U64 *)MiAllocatePxe();
+            if (!NewTableBase)
+                return FALSE;
+
+            if (UseMapping2M)
+            {
+                PDE = ARCH_X64_PXE_PRESENT | ARCH_X64_PXE_LARGE_SIZE | 
+                    (PteFlags & ~ARCH_X64_PXE_2M_BASE_MASK) | 
+                    ((DestinationPageNumber << PAGE_SHIFT) & ARCH_X64_PXE_2M_BASE_MASK);
+            }
+            else
+            {
+                PDE = PxeDefaultFlags | ((U64)NewTableBase & ARCH_X64_PXE_4K_BASE_MASK);
+            }
+
+            PDBase[PDEi] = PDE;
+        }
+
+        if (UseMapping2M)
+        {
+            i += PageCount2M;
+            SourcePageNumber += PageCount2M;
+            DestinationPageNumber += PageCount2M;
+        }
+        else
+        {
+            // PD -> PT
+            U64 *PTBase = (U64 *)(PDE & ARCH_X64_PXE_4K_BASE_MASK);
+
+            // Set new PTEs
+            U64 PTE = ARCH_X64_PXE_PRESENT | 
+                    (PteFlags & ~ARCH_X64_PXE_4K_BASE_MASK) | 
+                    ((DestinationPageNumber << PAGE_SHIFT) & ARCH_X64_PXE_4K_BASE_MASK);
+
+            PTBase[PTEi] = PTE;
+
+            i++;
+            SourcePageNumber++;
+            DestinationPageNumber++;
+        }
     }
+
+    return TRUE;
+}
+
+/**
+ * @brief Clears virtual-to-physical page mapping.\n
+ * 
+ * @param [in] PML4TBase        Base address of PML4T.
+ * @param [in] VirtualAddress   Virtual address.
+ * @param [in] Size             Map size.
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
+BOOLEAN
+KERNELAPI
+MiArchX64SetPageMappingNotPresent(
+    IN U64 *PML4TBase, 
+    IN VIRTUAL_ADDRESS VirtualAddress, 
+    IN SIZE_T Size)
+{
+    U64 PageCount = SIZE_TO_PAGES(Size);
+    U64 VfnStart = PAGE_TO_PAGE_NUMBER_4K(VirtualAddress);
+    U64 SourcePageNumber = VfnStart;
+
+    for (U64 i = 0; i < PageCount; )
+    {
+        U64 PML4TEi = ARCH_X64_PAGE_NUMBER_TO_PML4EI(SourcePageNumber);
+        U64 PDPTEi = ARCH_X64_PAGE_NUMBER_TO_PDPTEI(SourcePageNumber);
+        U64 PDEi = ARCH_X64_PAGE_NUMBER_TO_PDEI(SourcePageNumber);
+        U64 PTEi = ARCH_X64_PAGE_NUMBER_TO_PTEI(SourcePageNumber);
+
+        U64 PML4TE = PML4TBase[PML4TEi];
+        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PML4T -> PDPT
+        U64 *PDPTBase = (U64 *)(PML4TE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PDPTE = PDPTBase[PDPTEi];
+        if (!(PDPTE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PDPT -> PD
+        U64 *PDBase = (U64 *)(PDPTE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PDE = PDBase[PDEi];
+        if (!(PDE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PD -> PT
+        U64 *PTBase = (U64 *)(PDE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PTE = PTBase[PTEi];
+
+        // Clear present bit
+        PTE &= ~ARCH_X64_PXE_PRESENT;
+
+        PTBase[PTEi] = PTE;
+
+        i++;
+        SourcePageNumber++;
+    }
+
+    return TRUE;
+}
+
+
+/**
+ * @brief Checks whether the virtual-to-physical is exists.\n
+ * 
+ * @param [in] PML4TBase        Base address of PML4T.
+ * @param [in] VirtualAddress   Virtual address.
+ * @param [in] Size             Map size.
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
+BOOLEAN
+KERNELAPI
+MiArchX64IsPageMappingExists(
+    IN U64 *PML4TBase, 
+    IN EFI_VIRTUAL_ADDRESS VirtualAddress, 
+    IN SIZE_T Size)
+{
+    U64 PageCount = SIZE_TO_PAGES(Size);
+    U64 VfnStart = PAGE_TO_PAGE_NUMBER_4K(VirtualAddress);
+
+    U64 SourcePageNumber = VfnStart;
+
+    U64 PageCount2M = SIZE_TO_PAGES(PAGE_SIZE_2M);
+
+    for (U64 i = 0; i < PageCount; )
+    {
+        U64 PML4TEi = ARCH_X64_PAGE_NUMBER_TO_PML4EI(SourcePageNumber);
+        U64 PDPTEi = ARCH_X64_PAGE_NUMBER_TO_PDPTEI(SourcePageNumber);
+        U64 PDEi = ARCH_X64_PAGE_NUMBER_TO_PDEI(SourcePageNumber);
+        U64 PTEi = ARCH_X64_PAGE_NUMBER_TO_PTEI(SourcePageNumber);
+
+        U64 PML4TE = PML4TBase[PML4TEi];
+        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PML4T -> PDPT
+        U64 *PDPTBase = (U64 *)(PML4TE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PDPTE = PDPTBase[PDPTEi];
+        if (!(PDPTE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        // PDPT -> PD
+        U64 *PDBase = (U64 *)(PDPTE & ARCH_X64_PXE_4K_BASE_MASK);
+        U64 PDE = PDBase[PDEi];
+        if (!(PDE & ARCH_X64_PXE_PRESENT))
+        {
+            return FALSE;
+        }
+
+        if (PDE & ARCH_X64_PXE_LARGE_SIZE)
+        {
+            i += PageCount2M;
+            SourcePageNumber += PageCount2M;
+        }
+        else
+        {
+            // PD -> PT
+            U64 *PTBase = (U64 *)(PDE & ARCH_X64_PXE_4K_BASE_MASK);
+            U64 PTE = PTBase[PTEi];
+
+            if (!(PTE & ARCH_X64_PXE_PRESENT))
+            {
+                return FALSE;
+            }
+
+            i++;
+            SourcePageNumber++;
+        }
+    }
+
+    return TRUE;
 }
 

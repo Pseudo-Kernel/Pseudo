@@ -85,21 +85,13 @@ PiPreInitialize(
     LoaderBlockTemp->Base.ImageHandle = NULL;
     LoaderBlockTemp->Base.RootDirectory = NULL;
 
-//  PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.KernelPhysicalBase, LoaderBlockTemp->LoaderData.MappedSize);
-//  PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.PreInitPoolBase, LoaderBlockTemp->LoaderData.PreInitPoolSize);
-//  PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.ShadowBase, LoaderBlockTemp->LoaderData.ShadowSize);
-//  PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.BootImageBase, LoaderBlockTemp->LoaderData.BootImageSize);
-//  PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->LoaderData.VideoModeBase, LoaderBlockTemp->LoaderData.VideoModeSize);
-//  PREINIT_PAGE_RESERVE_ADD(LoaderBlockTemp->Memory.Map, LoaderBlockTemp->Memory.DescriptorSize * LoaderBlockTemp->Memory.MapCount);
-//  ASSERT(PiPageReserveCount < ARRAY_SIZE(PiPageReserve));
-
     //
-    // Initialize the pre-init pool.
+    // Initialize the pre-init pool and XAD trees.
     //
 
     if (!MiPreInitialize(LoaderBlockTemp))
     {
-        BootGfxFatalStop("Failed to initialize pre-init pool");
+        BootGfxFatalStop("Failed to initialize memory");
     }
 
     //
