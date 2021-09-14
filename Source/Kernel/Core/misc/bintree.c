@@ -42,32 +42,30 @@ RsBtTrace(
  * 
  * @param [in] Tree         Tree structure.
  * @param [in] Next         Starting node.
+ * @param [in] Traverse     Traverse function.
  *
  * @return None.
  */
 VOID
 RsBtTraverse(
     IN RS_BINARY_TREE *Tree,
-    IN RS_BINARY_TREE_LINK *Next)
+    IN RS_BINARY_TREE_LINK *Next,
+    IN PRS_BINARY_TREE_TRAVERSE Traverse)
 {
     if (!Next)
     {
         if (Tree->Root)
-            RsBtTraverse(Tree, Tree->Root);
+            RsBtTraverse(Tree, Tree->Root, Traverse);
     }
     else
     {
         if (Next->RightChild)
-            RsBtTraverse(Tree, Next->RightChild);
+            RsBtTraverse(Tree, Next->RightChild, Traverse);
 
-        CHAR KeyString[100];
-        PVOID CallerContext = Tree->CallerContext;
-        PVOID Key = Tree->Operations.GetKey(CallerContext, Next);
-        Tree->Operations.KeyToString(CallerContext, Key, KeyString, sizeof(KeyString) / sizeof(KeyString[0]));
-        RsBtTrace("%s\n", KeyString);
+        Traverse(Tree->CallerContext, Next);
 
         if (Next->LeftChild)
-            RsBtTraverse(Tree, Next->LeftChild);
+            RsBtTraverse(Tree, Next->LeftChild, Traverse);
     }
 }
 

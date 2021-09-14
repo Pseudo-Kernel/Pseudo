@@ -46,7 +46,8 @@ typedef struct _MMXAD
     U32 PrevType;           //!< Previous address type.
 } MMXAD;
 
-#define	MMXAD_MAX_SIZE_LEVELS					(64 - PAGE_SHIFT) // (64 - PAGE_SHIFT) = 52 levels
+#define	MMXAD_MAX_SIZE_LEVELS					(64 - PAGE_SHIFT + 1) // (64 - PAGE_SHIFT) = 52 levels
+C_ASSERT(MMXAD_MAX_SIZE_LEVELS > 1);
 
 typedef struct _MMXAD_TREE
 {
@@ -58,7 +59,10 @@ typedef struct _MMXAD_TREE
 
 
 
-
+BOOLEAN
+MmXadDebugTraverse(
+    IN PVOID CallerContext,
+    IN MMXAD *Xad);
 
 
 BOOLEAN

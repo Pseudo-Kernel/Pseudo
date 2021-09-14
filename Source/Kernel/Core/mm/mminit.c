@@ -178,9 +178,11 @@ MiPreInitialize(
     // Allocates memory by memory map info.
     //
 
-    EFI_MEMORY_DESCRIPTOR *Descriptor = LoaderBlock->Memory.Map;
-    U32 Count = LoaderBlock->Memory.MapCount;
     PTR OffsetToVirtualBase = LoaderBlock->LoaderData.OffsetToVirtualBase;
+    EFI_MEMORY_DESCRIPTOR *Descriptor = (EFI_MEMORY_DESCRIPTOR *)((PTR)
+        LoaderBlock->Memory.Map + OffsetToVirtualBase);
+    U32 Count = LoaderBlock->Memory.MapCount;
+    U32 DescriptorSize = LoaderBlock->Memory.DescriptorSize;
     for (U32 i = 0; i < Count; i++)
     {
         PTR NewAddress = Descriptor->PhysicalStart;
@@ -210,24 +212,30 @@ MiPreInitialize(
             {
                 return Status;
             }
-        }    
+        }
+
+        // Move to the next descriptor.
+        Descriptor = (EFI_MEMORY_DESCRIPTOR *)((PTR)Descriptor + DescriptorSize);
     }
 
     MiXadContext.UsePreInitPool = FALSE;
     MiXadInitialized = TRUE;
 
-#if 1
-    DbgTrace(TraceLevelDebug, "\n");
-
-    DbgTrace(TraceLevelDebug, "Listing PAD tree...\n");
-    RsBtTraverse(&MiPadTree.Tree, NULL);
-    DbgTrace(TraceLevelDebug, "\n");
-
-    DbgTrace(TraceLevelDebug, "Listing VAD tree...\n");
-    RsBtTraverse(&MiVadTree.Tree, NULL);
-    DbgTrace(TraceLevelDebug, "\n");
-#endif
-
     return E_SUCCESS;
 }
 
+VOID
+KERNELAPI
+MiPreDumpXad(
+    VOID)
+{
+    BootGfxPrintTextFormat("\n");
+
+    BootGfxPrintTextFormat("Listing PAD tree...\n");
+    RsBtTraverse(&MiPadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
+    BootGfxPrintTextFormat("\n");
+
+    BootGfxPrintTextFormat("Listing VAD tree...\n");
+    RsBtTraverse(&MiVadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
+    BootGfxPrintTextFormat("\n");
+}

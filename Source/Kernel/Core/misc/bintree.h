@@ -8,6 +8,11 @@
 typedef union _RS_BINARY_TREE_LINK			RS_BINARY_TREE_LINK;
 typedef struct _RS_BINARY_TREE				RS_BINARY_TREE;
 
+typedef
+BOOLEAN
+(*PRS_BINARY_TREE_TRAVERSE)(
+    IN PVOID CallerContext,
+    IN RS_BINARY_TREE_LINK *Node);
 
 
 typedef
@@ -119,7 +124,8 @@ RsBtTrace(
 VOID
 RsBtTraverse(
 	IN RS_BINARY_TREE *Tree,
-	IN RS_BINARY_TREE_LINK *Next);
+	IN RS_BINARY_TREE_LINK *Next,
+    IN PRS_BINARY_TREE_TRAVERSE Traverse);
 
 VOID
 RsBtInitialize(

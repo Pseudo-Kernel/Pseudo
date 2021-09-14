@@ -57,4 +57,9 @@ KERNELAPI
 MiPreInitialize(
     IN OS_LOADER_BLOCK *LoaderBlock);
 
+VOID
+KERNELAPI
+MiPreDumpXad(
+    VOID);
+
 
