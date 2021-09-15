@@ -5,7 +5,7 @@
 //
 
 // __cdecl, __stdcall are accepted but ignored by compiler on x64.
-#define	KERNELAPI					__stdcall
+#define	KERNELAPI					//__stdcall
 
 
 //

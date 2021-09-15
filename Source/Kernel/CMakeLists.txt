@@ -12,6 +12,9 @@ project(
 set(TARGET_NAME core)           # Output file name
 set(TARGET_EXTENSION .sys)      # Output file extension
 
+# Kernel macro definitions.
+set(EMULATOR_BUILD 0)   # 0 or 1. 0 for real hardware, 1 for emulator.
+
 # Kernel image base.
 set(KERNEL_IMAGE_BASE 0xffff8f0000000000)
 
@@ -81,7 +84,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 # Compile options.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -O3 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O3 -save-temps -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+#    PRIVATE -O0 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.
 # Native application (Base=0x400000, Subsystem=Native, EntryPoint=KiKernelStart)

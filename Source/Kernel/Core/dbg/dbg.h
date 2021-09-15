@@ -1,5 +1,8 @@
 #pragma once
 
+#define	DBG_SPECIAL_IO_PORT				0xe9
+
+
 typedef enum _DBG_TRACE_LEVEL {
 	TraceLevelAll,			// All
 	TraceLevelDebug,		// Debug & Event & Warning & Error

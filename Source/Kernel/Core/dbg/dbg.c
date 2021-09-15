@@ -1,8 +1,6 @@
 
 #include <base/base.h>
 
-#define	DBG_SPECIAL_IO_PORT				0xe9
-
 PDBG_TRACE_ROUTINE DbgpTrace = NULL;
 DBG_TRACE_LEVEL DbgPrintTraceLevel = TraceLevelDebug;
 
@@ -17,8 +15,10 @@ DbgpNormalTraceN(
 	if (TraceLevel < DbgPrintTraceLevel)
 		return FALSE;
 
+#if KERNEL_BUILD_TARGET_EMULATOR
 	__PseudoIntrin_OutPortBuffer8(DBG_SPECIAL_IO_PORT, (U8 *)TraceMessage, Length);
 //	__outbytestring(DBG_SPECIAL_IO_PORT, TraceMessage, (U32)Length);
+#endif
 
 	return TRUE;
 }
