@@ -8,7 +8,6 @@
  * 
  * @copyright Copyright (c) 2021
  * 
- * @todo Fix RsBtTrace crash bug (addresss 0xffff8f00000049b8)
  */
 
 #include <base/base.h>
