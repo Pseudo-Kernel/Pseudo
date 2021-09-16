@@ -28,6 +28,7 @@
  * 
  * @return This function never returns.
  */
+__attribute__((ms_abi))
 U64
 KERNELAPI
 KiKernelStart(
@@ -37,8 +38,6 @@ KiKernelStart(
 	IN PTR Reserved)
 {
 	DbgInitialize(TraceLevelDebug);
-
-	DbgNullBreak();
 
 	DbgTraceF(TraceLevelDebug, "%s (%p, %p, %X, %p)\n",
 		__FUNCTION__, LoadedBase, LoaderBlock, SizeOfLoaderBlock, Reserved);

@@ -130,11 +130,6 @@ MiArchX64SetPageMapping(
         U64 PDE = PDBase[PDEi];
         if (!(PDE & ARCH_X64_PXE_PRESENT))
         {
-            // Allocate new PDEs
-            NewTableBase = (U64 *)MiAllocatePxe();
-            if (!NewTableBase)
-                return FALSE;
-
             if (UseMapping2M)
             {
                 PDE = ARCH_X64_PXE_PRESENT | ARCH_X64_PXE_LARGE_SIZE | 
@@ -143,6 +138,11 @@ MiArchX64SetPageMapping(
             }
             else
             {
+                // Allocate new PDEs
+                NewTableBase = (U64 *)MiAllocatePxe();
+                if (!NewTableBase)
+                    return FALSE;
+
                 PDE = PxeDefaultFlags | ((U64)NewTableBase & ARCH_X64_PXE_4K_BASE_MASK);
             }
 

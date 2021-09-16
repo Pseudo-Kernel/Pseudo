@@ -681,7 +681,10 @@ UefiMain(
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to Initialize\r\n");
-        gBS->Stall(5 * 1000 * 1000);
+
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return Status;
     }
 
@@ -724,7 +727,10 @@ UefiMain(
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to open partition\r\n");
-        gBS->Stall(5 * 1000 * 1000);
+        
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return Status;
     }
 
@@ -742,7 +748,10 @@ UefiMain(
     if (!OslLoadBootFiles(&OslLoaderBlock))
     {
         TRACEF(L"Failed to load boot files\r\n");
-        gBS->Stall(5 * 1000 * 1000);
+        
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return EFI_LOAD_ERROR;
     }
 
@@ -764,7 +773,10 @@ UefiMain(
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to query memory map");
-        SystemTable->BootServices->Stall(5 * 1000 * 1000);
+        
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return Status;
     }
 
@@ -783,7 +795,9 @@ UefiMain(
 
     if (!OslQuerySwitchVideoModes(&OslLoaderBlock))
     {
-        gBS->Stall(5 * 1000 * 1000);
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return EFI_NOT_STARTED;
     }
 
@@ -795,7 +809,10 @@ UefiMain(
     if (Status != EFI_SUCCESS)
     {
         TRACEF(L"Failed to query memory map");
-        gBS->Stall(5 * 1000 * 1000);
+        
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return Status;
     }
 
@@ -805,8 +822,11 @@ UefiMain(
 
     if (!OslSetupPaging(&OslLoaderBlock))
     {
-        TRACEF(L"Failed to setup paging structure");
-        gBS->Stall(5 * 1000 * 1000);
+        TRACEF(L"Failed to setup paging structure\r\n");
+        
+        TRACEF(L"Press Enter Key to Exit\r\n");
+        OslWaitForKeyInput(0, 0x0d, 0x00ffffffffffffff);
+
         return EFI_NOT_STARTED;
     }
 

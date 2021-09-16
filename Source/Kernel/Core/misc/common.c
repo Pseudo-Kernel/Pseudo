@@ -325,19 +325,6 @@ FormatHelper_ValueToStringU8(
     return OutputLength;
 }
 
-VOID
-ClDbgHex(
-    IN U64 Value)
-{
-    CHAR8 Buffer[65], *p;
-    FormatHelper_ValueToStringU8(Buffer, ARRAY_SIZE(Buffer) - 1, 0, 0, Value, 16, 0);
-
-//    for (p = Buffer; *p; p++)
-//        __PseudoIntrin_OutPort8(0xe9, *p);
-//
-//    __PseudoIntrin_OutPort8(0xe9, '\n');
-}
-
 SIZE_T
 ClStrFormatU8V(
     OUT CHAR8 *Buffer,

@@ -400,11 +400,6 @@ OslArchX64SetPageMapping(
         UINT64 PDE = PDBase[PDEi];
         if (!(PDE & ARCH_X64_PXE_PRESENT))
         {
-            // Allocate new PDEs
-            NewTableBase = (UINT64 *)OslAllocatePxe(&OslLoaderBlock);
-            if (!NewTableBase)
-                return FALSE;
-
             if (UseMapping2M)
             {
                 PDE = ARCH_X64_PXE_PRESENT | ARCH_X64_PXE_LARGE_SIZE | 
@@ -413,6 +408,11 @@ OslArchX64SetPageMapping(
             }
             else
             {
+                // Allocate new PDEs
+                NewTableBase = (UINT64 *)OslAllocatePxe(&OslLoaderBlock);
+                if (!NewTableBase)
+                    return FALSE;
+
                 PDE = PxeDefaultFlags | ((UINT64)NewTableBase & ARCH_X64_PXE_4K_BASE_MASK);
             }
 
@@ -699,12 +699,65 @@ EFIAPI
 OslSetupPaging(
 	IN OS_LOADER_BLOCK *LoaderBlock)
 {
+#if 1
     UINTN MemoryMapSize = LoaderBlock->Memory.MapSize;
     UINTN DescriptorSize = LoaderBlock->Memory.DescriptorSize;
     UINTN DescriptorVersion = LoaderBlock->Memory.DescriptorVersion;
 	UINTN MapCount = MemoryMapSize / DescriptorSize;
 
     EFI_MEMORY_DESCRIPTOR *Map = LoaderBlock->Memory.Map;
+#else
+    #define MEM_DESC(_ps, _pe, _vs, _ty)          { (_ty), (_ps), (_vs), EFI_SIZE_TO_PAGES((_pe) - (_ps) + 1), 1, }
+    #define MEM_DESC_0(_ps, _pe, _ty)             MEM_DESC((_ps), (_pe), (_ps), (_ty))
+    static EFI_MEMORY_DESCRIPTOR PseudoMapList[] = 
+    {
+        MEM_DESC_0(0x0, 0x9dfff, 0),
+        MEM_DESC_0(0x9e000, 0x9efff, 1),
+        MEM_DESC_0(0x9f000, 0x9ffff, 2),
+        MEM_DESC_0(0x100000, 0x1fffff, 3),
+        MEM_DESC_0(0x200000, 0x23efff, 4),
+        MEM_DESC_0(0x23f000, 0x5939ffff, 5),
+        MEM_DESC_0(0x593a0000, 0x593dffff, 6),
+        MEM_DESC_0(0x593e0000, 0x6571dfff, 7),
+        MEM_DESC_0(0x6571e000, 0x65788fff, 8),
+        MEM_DESC_0(0x65789000, 0x6578ffff, 9), 
+        MEM_DESC_0(0x65790000, 0x657effff, 10),
+        MEM_DESC_0(0x657f0000, 0x667effff, 11),
+        MEM_DESC_0(0x667f0000, 0x668effff, 12),
+        MEM_DESC_0(0x668f0000, 0x669effff, 13),
+        MEM_DESC_0(0x669f0000, 0x671effff, 14),
+        MEM_DESC_0(0x671f0000, 0x69286fff, 15),
+        MEM_DESC_0(0x69287000, 0x69287fff, 16),
+        MEM_DESC_0(0x69288000, 0x69288fff, 17),
+        MEM_DESC_0(0x69289000, 0x6938ffff, 18),
+        MEM_DESC_0(0x69390000, 0x6939cfff, 19),
+        MEM_DESC_0(0x6939d000, 0x6939efff, 20),
+        MEM_DESC_0(0x6939f000, 0x77c98fff, 21),
+        MEM_DESC_0(0x77c99000, 0x78467fff, 22),
+        MEM_DESC_0(0x78468000, 0x78cf3fff, 23),
+        MEM_DESC_0(0x78cf4000, 0x7a46bfff, 24),
+        MEM_DESC_0(0x7a46c000, 0x7a4e8fff, 25),
+        MEM_DESC_0(0x7a4e9000, 0x7ae5dfff, 26),
+        MEM_DESC_0(0x7ae5e000, 0x7b51afff, 27),
+        MEM_DESC_0(0x7b51b000, 0x7b5fdfff, 28),
+        MEM_DESC_0(0x7b5fe000, 0x7b5fefff, 29), // !!
+        MEM_DESC_0(0x100000000, 0x87e7fffff, 30),
+        MEM_DESC_0(0xa0000, 0xfffff, 31),
+        MEM_DESC_0(0x7b5ff000, 0x7b5fffff, 32),
+        MEM_DESC_0(0x7b600000, 0x7f7fffff, 33),
+        MEM_DESC_0(0xf0000000, 0xf7ffffff, 34),
+        MEM_DESC_0(0xfe000000, 0xfe010fff, 35),
+        MEM_DESC_0(0xfec00000, 0xfec00fff, 36),
+        MEM_DESC_0(0xfee00000, 0xfee00fff, 37),
+        MEM_DESC_0(0xff000000, 0xffffffff, 38),
+    };
+
+    UINTN DescriptorSize = sizeof(EFI_MEMORY_DESCRIPTOR);
+    UINTN MemoryMapSize = sizeof(PseudoMapList);
+    UINTN MapCount = MemoryMapSize / DescriptorSize;
+
+    EFI_MEMORY_DESCRIPTOR *Map = &PseudoMapList;
+#endif
 
     OslResetPxePool(LoaderBlock);
 
@@ -737,6 +790,10 @@ OslSetupPaging(
             if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 
                 Size, PxeFlag, FALSE))
             {
+                TRACEF(L"Failed to set mapping, PXE pool %lld / %lld\r\n", 
+                    LoaderBlock->LoaderData.PxeInitPoolSizeUsed,
+                    LoaderBlock->LoaderData.PxeInitPoolSize);
+
                 return FALSE;
             }
 

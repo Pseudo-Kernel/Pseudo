@@ -77,20 +77,6 @@ DbgInitialize(
 	return TRUE;
 }
 
-VOID
-KERNELAPI
-DbgNullBreak(
-	VOID)
-{
-	__asm__ __volatile__ (
-		"nop\n\t"
-		"ret\n\t"
-		:
-		:
-		: "memory"
-	);
-}
-
 #if 0
 __attribute__((naked))
 VOID
