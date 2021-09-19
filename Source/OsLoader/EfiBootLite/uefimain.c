@@ -81,11 +81,13 @@ OslInitializeLoaderBlock(
     LoaderBlock->Base.BootServices = SystemTable->BootServices;
     LoaderBlock->Base.RuntimeServices = SystemTable->RuntimeServices;
 
-    Status = OslAllocatePages(PreInitPoolSize, &PreInitPoolBase, FALSE, OsPreInitPool);
+    LoaderBlock->LoaderData.PreserveRangesBitmap = 0;
+
+    Status = OslAllocatePagesPreserve(LoaderBlock, PreInitPoolSize, &PreInitPoolBase, FALSE, OsPreInitPool);
     if (Status != EFI_SUCCESS)
         return Status;
 
-    Status = OslAllocatePages(ShadowSize, &ShadowBase, FALSE, OsLowMemory1M);
+    Status = OslAllocatePagesPreserve(LoaderBlock, ShadowSize, &ShadowBase, FALSE, OsLowMemory1M);
     if (Status != EFI_SUCCESS)
         return Status;
 
@@ -93,11 +95,11 @@ OslInitializeLoaderBlock(
     for (UINTN Offset = 0; Offset < ShadowSize; Offset++)
         *((CHAR8 *)ShadowBase + Offset) = *((CHAR8 *)0 + Offset);
 
-    Status = OslAllocatePages(KernelStackSize, &KernelStackBase, FALSE, OsKernelStack);
+    Status = OslAllocatePagesPreserve(LoaderBlock, KernelStackSize, &KernelStackBase, FALSE, OsKernelStack);
     if (Status != EFI_SUCCESS)
         return Status;
 
-    Status = OslAllocatePages(PxeInitPoolSize, &PxeInitPoolBase, FALSE, OsPagingPxePool);
+    Status = OslAllocatePagesPreserve(LoaderBlock, PxeInitPoolSize, &PxeInitPoolBase, FALSE, OsPagingPxePool);
     if (Status != EFI_SUCCESS)
         return Status;
 
@@ -213,7 +215,7 @@ OslLoadFile(
         // This returns required FileInfoSize with error.
         TargetFile->GetInfo(TargetFile, &gEfiFileInfoGuid, &FileInfoSize, NULL);
 
-        Status = OslAllocatePages(FileInfoSize, &FileInfo, FALSE, OsTemporaryData);
+        Status = OslAllocatePagesPreserve(LoaderBlock, FileInfoSize, &FileInfo, FALSE, OsTemporaryData);
         if (Status != EFI_SUCCESS)
             break;
 
@@ -227,7 +229,7 @@ OslLoadFile(
 
         FileBufferSize = ((EFI_FILE_INFO *)FileInfo)->FileSize;
 
-        Status = OslAllocatePages(FileBufferSize, &FileBuffer, FALSE, BufferMemoryType);
+        Status = OslAllocatePagesPreserve(LoaderBlock, FileBufferSize, &FileBuffer, FALSE, BufferMemoryType);
         if (Status != EFI_SUCCESS)
         {
             TRACEF(L"Failed to Allocate the Memory (%d Pages)\r\n", EFI_SIZE_TO_PAGES(FileBufferSize));
@@ -242,7 +244,7 @@ OslLoadFile(
         if (FileBufferSize >= 0x100000000ULL)
             break;
 
-        OslFreePages(FileInfo, FileInfoSize);
+        OslFreePagesPreserve(LoaderBlock, FileInfo, FileInfoSize);
 
         *Buffer = (VOID *)FileBuffer;
         *Size = FileBufferSize;
@@ -252,10 +254,10 @@ OslLoadFile(
     } while (FALSE);
 
     if (FileInfo)
-        OslFreePages(FileInfo, FileInfoSize);
+        OslFreePagesPreserve(LoaderBlock, FileInfo, FileInfoSize);
 
     if (FileBuffer)
-        OslFreePages(FileBuffer, FileBufferSize);
+        OslFreePagesPreserve(LoaderBlock, FileBuffer, FileBufferSize);
 
     return FALSE;
 }
@@ -288,12 +290,12 @@ OslLoadBootFiles(
         + KERNEL_VA_START_LOADER_SPACE;
 
     UINTN MappedSize = 0;
-    EFI_PHYSICAL_ADDRESS KernelPhysicalBase = OslPeLoadImage((void *)FileBuffer, FileBufferSize, &MappedSize, VirtualBase);
-    OslFreePages(FileBuffer, FileBufferSize);
+    EFI_PHYSICAL_ADDRESS KernelPhysicalBase = OslPeLoadImage(LoaderBlock, (void *)FileBuffer, FileBufferSize, &MappedSize, VirtualBase);
+    OslFreePagesPreserve(LoaderBlock, FileBuffer, FileBufferSize);
 
     if (!OslLoadFile(LoaderBlock, L"Efi\\Boot\\init.bin", OsBootImage, (VOID **)&FileBuffer, &FileBufferSize))
     {
-        OslFreePages(KernelPhysicalBase, MappedSize);
+        OslFreePagesPreserve(LoaderBlock, KernelPhysicalBase, MappedSize);
         return FALSE;
     }
 
@@ -515,7 +517,7 @@ OslQuerySwitchVideoModes(
             break;
         }
 
-        if (OslAllocatePages(VideoModeBufferLength, &VideoModeBuffer, FALSE, OsLoaderData)
+        if (OslAllocatePagesPreserve(LoaderBlock, VideoModeBufferLength, &VideoModeBuffer, FALSE, OsLoaderData)
             != EFI_SUCCESS)
             break;
 
@@ -597,8 +599,16 @@ OslQuerySwitchVideoModes(
             GfxOut->Mode->FrameBufferBase,
             GfxOut->Mode->FrameBufferBase + GfxOut->Mode->FrameBufferSize - 1);
 
-        OslDbgWaitEnterKey(LoaderBlock, NULL);
+        EFI_PHYSICAL_ADDRESS VideoFramebufferCopy = 0;
+        if (OslAllocatePagesPreserve(LoaderBlock, GfxOut->Mode->FrameBufferSize, 
+            &VideoFramebufferCopy, FALSE, OsFramebufferCopy) != EFI_SUCCESS)
+        {
+            TRACE(L"Failed to allocate framebuffer copy\r\n");
+            break;
+        }
 
+
+        OslDbgWaitEnterKey(LoaderBlock, NULL);
 
         // Clear the screen once more.
         FillColor.Raw = 0;
@@ -614,6 +624,7 @@ OslQuerySwitchVideoModes(
         LoaderBlock->LoaderData.VideoModeSize = VideoModeBufferLength;
         LoaderBlock->LoaderData.VideoMaxMode = MaxMode;
         LoaderBlock->LoaderData.VideoFramebufferBase = GfxOut->Mode->FrameBufferBase;
+        LoaderBlock->LoaderData.VideoFramebufferCopy = VideoFramebufferCopy;
         LoaderBlock->LoaderData.VideoModeSelected = SelectedMode;
         LoaderBlock->LoaderData.VideoFramebufferSize = GfxOut->Mode->FrameBufferSize;
 
@@ -626,7 +637,7 @@ OslQuerySwitchVideoModes(
     if (!Found)
     {
         if(VideoModeBuffer)
-            OslFreePages(VideoModeBuffer, VideoModeBufferLength);
+            OslFreePagesPreserve(LoaderBlock, VideoModeBuffer, VideoModeBufferLength);
     }
 
     return Found;
@@ -830,6 +841,8 @@ UefiMain(
         return EFI_NOT_STARTED;
     }
 
+    OslDbgFillScreen(&OslLoaderBlock, 0xff0000);
+
     //
     // Exit the Boot Services.
     // Any service calls must be prohibited because it can change the memory map.
@@ -850,6 +863,8 @@ UefiMain(
     //
     // Transfer control to the kernel.
     //
+
+    OslDbgFillScreen(&OslLoaderBlock, 0x00ff00);
 
     if (!OslTransferToKernel(&OslLoaderBlock))
     {

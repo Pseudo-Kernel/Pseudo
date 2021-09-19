@@ -12,6 +12,8 @@
  *       - Pool initialization
  *       - Interrupt registration and dispatch
  *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
+ * @todo Need to fix CPU reboot when calling ZipInitializeReaderContext. (VMware)\n
+ * 
  */
 
 #include <base/base.h>
@@ -37,10 +39,12 @@ KiKernelStart(
 	IN U32 SizeOfLoaderBlock, 
 	IN PTR Reserved)
 {
-	DbgInitialize(TraceLevelDebug);
+	DbgInitialize(LoaderBlock, TraceLevelDebug);
+    DFOOTPRN(1);
 
 	DbgTraceF(TraceLevelDebug, "%s (%p, %p, %X, %p)\n",
 		__FUNCTION__, LoadedBase, LoaderBlock, SizeOfLoaderBlock, Reserved);
+    DFOOTPRN(2);
 
     PiPreInitialize(LoaderBlock, SizeOfLoaderBlock);
 

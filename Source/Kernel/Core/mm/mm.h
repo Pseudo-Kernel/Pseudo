@@ -16,6 +16,23 @@ extern XAD_CONTEXT MiXadContext;
 
 extern BOOLEAN MiXadInitialized;
 
+
+typedef enum _LOADER_XAD_TYPE
+{
+    OsSpecificMemTypeStart = (int)0x80000000,
+    OsTemporaryData = OsSpecificMemTypeStart,
+    OsLoaderData,
+    OsLowMemory1M,
+    OsKernelImage,
+    OsKernelStack,
+    OsBootImage,
+    OsPreInitPool,
+    OsPagingPxePool,
+    OsFramebufferCopy,
+
+    OsSpecificMemTypeEnd,
+} LOADER_XAD_TYPE;
+
 typedef enum _PAD_TYPE
 {
 	// Inherits EFI_MEMORY_TYPE.
@@ -39,15 +56,7 @@ typedef enum _PAD_TYPE
 	PadInUse,									//!< Address is currently in use.
     PadInitialReserved,
 
-	// Inherits OS_MEMORY_TYPE in Osloader.
-    PadOsTemporaryData = (int)0x80000000,
-    PadOsLoaderData,
-    PadOsLowMemory1M,
-    PadOsKernelImage,
-    PadOsKernelStack,
-    PadOsBootImage,
-    PadOsPreInitPool,
-    PadOsPagingPxePool,
+	// Inherits OS_MEMORY_TYPE(LOADER_XAD_TYPE) in Osloader.
 } PAD_TYPE;
 
 typedef enum _VAD_TYPE
@@ -57,15 +66,7 @@ typedef enum _VAD_TYPE
     VadFree,		    //!< Address is free to use.
     VadInUse,		    //!< Address is currently in use.
 
-	// Inherits OS_MEMORY_TYPE in Osloader.
-    VadOsTemporaryData = (int)0x80000000,
-    VadOsLoaderData,
-    VadOsLowMemory1M,
-    VadOsKernelImage,
-    VadOsKernelStack,
-    VadOsBootImage,
-    VadOsPreInitPool,
-    VadOsPagingPxePool,
+	// Inherits OS_MEMORY_TYPE(LOADER_XAD_TYPE) in Osloader.
 } VAD_TYPE;
 
 typedef struct _PHYSICAL_ADDRESSES
@@ -84,6 +85,14 @@ typedef struct _PHYSICAL_ADDRESSES
 //ESTATUS
 //MmInitialize(
 //	VOID);
+
+ESTATUS
+MmReallocateVirtualMemory(
+    IN PVOID ReservedZero,
+    IN OUT PTR *Address,
+    IN SIZE_T Size,
+    IN VAD_TYPE SourceType,
+    IN VAD_TYPE Type);
 
 ESTATUS
 MmAllocateVirtualMemory2(
@@ -105,6 +114,13 @@ ESTATUS
 MmFreeVirtualMemory(
 	IN PTR Address,
 	IN SIZE_T Size);
+
+ESTATUS
+MmReallocatePhysicalMemory(
+    IN OUT PTR *Address,
+    IN SIZE_T Size,
+    IN PAD_TYPE SourceType,
+    IN PAD_TYPE Type);
 
 ESTATUS
 MmAllocatePhysicalMemory2(

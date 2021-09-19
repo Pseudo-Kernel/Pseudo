@@ -19,9 +19,6 @@
 
 
 OS_LOADER_BLOCK PiLoaderBlockTemporary;
-PREINIT_PAGE_RESERVE PiPageReserve[32]; // Page list which must not be discarded
-U32 PiPageReserveCount = 0;
-
 ZIP_CONTEXT PiBootImageContext; // Boot image context
 
 
@@ -47,21 +44,14 @@ PiPreInitialize(
     LoaderBlockTemp->Base.ImageHandle = NULL;
     LoaderBlockTemp->Base.RootDirectory = NULL;
 
-    //
-    // Initialize the pre-init pool and XAD trees.
-    //
+//    __asm__ __volatile__ ("hlt" : : : "memory");
 
-    ESTATUS Status = MiPreInitialize(LoaderBlockTemp);
-
-    if (!E_IS_SUCCESS(Status))
-    {
-        BootGfxFatalStop("Failed to initialize memory");
-    }
 
     //
     // Initialize the boot image context.
     //
 
+    DFOOTPRN(10);
     if (!ZipInitializeReaderContext(&PiBootImageContext,
         (PVOID)(LoaderBlockTemp->LoaderData.BootImageBase + OffsetToVirtualBase),
         (U32)LoaderBlockTemp->LoaderData.BootImageSize))
@@ -74,21 +64,38 @@ PiPreInitialize(
     // Note that we use physical address of framebuffer because it is identity mapped.
     //
 
+    DFOOTPRN(11);
     if (!BootGfxInitialize(
         (PVOID)(LoaderBlockTemp->LoaderData.VideoModeBase + OffsetToVirtualBase),
         (U32)LoaderBlockTemp->LoaderData.VideoModeSize,
         LoaderBlockTemp->LoaderData.VideoModeSelected,
         (PVOID)LoaderBlockTemp->LoaderData.VideoFramebufferBase,
+        (PVOID)(LoaderBlockTemp->LoaderData.VideoFramebufferCopy + OffsetToVirtualBase),
         LoaderBlockTemp->LoaderData.VideoFramebufferSize,
         &PiBootImageContext))
     {
         BootGfxFatalStop("Failed to initialize graphics");
     }
 
+    BootGfxPrintTextFormat("Pre-init graphics initialized\n");
+
+    //
+    // Initialize the pre-init pool and XAD trees.
+    //
+
+    DFOOTPRN(12);
+    ESTATUS Status = MiPreInitialize(LoaderBlockTemp);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        BootGfxFatalStop("Failed to initialize memory");
+    }
+
     //
     // Dump XADs.
     //
 
+    DFOOTPRN(13);
     MiPreDumpXad();
 
     BootGfxPrintTextFormat("System Halt.");

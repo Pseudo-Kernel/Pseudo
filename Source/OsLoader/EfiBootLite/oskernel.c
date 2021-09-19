@@ -14,6 +14,7 @@
 #include "ospeimage.h"
 #include "osmemory.h"
 #include "oskernel.h"
+#include "osdebug.h"
 
 
 /**
@@ -33,6 +34,19 @@ OslReturnedFromKernel(
 }
 
 /**
+ * @brief Disables the interrupts by clearing the CR0.IF.
+ * 
+ * @return None.
+ */
+VOID
+EFIAPI
+OslDisableInterrupts(
+    VOID)
+{
+    __asm__ __volatile__("cli" : : : "memory");
+}
+
+/**
  * @brief Transfers control to the kernel.
  * 
  * @param [in] LoaderBlock  The loader block which contains OS loader information.
@@ -44,8 +58,13 @@ EFIAPI
 OslTransferToKernel(
     IN OS_LOADER_BLOCK *LoaderBlock)
 {
+    // Disables the interrupts.
+    OslDisableInterrupts();
+
     // Set our page mapping. This will invalidate the TLB.
-    OslArchX64SetCr3(LoaderBlock->LoaderData.PML4TBase);
+    OslArchX64SetCr3(
+        (OslArchX64GetCr3() & ~ARCH_X64_CR3_PML4_BASE_MASK) | 
+        LoaderBlock->LoaderData.PML4TBase);
 
     EFI_VIRTUAL_ADDRESS KernelBase = 
         LoaderBlock->LoaderData.KernelPhysicalBase
@@ -55,7 +74,11 @@ OslTransferToKernel(
         + LoaderBlock->LoaderData.OffsetToVirtualBase
         + LoaderBlock->LoaderData.StackSize);
 
+    OslDbgFillScreen(&OslLoaderBlock, 0xffffff);
+
     IMAGE_NT_HEADERS_3264 *Nt3264 = OslPeImageBaseToNtHeaders((void *)KernelBase);
+
+    OslDbgFillScreen(&OslLoaderBlock, 0x000000);
 
     if (!Nt3264)
         return FALSE;
@@ -75,8 +98,7 @@ OslTransferToKernel(
         "mov r8d, %4\n\t"
         "mov r9, %5\n\t"
         "xchg rsp, r10\n\t" // stack switch!
-        "push rax\n\t"
-        "ret\n\t"
+        "call rax\n\t"
         :
         : "m"(StartEntry), "m"(StackPointer),
           "m"(KernelBase), "m"(LoaderBlock), "m"(LoaderBlockSize), "n"(0)

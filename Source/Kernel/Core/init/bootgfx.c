@@ -54,7 +54,7 @@ BootFonCharBlt(
 	X = Screen->TextCursorX * CharWidth;
 	Y = Screen->TextCursorY * CharHeight;
 
-	BltBuffer = (U32 *)Screen->FrameBuffer.FrameBuffer;
+	BltBuffer = (U32 *)Screen->FrameBuffer.FrameBufferCopy;
 
 	for (i = 0; i < u; i++) // x
 	{
@@ -232,6 +232,8 @@ BootFonPrintTextN(
 			Screen->FrameBuffer.ScrollRoutine(Screen, FontFile->PixHeight * ScrollCount);
 		}
 	}
+
+    BootGfxUpdateScreen(Screen);
 
 	*PrintLength = i;
 
@@ -412,7 +414,7 @@ BootGfxScrollBufferInternal(
 	U32 ResolutionX = PiBootGfx.ModeInfo->HorizontalResolution;
 	U32 ResolutionY = PiBootGfx.ModeInfo->VerticalResolution;
 
-	volatile U32 *FrameBuffer = (U32 *)PiBootGfx.Screen.FrameBuffer.FrameBuffer;
+	U32 *FrameBufferCopy = (U32 *)PiBootGfx.Screen.FrameBuffer.FrameBufferCopy;
 	U32 ScanLineWidth = PiBootGfx.ModeInfo->PixelsPerScanLine;
 	U32 BackgroundColor = PiBootGfx.Screen.TextBackgroundColor;
 
@@ -442,8 +444,8 @@ BootGfxScrollBufferInternal(
 	{
 		for (u = X1; u < X1 + SX; u++)
 		{
-			FrameBuffer[u + v * ScanLineWidth] =
-				FrameBuffer[u + (v + ScrollHeight) * ScanLineWidth];
+			FrameBufferCopy[u + v * ScanLineWidth] =
+				FrameBufferCopy[u + (v + ScrollHeight) * ScanLineWidth];
 		}
 	}
 
@@ -451,11 +453,28 @@ BootGfxScrollBufferInternal(
 	{
 		for (u = X1; u < X1 + SX; u++)
 		{
-			FrameBuffer[u + v * ScanLineWidth] = BackgroundColor;
+			FrameBufferCopy[u + v * ScanLineWidth] = BackgroundColor;
 		}
 	}
 
 	return TRUE;
+}
+
+VOID
+KERNELAPI
+BootGfxUpdateScreen(
+    IN BOOT_GFX_SCREEN *Screen)
+{
+    UPTR Destination = Screen->FrameBuffer.FrameBuffer;
+    UPTR Source = Screen->FrameBuffer.FrameBufferCopy;
+    SIZE_T ScanLineSize = Screen->FrameBuffer.ScanLineWidth * sizeof(U32);
+
+    for (U32 y = 0; y < Screen->FrameBuffer.VerticalResolution; y++)
+    {
+        memcpy((void *)Destination, (void *)Source, ScanLineSize);
+        Destination += ScanLineSize;
+        Source += ScanLineSize;
+    }
 }
 
 BOOLEAN
@@ -467,7 +486,10 @@ BootGfxScrollBuffer(
 	U32 Width = Screen->TextResolutionX * Screen->TextWidth;
 	U32 Height = Screen->TextResolutionY * Screen->TextHeight;
 
-	return BootGfxScrollBufferInternal(0, 0, Width, Height, ScrollHeight);
+	BOOLEAN Result = BootGfxScrollBufferInternal(0, 0, Width, Height, ScrollHeight);
+    BootGfxUpdateScreen(Screen);
+
+    return Result;
 }
 
 U32
@@ -505,7 +527,7 @@ BootGfxFillBuffer(
 	U32 ResolutionX = PiBootGfx.ModeInfo->HorizontalResolution;
 	U32 ResolutionY = PiBootGfx.ModeInfo->VerticalResolution;
 
-	volatile U32 *FrameBuffer = (U32 *)PiBootGfx.Screen.FrameBuffer.FrameBuffer;
+	U32 *FrameBuffer = (U32 *)PiBootGfx.Screen.FrameBuffer.FrameBufferCopy;
 	U32 ScanLineWidth = PiBootGfx.ModeInfo->PixelsPerScanLine;
 
 	U32 u, v;
@@ -526,6 +548,8 @@ BootGfxFillBuffer(
 			FrameBuffer[u + v * ScanLineWidth] = (Color & 0xffffff);
 		}
 	}
+
+    BootGfxUpdateScreen(&PiBootGfx.Screen);
 
 	return TRUE;
 }
@@ -594,9 +618,9 @@ BootGfxInitialize(
 	IN U32 VideoModesBufferSize, // Mode list buffer size
 	IN U32 ModeNumberCurrent, // Current mode number
 	IN PVOID FrameBuffer, // Linear framebuffer address
+	IN PVOID FrameBufferCopy, // Copy framebuffer address
 	IN SIZE_T FrameBufferSize, // Framebuffer size
-	IN ZIP_CONTEXT *BootImageContext
-	)
+	IN ZIP_CONTEXT *BootImageContext)
 {
 	U32 Offset;
 	VOID *FontFile;
@@ -703,6 +727,7 @@ BootGfxInitialize(
 	PiBootGfx.BootFont = BootFont;
 
 	PiBootGfx.Screen.FrameBuffer.FrameBuffer = (UPTR)FrameBuffer;
+    PiBootGfx.Screen.FrameBuffer.FrameBufferCopy = (UPTR)FrameBufferCopy;
 	PiBootGfx.Screen.FrameBuffer.FrameBufferSize = FrameBufferSize;
 	PiBootGfx.Screen.FrameBuffer.HorizontalResolution = ModeInfo->HorizontalResolution;
 	PiBootGfx.Screen.FrameBuffer.VerticalResolution = ModeInfo->VerticalResolution;

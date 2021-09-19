@@ -90,6 +90,117 @@ OslFreePages(
 }
 
 /**
+ * @brief Allocates physical pages below 4GB.
+ * 
+ * @param [in] LoaderBlock          Loader block.
+ * @param [in] Size                 Size to allocate.
+ * @param [in,out] Address          Same as OslAllocatePages.
+ * @param [in] AddressSpecified     Same as OslAllocatePages.
+ * @param [in] MemoryType           If MemoryType is OS_MEMORY_TYPE.OsXxx, allocated memory range will be added to the preserve list.
+ * 
+ * @return EFI_SUCCESS  The operation is completed successfully.
+ * @return else         An error occurred during the operation.
+ */
+EFI_STATUS
+EFIAPI
+OslAllocatePagesPreserve(
+    IN OS_LOADER_BLOCK *LoaderBlock,
+    IN UINTN Size, 
+    IN OUT EFI_PHYSICAL_ADDRESS *Address, 
+    IN BOOLEAN AddressSpecified,
+    IN OS_MEMORY_TYPE MemoryType)
+{
+    //
+    // We'll only pass EfiLoaderData when calling gBS->AllocatePages()
+    // because it makes ExitBootServices() hang for memory type 0x80000000..0xffffffff.
+    // (It looks like a firmware bug. 
+    //  Using 0x70000000..0x7fffffff worked, but not allowed to use for OS loaders)
+    //
+
+    EFI_STATUS Status = OslAllocatePages(Size, Address, AddressSpecified, EfiLoaderData);
+
+    if (Status != EFI_SUCCESS)
+    {
+        return Status;
+    }
+
+    if (OsSpecificMemTypeStart <= MemoryType && MemoryType < OsSpecificMemTypeEnd)
+    {
+        if (LoaderBlock->LoaderData.PreserveRangesBitmap == OS_PRESERVE_RANGE_BITMAP_FULL)
+        {
+            OslFreePages(*Address, Size);
+            return EFI_OUT_OF_RESOURCES;
+        }
+
+        // Add memory range to PreserveRanges[].
+        for (UINTN i = 0; i < OS_PRESERVE_RANGE_MAX_COUNT; i++)
+        {
+            if (LoaderBlock->LoaderData.PreserveRangesBitmap & (1ULL << i))
+            {
+                continue;
+            }
+
+            OS_PRESERVE_MEMORY_RANGE MemoryRange = 
+            {
+                .PhysicalStart = *Address,
+                .Size = Size,
+                .VirtualStart = 0,
+                .Type = MemoryType,
+                .Reserved = 0,
+            };
+
+            LoaderBlock->LoaderData.PreserveRanges[i] = MemoryRange;
+            LoaderBlock->LoaderData.PreserveRangesBitmap |= (1ULL << i);
+            break;
+        }
+    }
+
+    return Status;
+}
+
+/**
+ * @brief Frees the page and remove from preserve list.
+ * 
+ * @param [in] LoaderBlock  Loader block.
+ * @param [in] Address      4K-aligned address which we want to free.
+ * @param [in] Size         Size to free.
+ * 
+ * @return EFI_SUCCESS      The operation is completed successfully.
+ * @return else             An error occurred during the operation.
+ */
+EFI_STATUS
+EFIAPI
+OslFreePagesPreserve(
+    IN OS_LOADER_BLOCK *LoaderBlock,
+    IN EFI_PHYSICAL_ADDRESS Address, 
+    IN UINTN Size)
+{
+    EFI_STATUS Status = OslFreePages(Address, Size);
+
+    if (Status == EFI_SUCCESS && 
+        LoaderBlock->LoaderData.PreserveRangesBitmap != 0)
+    {
+        for (UINTN i = 0; i < OS_PRESERVE_RANGE_MAX_COUNT; i++)
+        {
+            if (!(LoaderBlock->LoaderData.PreserveRangesBitmap & (1ULL << i)) || 
+                LoaderBlock->LoaderData.PreserveRanges[i].PhysicalStart != Address)
+            {
+                continue;
+            }
+
+            // Remove from PreserveRanges[].
+            LoaderBlock->LoaderData.PreserveRangesBitmap &= ~(1ULL << i);
+            break;
+        }
+    }
+
+    return Status;
+}
+
+
+
+
+/**
  * @brief Frees the memory map.
  * 
  * @param [in] LoaderBlock  The loader block which contains OS loader information.
@@ -103,7 +214,7 @@ OslFreeMemoryMap(
 {
 	VOID *Map = (VOID *)LoaderBlock->Memory.Map;
 
-    OslFreePages((EFI_PHYSICAL_ADDRESS)Map, LoaderBlock->Memory.MapSize);
+    OslFreePagesPreserve(LoaderBlock, (EFI_PHYSICAL_ADDRESS)Map, LoaderBlock->Memory.MapSize);
 
 	LoaderBlock->Memory.Map = NULL;
 	LoaderBlock->Memory.MapKey = 0;
@@ -138,7 +249,7 @@ OslQueryMemoryMap(
 
 	for (TryCount = 0; TryCount < 0x10; TryCount++)
 	{
-		Status = OslAllocatePages(MapSize, (EFI_PHYSICAL_ADDRESS *)&Map, FALSE, OsLoaderData);
+		Status = OslAllocatePagesPreserve(LoaderBlock, MapSize, (EFI_PHYSICAL_ADDRESS *)&Map, FALSE, OsLoaderData);
 		if (Status != EFI_SUCCESS)
 			return Status;
 
@@ -146,7 +257,7 @@ OslQueryMemoryMap(
 		if (Status == EFI_SUCCESS)
 			break;
 
-        OslFreePages((EFI_PHYSICAL_ADDRESS)Map, MapSize);
+        OslFreePagesPreserve(LoaderBlock, (EFI_PHYSICAL_ADDRESS)Map, MapSize);
 	}
 
 	if (Status != EFI_SUCCESS)
@@ -687,6 +798,21 @@ OslArchX64SetCr3(
     );
 }
 
+BOOLEAN
+EFIAPI
+OslIsAddressInRange(
+    IN UINT64 TestAddress,
+    IN UINT64 TestSize,
+    IN UINT64 StartAddress,
+    IN UINT64 Size)
+{
+    if (StartAddress <= TestAddress && 
+        TestAddress + TestSize <= StartAddress + Size)
+        return TRUE;
+    
+    return FALSE;
+}
+
 /**
  * @brief Sets up the paging.
  * 
@@ -767,44 +893,61 @@ OslSetupPaging(
     if (!PML4TBase || !RPML4TBase)
         return FALSE;
 
+    UINT64 RangeBitmap = LoaderBlock->LoaderData.PreserveRangesBitmap;
+
 	for (UINTN i = 0; i < MapCount; i++)
 	{
 		EFI_MEMORY_DESCRIPTOR *MapEntry = (EFI_MEMORY_DESCRIPTOR *)((INT8 *)Map + i * DescriptorSize);
 
-        UINT64 PxeFlag = OslArchX64EfiMapAttributeToPxeFlag(MapEntry->Attribute);
+        UINT64 PxeFlag = ARCH_X64_PXE_WRITABLE;
 
         EFI_VIRTUAL_ADDRESS PhysicalAddress = MapEntry->PhysicalStart;
         EFI_VIRTUAL_ADDRESS VirtualAddress = MapEntry->PhysicalStart; // identity mapping for default
         UINTN Size = EFI_PAGES_TO_SIZE(MapEntry->NumberOfPages);
 
-        if (MapEntry->Type == OsLoaderData || 
-            MapEntry->Type == OsLowMemory1M || 
-            MapEntry->Type == OsKernelImage || 
-            MapEntry->Type == OsKernelStack || 
-            MapEntry->Type == OsBootImage || 
-            MapEntry->Type == OsPreInitPool)
+        BOOLEAN VirtualMappingSpecified = FALSE;
+
+        // Check whether the address is registered to PreserveRanges[].
+        for (UINTN j = 0; j < OS_PRESERVE_RANGE_MAX_COUNT; j++)
         {
-            VirtualAddress += LoaderBlock->LoaderData.OffsetToVirtualBase;
+            OS_PRESERVE_MEMORY_RANGE *PreserveRange = &LoaderBlock->LoaderData.PreserveRanges[j];
+            BOOLEAN InRange = OslIsAddressInRange(
+                PreserveRange->PhysicalStart,
+                PreserveRange->Size,
+                MapEntry->PhysicalStart,
+                Size);
 
-            // 1:1 Virtual-to-physical mapping.
-            if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 
-                Size, PxeFlag, FALSE))
+            if (InRange && (RangeBitmap & (1ULL << j)))
             {
-                TRACEF(L"Failed to set mapping, PXE pool %lld / %lld\r\n", 
-                    LoaderBlock->LoaderData.PxeInitPoolSizeUsed,
-                    LoaderBlock->LoaderData.PxeInitPoolSize);
+                // Virtual mapping is available.
+                PhysicalAddress = PreserveRange->PhysicalStart;
+                VirtualAddress = PhysicalAddress + LoaderBlock->LoaderData.OffsetToVirtualBase;
+                PreserveRange->VirtualStart = VirtualAddress;
+                VirtualMappingSpecified = TRUE;
 
-                return FALSE;
-            }
+                // 1:1 Virtual-to-physical mapping.
+                if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 
+                    PreserveRange->Size, PxeFlag, FALSE))
+                {
+                    TRACEF(L"Failed to set mapping, PXE pool %lld / %lld\r\n", 
+                        LoaderBlock->LoaderData.PxeInitPoolSizeUsed,
+                        LoaderBlock->LoaderData.PxeInitPoolSize);
 
-            // 1:1 Reverse mapping (physical-to-virtual).
-            if (!OslArchX64SetPageMapping((UINT64 *)RPML4TBase, VirtualAddress, PhysicalAddress, 
-                Size, 0, TRUE))
-            {
-                return FALSE;
+                    return FALSE;
+                }
+
+                // 1:1 Reverse mapping (physical-to-virtual).
+                if (!OslArchX64SetPageMapping((UINT64 *)RPML4TBase, VirtualAddress, PhysicalAddress, 
+                    PreserveRange->Size, 0, TRUE))
+                {
+                    return FALSE;
+                }
+
+                RangeBitmap &= ~(1ULL << j);
             }
         }
-        else
+
+        if (!VirtualMappingSpecified)
         {
             // Virtual-to-physical mapping (identity mapping).
             if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 

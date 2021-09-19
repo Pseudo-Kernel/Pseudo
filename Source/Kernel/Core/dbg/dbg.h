@@ -26,6 +26,7 @@ extern DBG_TRACE_LEVEL DbgPrintTraceLevel;
 BOOLEAN
 KERNELAPI
 DbgInitialize(
+    IN OS_LOADER_BLOCK *LoaderBlock,
 	IN DBG_TRACE_LEVEL DefaultTraceLevel);
 
 BOOLEAN
@@ -57,8 +58,12 @@ DbgHardwareBreak(
 
 VOID
 KERNELAPI
-DbgNullBreak(
-	VOID);
+DbgFootprint(
+    IN U32 Value, 
+    IN U32 Pixel);
+
+#define DFOOTPRN(_x)        DbgFootprint((_x), 0xff0000 >> (_x))
+
 
 
 #define	DASSERT(_expr)	{	\

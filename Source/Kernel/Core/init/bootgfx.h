@@ -151,7 +151,8 @@ BOOLEAN
 	IN U32 ScrollHeight);
 
 typedef struct _BOOT_GFX_FRAMEBUFFER {
-	UPTR FrameBuffer; // Linear framebuffer address
+	volatile UPTR FrameBuffer; // Linear framebuffer address
+	UPTR FrameBufferCopy; // Copy of framebuffer
 	SIZE_T FrameBufferSize; // Framebuffer size
 	U32 HorizontalResolution;
 	U32 VerticalResolution;
@@ -187,6 +188,7 @@ BootGfxInitialize(
 	IN U32 VideoModesBufferSize, // Mode list buffer size
 	IN U32 ModeNumberCurrent, // Current mode number
 	IN PVOID FrameBuffer, // Linear framebuffer address
+	IN PVOID FrameBufferCopy, // Copy framebuffer address
 	IN SIZE_T FrameBufferSize, // Framebuffer size
 	IN PZIP_CONTEXT BootImageContext
 	);
@@ -199,6 +201,11 @@ BootFonLookupFont(
 	IN U32 LookupBy,
 	IN U16 Value,
 	OUT FON_HEADER **FontFile);
+
+VOID
+KERNELAPI
+BootGfxUpdateScreen(
+    IN BOOT_GFX_SCREEN *Screen);
 
 BOOLEAN
 KERNELAPI

@@ -2,7 +2,7 @@
 #pragma once
 
 // Define the OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600 to fix screen resolution. 
-#define OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600
+//#define OSLOADER_EFI_SCREEN_RESOLUTION_FIX_800_600
 
 #ifndef __FUNCTION__
 #define __FUNCTION__                __func__
@@ -113,6 +113,18 @@ typedef struct _OS_VIDEO_MODE_RECORD
 #define OSL_LOADER_KERNEL_STACK_SIZE            0x100000 // 1M
 #define OSL_LOADER_PXE_INIT_POOL_SIZE           0x1000000 // 16M
 
+typedef struct _OS_PRESERVE_MEMORY_RANGE
+{
+    EFI_PHYSICAL_ADDRESS PhysicalStart;
+    EFI_VIRTUAL_ADDRESS VirtualStart;
+    UINT64 Size;
+    UINT32 Type;
+    UINT32 Reserved;
+} OS_PRESERVE_MEMORY_RANGE;
+
+#define OS_PRESERVE_RANGE_MAX_COUNT         64
+#define OS_PRESERVE_RANGE_BITMAP_FULL       0xffffffffffffffffULL
+
 typedef struct _OS_LOADER_BLOCK
 {
     struct
@@ -184,10 +196,14 @@ typedef struct _OS_LOADER_BLOCK
 
         EFI_PHYSICAL_ADDRESS VideoModeBase;
         EFI_PHYSICAL_ADDRESS VideoFramebufferBase;
+        EFI_PHYSICAL_ADDRESS VideoFramebufferCopy;
         UINTN VideoFramebufferSize;
         UINTN VideoModeSize;
         UINT32 VideoMaxMode;
         UINT32 VideoModeSelected;
+
+        OS_PRESERVE_MEMORY_RANGE PreserveRanges[OS_PRESERVE_RANGE_MAX_COUNT];
+        UINT64 PreserveRangesBitmap;
     } LoaderData;
 
     struct

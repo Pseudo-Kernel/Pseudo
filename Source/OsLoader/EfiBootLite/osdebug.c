@@ -137,3 +137,33 @@ OslDbgDumpLowMemoryToDisk(
     return FALSE;
 }
 
+/**
+ * @brief Fills the screen to color.
+ * 
+ * @param LoaderBlock       Loader block.
+ * @param Color             Color to fill.
+ * 
+ * @return TRUE if succeeds, FALSE otherwise.
+ */
+BOOLEAN
+EFIAPI
+OslDbgFillScreen(
+    IN OS_LOADER_BLOCK *LoaderBlock,
+    IN UINT32 Color)
+{
+    volatile UINT32 *Framebuffer = (volatile UINT32 *)LoaderBlock->LoaderData.VideoFramebufferBase;
+    UINT32 Count = LoaderBlock->LoaderData.VideoFramebufferSize / sizeof(UINT32);
+
+    if (!Framebuffer)
+    {
+        return FALSE;
+    }
+
+    for (UINT32 i = 0; i < Count; i++)
+    {
+        Framebuffer[i] = Color;
+    }
+
+    return TRUE;
+}
+

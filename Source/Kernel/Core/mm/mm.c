@@ -22,8 +22,9 @@ XAD_CONTEXT MiXadContext;
 
 
 
+
 /**
- * @brief Allocates virtual memory for given address.
+ * @brief Reallocates virtual memory for given address.
  * 
  * @param [in] ReservedZero Reserved for future use. Currently zero.
  * @param [in,out] Address  Pointer to caller-supplied variable which contains
@@ -36,7 +37,7 @@ XAD_CONTEXT MiXadContext;
  * @return ESTATUS code.
  */
 ESTATUS
-MmAllocateVirtualMemory2(
+MmReallocateVirtualMemory(
     IN PVOID ReservedZero,
     IN OUT PTR *Address,
     IN SIZE_T Size,
@@ -44,17 +45,6 @@ MmAllocateVirtualMemory2(
     IN VAD_TYPE Type)
 {
     if (!Address)
-    {
-        return E_INVALID_PARAMETER;
-    }
-
-    if (SourceType == VadInitialReserved && MiXadInitialized)
-    {
-        // Cannot allocate reserved area because XAD is already initialized
-        return E_INVALID_PARAMETER;
-    }
-
-    if (SourceType != VadFree && SourceType != VadInitialReserved)
     {
         return E_INVALID_PARAMETER;
     }
@@ -113,6 +103,51 @@ MmAllocateVirtualMemory2(
     *Address = AddressStart;
 
     return E_SUCCESS;
+}
+
+/**
+ * @brief Allocates virtual memory for given address.
+ * 
+ * @param [in] ReservedZero Reserved for future use. Currently zero.
+ * @param [in,out] Address  Pointer to caller-supplied variable which contains
+ *                          desired address to allocate. if *Address == zero,
+ *                          address will be determined automatically.
+ * @param [in] Size         Allocation size.
+ * @param [in] SourceType   Address type to lookup free memory.
+ * @param [in] Type         New address type after allocation.
+ * 
+ * @return ESTATUS code.
+ */
+ESTATUS
+MmAllocateVirtualMemory2(
+    IN PVOID ReservedZero,
+    IN OUT PTR *Address,
+    IN SIZE_T Size,
+    IN VAD_TYPE SourceType,
+    IN VAD_TYPE Type)
+{
+    if (!Address)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    if (SourceType == VadInitialReserved && MiXadInitialized)
+    {
+        // Cannot allocate reserved area because XAD is already initialized
+        return E_INVALID_PARAMETER;
+    }
+
+    if (SourceType != VadFree && SourceType != VadInitialReserved)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    if (SourceType == Type)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    return MmReallocateVirtualMemory(ReservedZero, Address, Size, SourceType, Type);
 }
 
 /**
@@ -195,9 +230,8 @@ MmFreeVirtualMemory(
 }
 
 
-
 /**
- * @brief Allocates physical memory for given address.
+ * @brief Reallocates physical memory for given address.
  *
  * @param [in,out] Address  Pointer to caller-supplied variable which contains
  *                          desired address to allocate. if *Address == zero,
@@ -209,18 +243,13 @@ MmFreeVirtualMemory(
  * @return ESTATUS code.
  */
 ESTATUS
-MmAllocatePhysicalMemory2(
+MmReallocatePhysicalMemory(
     IN OUT PTR *Address,
     IN SIZE_T Size,
     IN PAD_TYPE SourceType,
     IN PAD_TYPE Type)
 {
     if (!Address)
-    {
-        return E_INVALID_PARAMETER;
-    }
-
-    if (SourceType != PadFree && SourceType != PadInitialReserved)
     {
         return E_INVALID_PARAMETER;
     }
@@ -279,6 +308,39 @@ MmAllocatePhysicalMemory2(
     *Address = AddressStart;
 
     return E_SUCCESS;
+}
+
+
+/**
+ * @brief Allocates physical memory for given address.
+ *
+ * @param [in,out] Address  Pointer to caller-supplied variable which contains
+ *                          desired address to allocate. if *Address == zero,
+ *                          address will be determined automatically.
+ * @param [in] Size         Allocation size.
+ * @param [in] SourceType   Address type to lookup free memory.
+ * @param [in] Type         New address type after allocation.
+ *
+ * @return ESTATUS code.
+ */
+ESTATUS
+MmAllocatePhysicalMemory2(
+    IN OUT PTR *Address,
+    IN SIZE_T Size,
+    IN PAD_TYPE SourceType,
+    IN PAD_TYPE Type)
+{
+    if (!Address)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    if (SourceType != PadFree && SourceType != PadInitialReserved)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    return MmReallocatePhysicalMemory(Address, Size, SourceType, Type);
 }
 
 /**

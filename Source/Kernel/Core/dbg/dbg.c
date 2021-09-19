@@ -1,9 +1,12 @@
 
 #include <base/base.h>
+#include <init/bootgfx.h>
 
 PDBG_TRACE_ROUTINE DbgpTrace = NULL;
 DBG_TRACE_LEVEL DbgPrintTraceLevel = TraceLevelDebug;
 
+volatile PVOID DbgpFramebufferBase;
+SIZE_T DbgpFramebufferSize;
 
 BOOLEAN
 KERNELAPI
@@ -69,12 +72,28 @@ DbgTrace(
 BOOLEAN
 KERNELAPI
 DbgInitialize(
+    IN OS_LOADER_BLOCK *LoaderBlock,
 	IN DBG_TRACE_LEVEL DefaultTraceLevel)
 {
 	DbgpTrace = DbgpNormalTraceN;
 	DbgPrintTraceLevel = DefaultTraceLevel;
 
+    DbgpFramebufferBase = (PVOID)LoaderBlock->LoaderData.VideoFramebufferBase;
+    DbgpFramebufferSize = LoaderBlock->LoaderData.VideoFramebufferSize;
+
 	return TRUE;
+}
+
+VOID
+KERNELAPI
+DbgFootprint(
+    IN U32 Value, 
+    IN U32 Pixel)
+{
+    for (INT X = Value * 100; X < (Value + 1) * 100 + 50; X++)
+    {
+        *((U32 volatile *)DbgpFramebufferBase + X) = Pixel;
+    }
 }
 
 #if 0

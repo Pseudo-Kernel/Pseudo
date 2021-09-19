@@ -216,7 +216,7 @@ OslPeFixupImage(
 	}
 	else
 	{
-		DTRACEF(&OslLoaderBlock, L"Relocation Directory Not Found, Skipping...\r\n");
+		DTRACEF(&OslLoaderBlock, L"Relocation directory not found, skipping...\r\n");
 	}
 
 	return TRUE;
@@ -236,6 +236,7 @@ OslPeFixupImage(
 EFI_PHYSICAL_ADDRESS
 EFIAPI
 OslPeLoadImage(
+    IN OS_LOADER_BLOCK *LoaderBlock, 
 	IN VOID *FileBuffer, 
 	IN UINTN FileBufferLength, 
 	OUT UINTN *MappedSize,
@@ -251,18 +252,18 @@ OslPeLoadImage(
 
 	UINTN i;
 
-	DTRACEF(&OslLoaderBlock, L"Loading Image...\r\n");
+	DTRACEF(LoaderBlock, L"Loading image...\r\n");
 
 	Nt = OslPeImageBaseToNtHeaders(FileBuffer);
 	if (!Nt)
 	{
-		DTRACEF(&OslLoaderBlock, L"Invalid Image Header\r\n");
+		DTRACEF(LoaderBlock, L"Invalid image header\r\n");
 		return 0;
 	}
 
 	if (!OslPeIsImageTypeSupported(Nt))
 	{
-		DTRACEF(&OslLoaderBlock, L"Unsupported Image Type or Architecture\r\n");
+		DTRACEF(LoaderBlock, L"Unsupported image type or architecture\r\n");
 		return 0;
 	}
 
@@ -272,7 +273,7 @@ OslPeLoadImage(
 
 	if (SizeOfHeaders >= Nt->Nt64.OptionalHeader.SizeOfImage)
 	{
-		DTRACEF(&OslLoaderBlock, L"Corrupted Image Header\r\n");
+		DTRACEF(LoaderBlock, L"Corrupted image header\r\n");
 		return 0;
 	}
 
@@ -282,20 +283,20 @@ OslPeLoadImage(
 	// Address must be in the lower 4GB area.
 	//
 
-	DTRACEF(&OslLoaderBlock, L"SizeOfImage = 0x%lX\r\n", SizeOfImage);
+	DTRACEF(LoaderBlock, L"SizeOfImage = 0x%lX\r\n", SizeOfImage);
 
 	BaseAddress = Nt->Nt64.OptionalHeader.ImageBase;
-	AllocationStatus = OslAllocatePages(SizeOfImage, &BaseAddress, TRUE, OsKernelImage);
+	AllocationStatus = OslAllocatePagesPreserve(LoaderBlock, SizeOfImage, &BaseAddress, TRUE, OsKernelImage);
 
 	if (AllocationStatus != EFI_SUCCESS)
 	{
-		DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages at Preferred Base 0x%p\r\n", BaseAddress);
+		DTRACEF(LoaderBlock, L"Failed to allocate pages at preferred base 0x%p\r\n", BaseAddress);
 
 		// Not a failure, keep going
-		AllocationStatus = OslAllocatePages(SizeOfImage, &BaseAddress, FALSE, OsKernelImage);
-		if(AllocationStatus != EFI_SUCCESS)
+		AllocationStatus = OslAllocatePagesPreserve(LoaderBlock, SizeOfImage, &BaseAddress, FALSE, OsKernelImage);
+		if (AllocationStatus != EFI_SUCCESS)
 		{
-			DTRACEF(&OslLoaderBlock, L"Failed to Allocate Pages\r\n");
+			DTRACEF(LoaderBlock, L"Failed to allocate pages\r\n");
 			return 0;
 		}
 	}
@@ -308,7 +309,7 @@ OslPeLoadImage(
 	
 	SectionHeader = IMAGE_FIRST_SECTION(&Nt->Nt64);
 
-	DTRACE(&OslLoaderBlock,
+	DTRACE(LoaderBlock,
 		L"\r\n"
 		L"                FileOffset    RawSize          RVA   VirtSize         Attr\r\n");
 
@@ -322,7 +323,7 @@ OslPeLoadImage(
 		EFI_PHYSICAL_ADDRESS Source;
 		EFI_PHYSICAL_ADDRESS Destination;
 
-		DTRACE(&OslLoaderBlock,
+		DTRACE(LoaderBlock,
 			L"  Section[%2d]:  0x%08lX 0x%08lX   0x%08lX 0x%08lX   0x%08lX\r\n", i, 
 			SectionHeader[i].PointerToRawData, SectionHeader[i].SizeOfRawData,
 			SectionHeader[i].VirtualAddress, SectionHeader[i].Misc.VirtualSize,
@@ -343,8 +344,8 @@ OslPeLoadImage(
 			SectionRawOffset + SectionRawSize > FileBufferLength)
 		{
 			// Section out of bounds.
-			DTRACEF(&OslLoaderBlock, L"Section[%d] out of bounds\r\n", i);
-			OslFreePages(BaseAddress, SizeOfImage);
+			DTRACEF(LoaderBlock, L"Section[%d] out of bounds\r\n", i);
+			OslFreePagesPreserve(LoaderBlock, BaseAddress, SizeOfImage);
 			return 0;
 		}
 
@@ -366,13 +367,13 @@ OslPeLoadImage(
 	if (!OslPeFixupImage(BaseAddress, 0, TargetFixupBase, UseFixupBase))
 	{
 		// Relocation failed.
-		DTRACEF(&OslLoaderBlock, L"Failed to fixup image\r\n", i);
-		OslFreePages(BaseAddress, SizeOfImage);
+		DTRACEF(LoaderBlock, L"Failed to fixup image\r\n", i);
+		OslFreePagesPreserve(LoaderBlock, BaseAddress, SizeOfImage);
 		return 0;
 	}
 
-	DTRACEF(&OslLoaderBlock, 
-		L"Kernel Loaded at  : 0x%016lX - 0x%016lX\r\n"
+	DTRACEF(LoaderBlock, 
+		L"Kernel loaded at  : 0x%016lX - 0x%016lX\r\n"
 		L"Kernel EntryPoint : 0x%016lX\r\n", 
 		BaseAddress, 
 		BaseAddress + Nt->Nt64.OptionalHeader.SizeOfImage - 1, 

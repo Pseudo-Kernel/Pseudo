@@ -19,6 +19,10 @@
 #include <mm/mm.h>
 
 
+#define IS_IN_ADDRESS_RANGE(_test_addr, _test_size, _start_addr, _size) \
+    ((_start_addr) <= (_test_addr) && (_test_addr) + (_test_size) <= (_start_addr) + (_size))
+
+
 UPTR MiLoaderSpaceStart;
 UPTR MiLoaderSpaceEnd;
 UPTR MiPadListStart;
@@ -183,36 +187,60 @@ MiPreInitialize(
         LoaderBlock->Memory.Map + OffsetToVirtualBase);
     U32 Count = LoaderBlock->Memory.MapCount;
     U32 DescriptorSize = LoaderBlock->Memory.DescriptorSize;
+    U64 RangesBitmap = LoaderBlock->LoaderData.PreserveRangesBitmap;
+
     for (U32 i = 0; i < Count; i++)
     {
-        PTR NewAddress = Descriptor->PhysicalStart;
+        PTR PhysicalAddress = Descriptor->PhysicalStart;
         SIZE_T Size = PAGES_TO_SIZE(Descriptor->NumberOfPages);
-        Status = MmAllocatePhysicalMemory2(&NewAddress, Size, PadInitialReserved, Descriptor->Type);
+        U32 Type = Descriptor->Type;
 
+        Status = MmAllocatePhysicalMemory2(&PhysicalAddress, Size, PadInitialReserved, Type);
         if (!E_IS_SUCCESS(Status))
         {
             return Status;
         }
 
-        // VAD_TYPE inherits EFI_MEMORY_TYPE.
-        U32 Type = Descriptor->Type; 
-        if (Type == VadOsBootImage ||
-            Type == VadOsKernelImage ||
-            Type == VadOsKernelStack ||
-            Type == VadOsLoaderData ||
-            Type == VadOsLowMemory1M ||
-            Type == VadOsPagingPxePool ||
-            Type == VadOsPreInitPool ||
-            Type == VadOsTemporaryData)
+        if (Type == EfiLoaderData)
         {
-            NewAddress = Descriptor->PhysicalStart + OffsetToVirtualBase;
-
-            Status = MmAllocateVirtualMemory2(NULL, &NewAddress, Size, VadInitialReserved, Descriptor->Type);
-            if (!E_IS_SUCCESS(Status))
+            for (U32 j = 0; j < OS_PRESERVE_RANGE_MAX_COUNT; j++)
             {
-                return Status;
+                OS_PRESERVE_MEMORY_RANGE *PreserveRange = &LoaderBlock->LoaderData.PreserveRanges[j];
+
+                BOOLEAN InRange = IS_IN_ADDRESS_RANGE(
+                    PreserveRange->PhysicalStart,
+                    PreserveRange->Size,
+                    Descriptor->PhysicalStart,
+                    Size);
+
+                if (InRange && (RangesBitmap & (1ULL << j)))
+                {
+                    if (OsSpecificMemTypeStart <= PreserveRange->Type &&
+                        PreserveRange->Type < OsSpecificMemTypeEnd)
+                    {
+                        // Reallocate memory blocks for specific range.
+                        PTR PhysicalAddress = PreserveRange->PhysicalStart;
+                        PTR VirtualAddress = PreserveRange->VirtualStart;
+
+                        Status = MmReallocatePhysicalMemory(&PhysicalAddress, PreserveRange->Size, 
+                            Type, PreserveRange->Type);
+                        if (!E_IS_SUCCESS(Status))
+                        {
+                            return Status;
+                        }
+
+                        Status = MmAllocateVirtualMemory2(NULL, &VirtualAddress, PreserveRange->Size, 
+                            VadInitialReserved, PreserveRange->Type);
+                        if (!E_IS_SUCCESS(Status))
+                        {
+                            return Status;
+                        }
+
+                        RangesBitmap &= ~(1ULL << j);
+                    }
+                }
             }
-        }
+        }        
 
         // Move to the next descriptor.
         Descriptor = (EFI_MEMORY_DESCRIPTOR *)((PTR)Descriptor + DescriptorSize);

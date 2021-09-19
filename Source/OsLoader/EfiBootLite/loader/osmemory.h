@@ -4,7 +4,8 @@
 typedef enum _OS_MEMORY_TYPE
 {
     // 0x80000000 to 0xffffffff are reserved for use by UEFI OS loaders.
-    OsTemporaryData = 0x80000000,
+    OsSpecificMemTypeStart = (int)0x80000000,
+    OsTemporaryData = OsSpecificMemTypeStart,
     OsLoaderData,
     OsLowMemory1M,
     OsKernelImage,
@@ -12,6 +13,9 @@ typedef enum _OS_MEMORY_TYPE
     OsBootImage,
     OsPreInitPool,
     OsPagingPxePool,
+    OsFramebufferCopy,
+
+    OsSpecificMemTypeEnd,
 } OS_MEMORY_TYPE;
 
 
@@ -46,6 +50,8 @@ typedef enum _OS_MEMORY_TYPE
 
 #define ARCH_X64_PXE_4K_BASE_MASK           0x000ffffffffff000ULL // [51:12], 4K
 #define ARCH_X64_PXE_2M_BASE_MASK           0x000fffffffe00000ULL // [51:21], 2M
+
+#define ARCH_X64_CR3_PML4_BASE_MASK         0xfffffffffffff000ULL // [M-1:12], 4K
 
 #if 0
 typedef union _ARCH_X64_VIRTUAL_ADDRESS
@@ -189,6 +195,21 @@ OslFreePages(
     IN EFI_PHYSICAL_ADDRESS Address,
     IN UINTN Size);
 
+EFI_STATUS
+EFIAPI
+OslAllocatePagesPreserve(
+    IN OS_LOADER_BLOCK *LoaderBlock,
+    IN UINTN Size, 
+    IN OUT EFI_PHYSICAL_ADDRESS *Address, 
+    IN BOOLEAN AddressSpecified,
+    IN OS_MEMORY_TYPE MemoryType);
+
+EFI_STATUS
+EFIAPI
+OslFreePagesPreserve(
+    IN OS_LOADER_BLOCK *LoaderBlock,
+    IN EFI_PHYSICAL_ADDRESS Address, 
+    IN UINTN Size);
 
 EFI_STATUS
 EFIAPI

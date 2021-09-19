@@ -14,6 +14,19 @@ typedef struct _OS_VIDEO_MODE_RECORD {
 	// UCHAR ModeInfo[SizeOfInfo];
 } OS_VIDEO_MODE_RECORD, *POS_VIDEO_MODE_RECORD;
 
+typedef struct _OS_PRESERVE_MEMORY_RANGE
+{
+    EFI_PHYSICAL_ADDRESS PhysicalStart;
+    EFI_VIRTUAL_ADDRESS VirtualStart;
+    U64 Size;
+    U32 Type;
+    U32 Reserved;
+} OS_PRESERVE_MEMORY_RANGE;
+
+#define OS_PRESERVE_RANGE_MAX_COUNT         64
+#define OS_PRESERVE_RANGE_BITMAP_FULL       0xffffffffffffffffULL
+
+
 typedef struct _OS_LOADER_BLOCK {
 	struct
 	{
@@ -88,10 +101,14 @@ typedef struct _OS_LOADER_BLOCK {
 
 		EFI_PHYSICAL_ADDRESS VideoModeBase;
 		EFI_PHYSICAL_ADDRESS VideoFramebufferBase;
+        EFI_PHYSICAL_ADDRESS VideoFramebufferCopy;
 		UPTR VideoFramebufferSize;
 		UPTR VideoModeSize;
 		U32 VideoMaxMode;
 		U32 VideoModeSelected;
+        
+        OS_PRESERVE_MEMORY_RANGE PreserveRanges[OS_PRESERVE_RANGE_MAX_COUNT];
+        U64 PreserveRangesBitmap;
 	} LoaderData;
 
 	struct

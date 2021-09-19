@@ -17,3 +17,9 @@ EFIAPI
 OslDbgDumpLowMemoryToDisk(
     IN OS_LOADER_BLOCK *LoaderBlock);
 
+BOOLEAN
+EFIAPI
+OslDbgFillScreen(
+    IN OS_LOADER_BLOCK *LoaderBlock,
+    IN UINT32 Color);
+

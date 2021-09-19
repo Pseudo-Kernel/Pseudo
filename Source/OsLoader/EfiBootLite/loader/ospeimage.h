@@ -16,6 +16,7 @@ OslPeImageBaseToNtHeaders(
 EFI_PHYSICAL_ADDRESS
 EFIAPI
 OslPeLoadImage(
+    IN OS_LOADER_BLOCK *LoaderBlock,
     IN VOID *FileBuffer,
     IN UINTN FileBufferLength,
     OUT UINTN *MappedSize,
