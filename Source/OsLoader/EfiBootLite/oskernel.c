@@ -85,8 +85,17 @@ OslTransferToKernel(
 
     PKERNEL_START_ENTRY StartEntry = (PKERNEL_START_ENTRY)(
         KernelBase + Nt3264->Nt64.OptionalHeader.AddressOfEntryPoint);
-    UINT64 *StackPointer = KernelStackTop - 5;
 
+    //
+    // NOTE: Kernel will crash if rsp is not 16-byte aligned, especially
+    //       when SSE/AVE instructions are used (e.g. movaps, movdqa.).
+    //
+    // Tested on QEMU/VMware/VirtualBox, It seems that QEMU cannot detect 
+    // unaligned access for movaps. Both VMware and VirtualBox detected 
+    // unaligned access pretty well.
+    //
+
+    UINT64 *StackPointer = KernelStackTop - 4; /* Make sure rsp is 16-byte aligned before kernel call */
     UINT32 LoaderBlockSize = sizeof(*LoaderBlock);
 
     __asm__ __volatile__
@@ -97,7 +106,7 @@ OslTransferToKernel(
         "mov rdx, %3\n\t"
         "mov r8d, %4\n\t"
         "mov r9, %5\n\t"
-        "xchg rsp, r10\n\t" // stack switch!
+        "xchg rsp, r10\n\t"
         "call rax\n\t"
         :
         : "m"(StartEntry), "m"(StackPointer),

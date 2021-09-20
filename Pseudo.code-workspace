@@ -54,6 +54,7 @@
         "editor.detectIndentation": false,
         "doxdocgen.generic.authorEmail": "sandbox.isolated@gmail.com",
         "doxdocgen.generic.authorName": "Pseudo-Kernel",
+        "C_Cpp.exclusionPolicy": "checkFilesAndFolders",
     },
     "extensions": {
         "recommendations": [

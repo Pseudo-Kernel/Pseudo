@@ -65,6 +65,7 @@ typedef enum _VAD_TYPE
     VadInitialReserved, //!< Address is reserved for initial use.
     VadFree,		    //!< Address is free to use.
     VadInUse,		    //!< Address is currently in use.
+    VadInaccessibleHole,//!< Giant memory hole for 0x0000800000000000 to 0xffff800000000000 range. Address is unusable.
 
 	// Inherits OS_MEMORY_TYPE(LOADER_XAD_TYPE) in Osloader.
 } VAD_TYPE;

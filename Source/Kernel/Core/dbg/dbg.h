@@ -2,14 +2,36 @@
 
 #define	DBG_SPECIAL_IO_PORT				0xe9
 
-
-typedef enum _DBG_TRACE_LEVEL {
+typedef enum _DBG_TRACE_LEVEL
+{
 	TraceLevelAll,			// All
 	TraceLevelDebug,		// Debug & Event & Warning & Error
 	TraceLevelEvent,		// Event & Warning & Error
 	TraceLevelWarning,		// Warning & Error
 	TraceLevelError,		// Error
 } DBG_TRACE_LEVEL;
+
+
+#define COM1_IO_DEFAULT_BASE        0x3f8
+#define COM2_IO_DEFAULT_BASE        0x2f8
+#define COM3_IO_DEFAULT_BASE        0x3e8
+#define COM4_IO_DEFAULT_BASE        0x2e8
+
+#define COM_IO_DATA                 0
+#define COM_IO_IER                  1
+#define COM_IO_DIVISOR_LOW          COM_IO_DATA
+#define COM_IO_DIVISOR_HIGH         COM_IO_IER
+#define COM_IO_FIFO_CTL             2
+#define COM_IO_LINE_CTL             3
+#define COM_IO_MODEM_CTL            4
+#define COM_IO_LINE_STATUS          5
+#define COM_IO_MODEM_STATUS         6
+#define COM_IO_STRATCH              7
+
+#define COM_DEFAULT_BAUD            115200L
+
+
+
 
 typedef
 BOOLEAN

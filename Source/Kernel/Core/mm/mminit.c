@@ -178,6 +178,15 @@ MiPreInitialize(
         return Status;
     }
 
+    PTR UnusableVirtualAddressHole = 0x0000800000000000ULL;
+    Status = MmAllocateVirtualMemory2(NULL, &UnusableVirtualAddressHole, 
+        0xffff800000000000ULL - 0x0000800000000000ULL, VadInitialReserved, VadInaccessibleHole);
+    if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+
     //
     // Allocates memory by memory map info.
     //

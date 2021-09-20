@@ -44,14 +44,11 @@ PiPreInitialize(
     LoaderBlockTemp->Base.ImageHandle = NULL;
     LoaderBlockTemp->Base.RootDirectory = NULL;
 
-//    __asm__ __volatile__ ("hlt" : : : "memory");
-
 
     //
     // Initialize the boot image context.
     //
 
-    DFOOTPRN(10);
     if (!ZipInitializeReaderContext(&PiBootImageContext,
         (PVOID)(LoaderBlockTemp->LoaderData.BootImageBase + OffsetToVirtualBase),
         (U32)LoaderBlockTemp->LoaderData.BootImageSize))
@@ -59,12 +56,12 @@ PiPreInitialize(
         BootGfxFatalStop("Invalid boot image");
     }
 
+
     //
     // Initialize the pre-init graphics.
     // Note that we use physical address of framebuffer because it is identity mapped.
     //
 
-    DFOOTPRN(11);
     if (!BootGfxInitialize(
         (PVOID)(LoaderBlockTemp->LoaderData.VideoModeBase + OffsetToVirtualBase),
         (U32)LoaderBlockTemp->LoaderData.VideoModeSize,
@@ -83,7 +80,6 @@ PiPreInitialize(
     // Initialize the pre-init pool and XAD trees.
     //
 
-    DFOOTPRN(12);
     ESTATUS Status = MiPreInitialize(LoaderBlockTemp);
 
     if (!E_IS_SUCCESS(Status))
@@ -95,7 +91,6 @@ PiPreInitialize(
     // Dump XADs.
     //
 
-    DFOOTPRN(13);
     MiPreDumpXad();
 
     BootGfxPrintTextFormat("System Halt.");
@@ -105,11 +100,5 @@ PiPreInitialize(
         __PseudoIntrin_DisableInterrupt();
         __PseudoIntrin_Halt();
     }
-
-//  if (!PiDiscardFirmwareMemory())
-//  {
-//      DbgTraceF(TraceLevelError, "Failed to free unused memory\n");
-//      return FALSE;
-//  }
 }
 
