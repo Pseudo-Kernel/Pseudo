@@ -1,6 +1,4 @@
 
-//#pragma message("Must be compiled without: /GL option")
-
 #include <base/base.h>
 
 //#pragma function(memset, memcmp, memcpy)

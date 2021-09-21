@@ -35,27 +35,6 @@ UPTR MiPoolStart;
 UPTR MiPoolEnd;
 
 
-#if 0
-BOOLEAN
-KERNELAPI
-MiInitializeMemory(
-    VOID)
-{
-    U64 *PML4Base;
-    SIZE_T Size;
-
-    // Initializes the 4-Level paging.
-
-    PML4Base = MmAllocatePool(PoolTypeNonPagedPreInit, PAGE_SIZE, PAGE_SIZE, TAG4('M', 'M', 'I', 'N'));
-
-    // PML4 virtual base at 0xffffffff`fffff000
-    PML4Base[]
-
-    return FALSE;
-}
-#endif
-
-
 BOOLEAN
 KERNELAPI
 MiDiscardFirmwareMemory(
@@ -128,6 +107,10 @@ KERNELAPI
 MiPreInitialize(
     IN OS_LOADER_BLOCK *LoaderBlock)
 {
+    U64 OffsetToVirtualBase = LoaderBlock->LoaderData.OffsetToVirtualBase;
+    MiPML4TBase = (U64 *)((UPTR)LoaderBlock->LoaderData.PML4TBase + OffsetToVirtualBase);
+    MiRPML4TBase = (U64 *)((UPTR)LoaderBlock->LoaderData.RPML4TBase + OffsetToVirtualBase);
+
     //
     // Initialize the pre-init pool.
     //
@@ -191,7 +174,6 @@ MiPreInitialize(
     // Allocates memory by memory map info.
     //
 
-    PTR OffsetToVirtualBase = LoaderBlock->LoaderData.OffsetToVirtualBase;
     EFI_MEMORY_DESCRIPTOR *Descriptor = (EFI_MEMORY_DESCRIPTOR *)((PTR)
         LoaderBlock->Memory.Map + OffsetToVirtualBase);
     U32 Count = LoaderBlock->Memory.MapCount;
@@ -276,3 +258,4 @@ MiPreDumpXad(
     RsBtTraverse(&MiVadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
     BootGfxPrintTextFormat("\n");
 }
+

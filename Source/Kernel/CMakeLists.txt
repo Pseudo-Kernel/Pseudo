@@ -54,9 +54,11 @@ set(SRC_LIST
     core/misc/list.h
     core/misc/misc.h
     core/misc/bintree.h
+    core/misc/objpool.h
     core/misc/common.c
     core/misc/list.c
     core/misc/bintree.c
+    core/misc/objpool.c
     # mm
     core/mm/mminit.h
     core/mm/pool.h
