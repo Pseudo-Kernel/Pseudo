@@ -32,7 +32,7 @@ PiPreInitialize(
 
     if (sizeof(*LoaderBlock) != LoaderBlockSize)
     {
-        BootGfxFatalStop("Loader block size mismatch\n");
+        FATAL("Loader block size mismatch\n");
     }
 
     OS_LOADER_BLOCK *LoaderBlockTemp = &PiLoaderBlockTemporary;
@@ -53,7 +53,7 @@ PiPreInitialize(
         (PVOID)(LoaderBlockTemp->LoaderData.BootImageBase + OffsetToVirtualBase),
         (U32)LoaderBlockTemp->LoaderData.BootImageSize))
     {
-        BootGfxFatalStop("Invalid boot image");
+        FATAL("Invalid boot image");
     }
 
 
@@ -84,7 +84,7 @@ PiPreInitialize(
 
     if (!E_IS_SUCCESS(Status))
     {
-        BootGfxFatalStop("Failed to initialize memory");
+        FATAL("Failed to initialize memory");
     }
 
     //
@@ -92,13 +92,5 @@ PiPreInitialize(
     //
 
     MiPreDumpXad();
-
-    BootGfxPrintTextFormat("System Halt.");
-
-    for (;;)
-    {
-        __PseudoIntrin_DisableInterrupt();
-        __PseudoIntrin_Halt();
-    }
 }
 

@@ -15,6 +15,7 @@ typedef enum _ESTATUS
 
     // System initialization error codes.
     E_PREINIT_POOL_INIT_FAILED,
+    E_PREINIT_PXE_POOL_INIT_FAILED,
 } ESTATUS;
 
 #define	E_IS_SUCCESS(_err)		((_err) == E_SUCCESS)

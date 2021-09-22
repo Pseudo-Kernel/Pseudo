@@ -49,7 +49,7 @@ DbgpNormalTraceSerialN(
     U16 Base = DbgSerialPortBase[0]; // COM1
     CHAR8 *s = TraceMessage, c = 0;
 
-    while (c = *s++)
+    while ((c = *s++))
     {
         // while(!LINE_STATUS.TransmitEmpty)
         while(!(__PseudoIntrin_InPort8(Base + COM_IO_LINE_STATUS) & 0x20));

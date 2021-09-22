@@ -15,7 +15,7 @@
 #define	PAGE_MASK						(PAGE_SIZE - 1)
 #define	ROUNDUP_TO_PAGE_SIZE(_x)		( ((_x) + PAGE_MASK) & ~PAGE_MASK )
 #define	ROUNDUP_TO_PAGES(_x)			( ((_x) + PAGE_MASK) >> PAGE_SHIFT )
-#define	ROUNTDOWN_TO_PAGE_SIZE(_x)		( (_x) & ~PAGE_MASK )
+#define	ROUNDDOWN_TO_PAGE_SIZE(_x)		( (_x) & ~PAGE_MASK )
 
 
 //

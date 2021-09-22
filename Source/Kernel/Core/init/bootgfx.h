@@ -176,7 +176,15 @@ typedef struct _BOOT_GFX_SCREEN {
 } BOOT_GFX_SCREEN, *PBOOT_GFX_SCREEN;
 
 
-
+#define FATAL(...) {    \
+    CHAR8 __msg[256];   \
+    SIZE_T __cnt = ClStrFormatU8(__msg, 256, __VA_ARGS__);  \
+    ClStrTerminateU8(__msg, 256, __cnt);    \
+    BootGfxFatalStop(                       \
+        "%s: file %s, line %d\r\n%s",       \
+        __FUNCTION__, __FILE__, __LINE__,   \
+        __msg);                             \
+}
 
 
 typedef struct _ZIP_CONTEXT			*PZIP_CONTEXT;

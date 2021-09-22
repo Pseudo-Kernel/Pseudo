@@ -17,6 +17,7 @@
 #include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
+#include <mm/mminit.h>
 
 /**
  * @brief Kernel main entry point.
@@ -43,6 +44,8 @@ KiKernelStart(
 		__FUNCTION__, LoadedBase, LoaderBlock, SizeOfLoaderBlock, Reserved);
 
     PiPreInitialize(LoaderBlock, SizeOfLoaderBlock);
+
+    MmInitialize();
 
 	for (;;)
 	{

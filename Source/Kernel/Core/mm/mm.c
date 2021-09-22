@@ -61,7 +61,7 @@ MmReallocateVirtualMemory(
 
     if (CapturedAddressHint)
     {
-        CapturedAddressHint = ROUNTDOWN_TO_PAGE_SIZE(CapturedAddressHint);
+        CapturedAddressHint = ROUNDDOWN_TO_PAGE_SIZE(CapturedAddressHint);
         Options |= XAD_LAF_ADDRESS;
     }
 
@@ -153,6 +153,7 @@ MmAllocateVirtualMemory2(
 /**
  * @brief Allocates virtual memory for given address.
  * 
+ * @param [in] ReservedZero Reserved for future use. Currently zero.
  * @param [in,out] Address  Pointer to caller-supplied variable which contains
  *                          desired address to allocate. if *Address == zero,
  *                          address will be determined automatically.
@@ -164,11 +165,12 @@ MmAllocateVirtualMemory2(
 KEXPORT
 ESTATUS
 MmAllocateVirtualMemory(
+    IN PVOID ReservedZero,
     IN OUT PTR *Address,
     IN SIZE_T Size,
     IN VAD_TYPE Type)
 {
-    return MmAllocateVirtualMemory2(NULL, Address, Size, VadFree, Type);
+    return MmAllocateVirtualMemory2(ReservedZero, Address, Size, VadFree, Type);
 }
 
 /**
@@ -187,7 +189,7 @@ MmFreeVirtualMemory(
 {
     SIZE_T RoundupSize = ROUNDUP_TO_PAGE_SIZE(Size);
     U32 Options = XAD_LAF_ADDRESS;
-    PTR FreeAddress = ROUNTDOWN_TO_PAGE_SIZE(Address);
+    PTR FreeAddress = ROUNDDOWN_TO_PAGE_SIZE(Address);
 
     if (RoundupSize)
     {
@@ -266,7 +268,7 @@ MmReallocatePhysicalMemory(
 
     if (CapturedAddressHint)
     {
-        CapturedAddressHint = ROUNTDOWN_TO_PAGE_SIZE(CapturedAddressHint);
+        CapturedAddressHint = ROUNDDOWN_TO_PAGE_SIZE(CapturedAddressHint);
         Options |= XAD_LAF_ADDRESS;
     }
 
@@ -380,7 +382,7 @@ MmFreePhysicalMemory(
 {
     SIZE_T RoundupSize = ROUNDUP_TO_PAGE_SIZE(Size);
     U32 Options = XAD_LAF_ADDRESS;
-    PTR FreeAddress = ROUNTDOWN_TO_PAGE_SIZE(Address);
+    PTR FreeAddress = ROUNDDOWN_TO_PAGE_SIZE(Address);
 
     if (RoundupSize)
     {
@@ -620,7 +622,7 @@ MmFreePhysicalMemoryGather(
 
 ESTATUS
 MiMapMemory(
-    IN U64 *ToplevelPageTable,
+    IN U64 *ToplevelTable,
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress, 
     IN U64 Flags, 
@@ -637,19 +639,20 @@ MiMapMemory(
         return E_INVALID_PARAMETER;
     }
 
-    VIRTUAL_ADDRESS TargetVirtualAddress = PhysicalAddresses->StartingVirtualAddress;
+    VIRTUAL_ADDRESS TargetVirtualAddress = ROUNDDOWN_TO_PAGE_SIZE(VirtualAddress);
     for (U32 i = 0; i < PhysicalAddresses->PhysicalAddressCount; i++)
     {
         ADDRESS_RANGE Range = PhysicalAddresses->PhysicalAddresses[i].Range;
         SIZE_T Size = Range.End - Range.Start;
 
         // @todo: Revert page mapping if fails
-        ASSERT(MiArchX64SetPageMapping(ToplevelPageTable, TargetVirtualAddress, 
+        ASSERT(MiArchX64SetPageMapping(ToplevelTable, TargetVirtualAddress, 
             Range.Start, Size, Flags, FALSE, AllowNonDefaultPageSize));
 
         TargetVirtualAddress += Size;
     }
 
+    PhysicalAddresses->StartingVirtualAddress = ROUNDDOWN_TO_PAGE_SIZE(VirtualAddress);
     PhysicalAddresses->Mapped = TRUE;
 
     return E_SUCCESS;
@@ -663,7 +666,7 @@ MmMapMemory(
     IN U64 Flags, 
     IN BOOLEAN AllowNonDefaultPageSize)
 {
-    return MiMapMemory(MiPML4TBase, PhysicalAddresses, 
-        VirtualAddress, Flags, AllowNonDefaultPageSize);
+    return MiMapMemory(MiPML4TBase, PhysicalAddresses, VirtualAddress, 
+        Flags, AllowNonDefaultPageSize);
 }
 

@@ -8,21 +8,6 @@
 
 POOL_BLOCK_LIST MiPoolList[PoolTypeMaximum];
 
-typedef struct _POOL_INITIAL_PARAMETERS {
-    POOL_TYPE Type;
-    UPTR AreaStart;
-    UPTR AreaSize;
-    U32 Flags;
-} POOL_INITIAL_PARAMETERS;
-
-POOL_INITIAL_PARAMETERS MiInitialPoolParameters[] = {
-    { PoolTypeNonPaged,        0, 0, 0, },
-    { PoolTypePaged,           0, 0, 0, },
-    { PoolTypeNonPagedNx,      0, 0, 0, },
-    { PoolTypePagedNx,         0, 0, 0, },
-    { PoolTypeNonPagedPreInit, 0, 0, 0, },
-};
-
 #define POOL_ASSERT(_cond)  DASSERT(_cond)
 
 

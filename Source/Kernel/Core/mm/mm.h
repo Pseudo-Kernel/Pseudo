@@ -83,6 +83,9 @@ typedef struct _PHYSICAL_ADDRESSES
 	} PhysicalAddresses[1];
 } PHYSICAL_ADDRESSES;
 
+#define SIZEOF_PHYSICAL_ADDRESSES(_range_cnt)   \
+    ( sizeof(PHYSICAL_ADDRESSES) + ((_range_cnt) - 1) * sizeof(((PHYSICAL_ADDRESSES *)0)->PhysicalAddresses[0]) )
+
 //ESTATUS
 //MmInitialize(
 //	VOID);
@@ -106,6 +109,7 @@ MmAllocateVirtualMemory2(
 KEXPORT
 ESTATUS
 MmAllocateVirtualMemory(
+    IN PVOID ReservedZero,
 	IN OUT PTR *Address,
 	IN SIZE_T Size,
 	IN VAD_TYPE Type);
@@ -149,3 +153,13 @@ MmAllocatePhysicalMemoryGather(
 	IN OUT PHYSICAL_ADDRESSES *PhysicalAddresses,
 	IN SIZE_T Size,
 	IN PAD_TYPE Type);
+
+
+
+KEXPORT
+ESTATUS
+MmMapMemory(
+    IN PHYSICAL_ADDRESSES *PhysicalAddresses,
+    IN VIRTUAL_ADDRESS VirtualAddress,
+    IN U64 Flags, 
+    IN BOOLEAN AllowNonDefaultPageSize);

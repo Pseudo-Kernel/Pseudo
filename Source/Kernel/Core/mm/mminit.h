@@ -1,7 +1,10 @@
 
 #pragma once
 
+
 #define	REQUIREMENT_MEMORY_SIZE			0x2000000
+
+#define POOLTAG_MMINIT                  (int)('mmin')
 
 
 //
@@ -42,6 +45,10 @@
 #define KERNEL_VA_PML4_BASE                             (KERNEL_VA_PDPT_BASE + KERNEL_VA_SIZE_PDPT)
 
 
+extern SIZE_T MiAvailableSystemMemory;
+
+
+
 BOOLEAN
 KERNELAPI
 MiDiscardFirmwareMemory(
@@ -62,4 +69,8 @@ KERNELAPI
 MiPreDumpXad(
     VOID);
 
+VOID
+KERNELAPI
+MmInitialize(
+    VOID);
 
