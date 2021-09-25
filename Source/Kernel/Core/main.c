@@ -9,7 +9,6 @@
  * @copyright Copyright (c) 2021
  * 
  * @todo There are many works to do:\n
- *       - Pool initialization
  *       - Interrupt registration and dispatch
  *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
  */
@@ -18,6 +17,7 @@
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 #include <mm/mminit.h>
+#include <mm/pool.h>
 
 /**
  * @brief Kernel main entry point.
@@ -46,6 +46,28 @@ KiKernelStart(
     PiPreInitialize(LoaderBlock, SizeOfLoaderBlock);
 
     MmInitialize();
+
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "NonPagedPool/PagedPool allocation test\n");
+
+    PVOID Test = NULL;
+    Test = MmAllocatePool(PoolTypeNonPaged, 0x1234, 0, 0);
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "NonPagedPool allocation result 0x%llx\n", Test);
+
+    if (Test)
+    {
+        MmFreePool(Test);
+    }
+
+    Test = MmAllocatePool(PoolTypePaged, 0x4321, 0, 0);
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "PagedPool allocation result 0x%llx\n", Test);
+
+    if (Test)
+    {
+        MmFreePool(Test);
+    }
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Test done. System halt.\n");
 
 	for (;;)
 	{

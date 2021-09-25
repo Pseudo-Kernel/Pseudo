@@ -21,7 +21,6 @@
  * 
  * @return Maximum tree depth.
  */
-inline
 U32
 PoolGetMaximumDepth(
     IN U32 MaximumObjectCount)
@@ -61,7 +60,7 @@ PoolBitmapInitialize(
     }
 
     // (1 << (MaximumDepth + 1)) - 1 = 1 + 1..2 + 1..4 + ... + 1..(1 << MaximumDepth)
-    U32 BitmapSize = (1 << (MaximumDepth + 1)) >> 3;
+    U32 BitmapSize = POOL_BITMAP_SIZE_MINIMUM_BY_MAXIMUM_DEPTH(MaximumDepth);
     if (!BitmapSize)
     {
         // size is too small
@@ -140,7 +139,6 @@ PoolBitmapFree(
  * 
  * @note This function does not check boundary.
  */
-inline
 BOOLEAN
 PoolBitmapGetBit(
     IN OBJECT_POOL_BITMAP *PoolBitmap,
@@ -162,7 +160,6 @@ PoolBitmapGetBit(
  * 
  * @note This function does not check boundary.
  */
-inline
 BOOLEAN
 PoolBitmapSetBit(
     IN OBJECT_POOL_BITMAP *PoolBitmap,

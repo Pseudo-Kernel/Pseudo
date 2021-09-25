@@ -186,6 +186,39 @@ typedef struct _BOOT_GFX_SCREEN {
         __msg);                             \
 }
 
+#define BGXTRACE                    BootGfxPrintTextFormat
+
+#define BGXTRACE_C(_color, ...) {   \
+    U32 __prev_color = BootGfxSetTextColor(_color); \
+    BootGfxPrintTextFormat(__VA_ARGS__);    \
+    BootGfxSetTextColor(__prev_color);      \
+}
+
+//
+// BGRx8888 format color codes.
+//
+
+#define BGX_RGB(_r, _g, _b)    \
+    ( (((_r) & 0xff) << 16) | (((_g) & 0xff) << 8) | (((_b) & 0xff) << 0) )
+
+#define BGX_COLOR_BLACK             BGX_RGB(0x0c, 0x0c, 0x0c)
+#define BGX_COLOR_BLUE              BGX_RGB(0x00, 0x37, 0xda)
+#define BGX_COLOR_CYAN              BGX_RGB(0x32, 0x96, 0xdd)
+#define BGX_COLOR_GREEN             BGX_RGB(0x13, 0xa1, 0x0e)
+#define BGX_COLOR_PURPLE            BGX_RGB(0x88, 0x17, 0x98)
+#define BGX_COLOR_RED               BGX_RGB(0xc5, 0x0f, 0x1f)
+#define BGX_COLOR_WHITE             BGX_RGB(0xcc, 0xcc, 0xcc)
+#define BGX_COLOR_YELLOW            BGX_RGB(0xc1, 0x9c, 0x00)
+#define BGX_COLOR_LIGHT_BLACK       BGX_RGB(0x76, 0x76, 0x76)
+#define BGX_COLOR_LIGHT_BLUE        BGX_RGB(0x3b, 0x78, 0xff)
+#define BGX_COLOR_LIGHT_CYAN        BGX_RGB(0x61, 0xd6, 0xd6)
+#define BGX_COLOR_LIGHT_GREEN       BGX_RGB(0x16, 0xc6, 0x0c)
+#define BGX_COLOR_LIGHT_PURPLE      BGX_RGB(0xb4, 0x00, 0x9e)
+#define BGX_COLOR_LIGHT_RED         BGX_RGB(0xe7, 0x48, 0x56)
+#define BGX_COLOR_LIGHT_WHITE       BGX_RGB(0xf2, 0xf2, 0xf2)
+#define BGX_COLOR_LIGHT_YELLOW      BGX_RGB(0xf9, 0xf1, 0xa5)
+
+
 
 typedef struct _ZIP_CONTEXT			*PZIP_CONTEXT;
 

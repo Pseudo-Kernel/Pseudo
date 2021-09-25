@@ -70,7 +70,6 @@ OslInitializeLoaderBlock(
     UINTN PreInitPoolSize = OSL_LOADER_PREINIT_POOL_SIZE;
     UINTN ShadowSize = OSL_LOADER_LOW_1M_SHADOW_SIZE;
     UINTN KernelStackSize = OSL_LOADER_KERNEL_STACK_SIZE;
-    UINTN PxeInitPoolSize = OSL_LOADER_PXE_INIT_POOL_SIZE;
 
     EFI_STATUS Status = EFI_SUCCESS;
 
@@ -82,6 +81,32 @@ OslInitializeLoaderBlock(
     LoaderBlock->Base.RuntimeServices = SystemTable->RuntimeServices;
 
     LoaderBlock->LoaderData.PreserveRangesBitmap = 0;
+
+    //
+    // Calculate the PXE pool size.
+    //
+
+    Status = OslQueryMemoryMap(LoaderBlock);
+    if (Status != EFI_SUCCESS)
+        return Status;
+
+    UINT64 ReportedPages = 0;
+    EFI_MEMORY_DESCRIPTOR *Descriptor = LoaderBlock->Memory.Map;
+    for (UINTN i = 0; i < LoaderBlock->Memory.MapCount; i++)
+    {
+        ReportedPages += Descriptor->NumberOfPages;
+        Descriptor = (EFI_MEMORY_DESCRIPTOR *)
+            ((CHAR8 *)Descriptor + LoaderBlock->Memory.DescriptorSize);
+    }
+
+    OslFreeMemoryMap(LoaderBlock);
+
+    TRACE(L"Reported total memory size (including MMIO and unusable memory): %lld\r\n", 
+        (ReportedPages << EFI_PAGE_SHIFT));
+
+    // (Pxe Pool Size) = (Reported pages count) * (Size of each PXE entry) * (Reverse mapping) * (multiplier=4)
+    //                 = (Reported pages count) * 64
+    UINTN PxeInitPoolSize = ReportedPages * sizeof(UINT64) * 2 * 4;
 
     Status = OslAllocatePagesPreserve(LoaderBlock, PreInitPoolSize, &PreInitPoolBase, FALSE, OsPreInitPool);
     if (Status != EFI_SUCCESS)
@@ -391,10 +416,11 @@ OslEvaluateVideoMode(
     if (!ModeInfo)
         return 0;
 
-    // We support pixel format RGBx8888 or BGRx8888 only.
-    // Pixel - 32bpp, RGBx or BGRx (in byte-order).
-    if (ModeInfo->PixelFormat != PixelRedGreenBlueReserved8BitPerColor &&
-        ModeInfo->PixelFormat != PixelBlueGreenRedReserved8BitPerColor)
+    // We support pixel format BGRx8888 only (32bpp).
+    //   ... Windows requires 1024x768 or 800x600 resolution with
+    //   32-bit or 24-bit color (BGR frame format) ...
+    //   (from https://uefi.org/sites/default/files/resources/UEFI-Plugfest-WindowsBootEnvironment.pdf)
+    if (ModeInfo->PixelFormat != PixelBlueGreenRedReserved8BitPerColor)
         return 0;
 
     // Assume no gaps between lines.

@@ -25,8 +25,18 @@ typedef struct _OBJECT_POOL
     BOOLEAN PoolSpecified;
 } OBJECT_POOL;
 
+#define POOL_BITMAP_SIZE_MINIMUM_BY_MAXIMUM_DEPTH(_max_depth)    \
+    ( (1 << ((_max_depth) + 1)) >> 3 )
+
+#define POOL_BITMAP_SIZE_MINIMUM(_obj_count)    \
+    POOL_BITMAP_SIZE_MINIMUM_BY_MAXIMUM_DEPTH(PoolGetMaximumDepth(_obj_count))
 
 
+
+
+U32
+PoolGetMaximumDepth(
+    IN U32 MaximumObjectCount);
 
 BOOLEAN
 PoolBitmapInitialize(
@@ -38,6 +48,17 @@ PoolBitmapInitialize(
 BOOLEAN
 PoolBitmapFree(
     IN OBJECT_POOL_BITMAP *PoolBitmap);
+
+BOOLEAN
+PoolBitmapGetBit(
+    IN OBJECT_POOL_BITMAP *PoolBitmap,
+    IN U32 BitIndex);
+
+BOOLEAN
+PoolBitmapSetBit(
+    IN OBJECT_POOL_BITMAP *PoolBitmap,
+    IN U32 BitIndex,
+    IN BOOLEAN Set);
 
 INT
 PoolBitmapFindFree(

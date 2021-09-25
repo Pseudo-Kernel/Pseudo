@@ -276,7 +276,6 @@ OslQueryMemoryMap(
 	return EFI_SUCCESS;
 }
 
-
 /**
  * @brief Prints the memory map.
  * 
@@ -700,6 +699,84 @@ OslArchX64IsPageMappingExists(
 }
 
 /**
+ * @brief Fixes the reverse mapping table to point virtual address for lower level tables.\n
+ * 
+ * @param [in] RPML4TBase       Base address of PML4T.
+ * @param [in] FixupDelta       Delta value to be added.
+ * 
+ * @return None.
+ */
+VOID
+EFIAPI
+OslArchX64FixupReverseMappingTable(
+    IN UINT64 *RPML4TBase, 
+    IN UINT64 FixupDelta)
+{
+    UINT64 Offset = (FixupDelta & ARCH_X64_PXE_4K_BASE_MASK);
+
+    for (UINTN PML4TEi = 0; PML4TEi < 512; PML4TEi++)
+    {
+        UINT64 PML4TE = RPML4TBase[PML4TEi];
+        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
+            continue;
+
+        UINT64 *PDPTBase = (UINT64 *)(PML4TE & ARCH_X64_PXE_4K_BASE_MASK);
+        for (UINTN PDPTEi = 0; PDPTEi < 512; PDPTEi++)
+        {
+            UINT64 PDPTE = PDPTBase[PDPTEi];
+            if (!(PDPTE & ARCH_X64_PXE_PRESENT))
+                continue;
+
+            UINT64 *PDBase = (UINT64 *)(PDPTE & ARCH_X64_PXE_4K_BASE_MASK);
+            for (UINTN PDEi = 0; PDEi < 512; PDEi++)
+            {
+                UINT64 PDE = PDBase[PDEi];
+                if (!(PDE & ARCH_X64_PXE_PRESENT))
+                    continue;
+
+                if (PDE & ARCH_X64_PXE_LARGE_SIZE)
+                {
+                    // 2M page.
+                    /*
+                    PDBase[PDEi] = (PDE & ~ARCH_X64_PXE_2M_BASE_MASK) | 
+                        (((PDE & ARCH_X64_PXE_2M_BASE_MASK) + (FixupDelta & ARCH_X64_PXE_2M_BASE_MASK)) & ARCH_X64_PXE_2M_BASE_MASK);
+                    */
+                }
+                else
+                {
+                    // 4K pages.
+                    /*
+                    UINT64 *PTBase = (UINT64 *)(PDE & ARCH_X64_PXE_4K_BASE_MASK);
+                    for (UINTN PTEi = 0; PTEi < 512; PTEi++)
+                    {
+                        UINT64 PTE = PTBase[PTEi];
+                        if (!(PTE & ARCH_X64_PXE_PRESENT))
+                            continue;
+
+                        PTBase[PTEi] = (PTE & ~ARCH_X64_PXE_4K_BASE_MASK) | 
+                            (((PTE & ARCH_X64_PXE_4K_BASE_MASK) + Offset) & ARCH_X64_PXE_4K_BASE_MASK);
+
+                        //TracePortE9(L"Fixup Page base 0x%p -> 0x%p\n", 
+                        //    (PTE & ARCH_X64_PXE_4K_BASE_MASK),
+                        //    (PTBase[PTEi] & ARCH_X64_PXE_4K_BASE_MASK));
+                    }
+                    */
+
+                    PDBase[PDEi] = (PDE & ~ARCH_X64_PXE_4K_BASE_MASK) | 
+                        (((PDE & ARCH_X64_PXE_4K_BASE_MASK) + Offset) & ARCH_X64_PXE_4K_BASE_MASK);
+                }
+            }
+
+            PDPTBase[PDPTEi] = (PDPTE & ~ARCH_X64_PXE_4K_BASE_MASK) | 
+                (((UINT64)PDBase + FixupDelta) & ARCH_X64_PXE_4K_BASE_MASK);
+        }
+
+        RPML4TBase[PML4TEi] = (PML4TE & ~ARCH_X64_PXE_4K_BASE_MASK) | 
+            (((UINT64)PDPTBase + FixupDelta) & ARCH_X64_PXE_4K_BASE_MASK);
+    }
+}
+
+/**
  * @brief Converts EFI_MEMORY_DESCRIPTOR.Attribute to PXE flag.
  * 
  * @param [in] Attribute    Attribute
@@ -984,6 +1061,13 @@ OslSetupPaging(
     {
         return FALSE;
     }
+
+    //
+    // Fixup the RPML4T as physical-virtual mapping has changed.
+    // (RPML4TE must point the virtual address to the lower level table, while PML4TE points physical address.)
+    //
+
+    OslArchX64FixupReverseMappingTable((UINT64 *)RPML4TBase, LoaderBlock->LoaderData.OffsetToVirtualBase);
 
     LoaderBlock->LoaderData.PML4TBase = PML4TBase;
     LoaderBlock->LoaderData.RPML4TBase = RPML4TBase;

@@ -290,7 +290,7 @@ OslPeLoadImage(
 
 	if (AllocationStatus != EFI_SUCCESS)
 	{
-		DTRACEF(LoaderBlock, L"Failed to allocate pages at preferred base 0x%p\r\n", BaseAddress);
+		DTRACEF(LoaderBlock, L"Failed to allocate pages at preferred base 0x%p\r\n", Nt->Nt64.OptionalHeader.ImageBase);
 
 		// Not a failure, keep going
 		AllocationStatus = OslAllocatePagesPreserve(LoaderBlock, SizeOfImage, &BaseAddress, FALSE, OsKernelImage);

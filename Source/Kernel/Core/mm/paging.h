@@ -51,12 +51,8 @@
 #define ARCH_X64_PXE_4K_BASE_MASK               0x000ffffffffff000ULL // [51:12], 4K
 #define ARCH_X64_PXE_2M_BASE_MASK               0x000fffffffe00000ULL // [51:21], 2M
 
-
-
-
-
-
-
+#define ARCH_X64_TO_CANONICAL_ADDRESS(_x)   \
+    ( ((_x) & 0x0008000000000000ULL) ? ((_x) | 0xfff0000000000000ULL) : (_x) )
 
 
 
@@ -83,23 +79,38 @@ MmIsCanonicalAddress(
 extern U64 *MiPML4TBase; //!< PML4 table base.
 extern U64 *MiRPML4TBase; //!< Reverse PML4 table base.
 
+extern struct _OBJECT_POOL MiPreInitPxePool;
 
+
+U64 *
+KERNELAPI
+MiAllocatePxePreInit(
+    VOID);
+
+VOID
+KERNELAPI
+MiArchX64InvalidatePage(
+    IN VIRTUAL_ADDRESS InvalidateAddress, 
+    IN SIZE_T Size);
 
 BOOLEAN
 KERNELAPI
 MiArchX64SetPageMapping(
     IN U64 *PML4TBase, 
+    IN U64 *RPML4TBase, 
     IN VIRTUAL_ADDRESS VirtualAddress, 
     IN PHYSICAL_ADDRESS PhysicalAddress, 
     IN SIZE_T Size, 
     IN U64 PteFlags,
     IN BOOLEAN ReverseMapping,
-    IN BOOLEAN AllowNonDefaultPageSize);
+    IN BOOLEAN AllowNonDefaultPageSize,
+    IN OBJECT_POOL *PxePool);
 
 BOOLEAN
 KERNELAPI
 MiArchX64SetPageMappingNotPresent(
     IN U64 *PML4TBase, 
+    IN U64 *RPML4TBase, 
     IN VIRTUAL_ADDRESS VirtualAddress, 
     IN SIZE_T Size);
 
@@ -107,6 +118,7 @@ BOOLEAN
 KERNELAPI
 MiArchX64IsPageMappingExists(
     IN U64 *PML4TBase, 
+    IN U64 *RPML4TBase, 
     IN EFI_VIRTUAL_ADDRESS VirtualAddress, 
     IN SIZE_T Size);
 

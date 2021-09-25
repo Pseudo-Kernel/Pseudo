@@ -111,7 +111,6 @@ typedef struct _OS_VIDEO_MODE_RECORD
 #define OSL_LOADER_PREINIT_POOL_SIZE            0x800000 // 8M
 #define OSL_LOADER_LOW_1M_SHADOW_SIZE           0x100000 // 1M
 #define OSL_LOADER_KERNEL_STACK_SIZE            0x100000 // 1M
-#define OSL_LOADER_PXE_INIT_POOL_SIZE           0x1000000 // 16M
 
 typedef struct _OS_PRESERVE_MEMORY_RANGE
 {

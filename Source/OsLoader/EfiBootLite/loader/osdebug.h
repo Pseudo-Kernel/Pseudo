@@ -2,6 +2,11 @@
 #pragma once
 
 VOID
+TracePortE9(
+    IN CHAR16 *Format, 
+    ...);
+
+VOID
 Trace(
     IN CHAR16 *Format,
     ...);

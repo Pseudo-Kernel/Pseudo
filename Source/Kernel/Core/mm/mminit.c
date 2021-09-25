@@ -8,7 +8,6 @@
  * 
  * @copyright Copyright (c) 2021
  * 
- * @todo Need to implement PXE pool (including pre-init PXE pool)
  */
 
 #include <base/base.h>
@@ -128,6 +127,7 @@ MiPreInitialize(
     // Initialize the pre-init pool.
     //
 
+    BGXTRACE("Initializing pre-init pool...\n");
     if (!MiPrePoolInitialize(LoaderBlock))
     {
         return E_PREINIT_POOL_INIT_FAILED;
@@ -138,11 +138,11 @@ MiPreInitialize(
     // Initialize the pre-init PXE pool.
     //
 
-    OBJECT_POOL MiPxePool;
+    BGXTRACE("Initializing pre-init PXE pool...\n");
 
     SIZE_T Pxe512EntriesSize = 512 * sizeof(U64);
     U32 PxeTableCount = LoaderBlock->LoaderData.PxeInitPoolSize / Pxe512EntriesSize;
-    SIZE_T PxePoolBitmapSize = (PxeTableCount * 2) >> 3;
+    SIZE_T PxePoolBitmapSize = POOL_BITMAP_SIZE_MINIMUM(PxeTableCount);
 
     U8 *InitialPxePoolBitmap = MmAllocatePool(PoolTypeNonPagedPreInit, PxePoolBitmapSize, 0x10, TAG4('I', 'N', 'I', 'T'));
     if (!InitialPxePoolBitmap)
@@ -151,9 +151,12 @@ MiPreInitialize(
     }
 
     memset(InitialPxePoolBitmap, 0, PxePoolBitmapSize);
+
+    BGXTRACE("Pre-init PXE pool => Bitmap size 0x%llx, Pool size 0x%llx\n", 
+        PxePoolBitmapSize, LoaderBlock->LoaderData.PxeInitPoolSize);
     
     if (!PoolInitialize(
-        &MiPxePool, PxeTableCount, Pxe512EntriesSize, 
+        &MiPreInitPxePool, PxeTableCount, Pxe512EntriesSize, 
         InitialPxePoolBitmap, PxePoolBitmapSize, 
         (PVOID)((PTR)LoaderBlock->LoaderData.PxeInitPoolBase + OffsetToVirtualBase),
         LoaderBlock->LoaderData.PxeInitPoolSize))
@@ -164,7 +167,7 @@ MiPreInitialize(
     UINT PxeTableAllocatedCount = LoaderBlock->LoaderData.PxeInitPoolSizeUsed / Pxe512EntriesSize;
     for (UINT i = 0; i < PxeTableAllocatedCount; i++)
     {
-        if (!PoolAllocateObject(&MiPxePool))
+        if (!PoolAllocateObject(&MiPreInitPxePool))
         {
             return E_PREINIT_PXE_POOL_INIT_FAILED;
         }
@@ -176,6 +179,8 @@ MiPreInitialize(
     //
     // Initialize the PAD/VAD tree.
     //
+
+    BGXTRACE("Initializing XADs...\n");
 
     MiXadContext.UsePreInitPool = TRUE;
 
@@ -312,6 +317,9 @@ MiPreInitialize(
         Descriptor = (EFI_MEMORY_DESCRIPTOR *)((PTR)Descriptor + DescriptorSize);
     }
 
+    BGXTRACE_C(BGX_COLOR_LIGHT_GREEN, "Currently available system memory %lldK (0x%llx)\n", 
+        AvailableMemory >> 10, AvailableMemory);
+
     MiAvailableSystemMemory = AvailableMemory;
     MiXadInitialized = TRUE;
 
@@ -323,15 +331,15 @@ KERNELAPI
 MiPreDumpXad(
     VOID)
 {
-    BootGfxPrintTextFormat("\n");
+    BGXTRACE("\n");
 
-    BootGfxPrintTextFormat("Listing PAD tree...\n");
-    RsBtTraverse(&MiPadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
-    BootGfxPrintTextFormat("\n");
+//    BGXTRACE("Listing PAD tree...\n");
+//    RsBtTraverse(&MiPadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
+//    BGXTRACE("\n");
 
-    BootGfxPrintTextFormat("Listing VAD tree...\n");
+    BGXTRACE("Listing VAD tree...\n");
     RsBtTraverse(&MiVadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
-    BootGfxPrintTextFormat("\n");
+    BGXTRACE("\n");
 }
 
 VOID
@@ -339,12 +347,6 @@ KERNELAPI
 MmInitialize(
     VOID)
 {
-    //
-    // Initialize the PXE pool.
-    //
-
-
-
     //
     // Initialize the pool (except pre-init pool).
     //
@@ -393,11 +395,13 @@ MmInitialize(
             FATAL("Failed to initialize pool (0x%08x)", Status);
         }
 
-        Status = MmMapMemory(Addresses, PoolVirtualBase, ARCH_X64_PXE_WRITABLE, TRUE);
+        Status = MmMapMemory(Addresses, PoolVirtualBase, ARCH_X64_PXE_WRITABLE, TRUE, 0/*MAP_MEMORY_FLAG_USE_PRE_INIT_PXE*/);
         if (!E_IS_SUCCESS(Status))
         {
             FATAL("Failed to initialize pool (0x%08x)", Status);
         }
+
+        MiArchX64InvalidatePage(PoolVirtualBase, PoolSize);
 
         if (!MiInitializePoolBlockList(&MiPoolList[PoolType], PoolVirtualBase, PoolSize, 0))
         {
@@ -408,6 +412,9 @@ MmInitialize(
         MiPoolAddresses[PoolType].Addresses = Addresses;
 
         DbgTraceF(TraceLevelDebug, "Pool initialized (type %d) => 0x%016llx - 0x%016llx\n", 
+            PoolType, PoolVirtualBase, PoolVirtualBase + PoolSize - 1);
+
+        BGXTRACE("Pool initialized (type %d) => 0x%016llx - 0x%016llx\n", 
             PoolType, PoolVirtualBase, PoolVirtualBase + PoolSize - 1);
     }
 

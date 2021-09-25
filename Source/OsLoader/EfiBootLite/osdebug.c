@@ -15,6 +15,36 @@
 #include "osdebug.h"
 
 
+VOID
+TracePortE9(
+    IN CHAR16 *Format, 
+    ...)
+{
+    CHAR16 Buffer[PRINT_MAX_BUFFER + 1];
+    VA_LIST List;
+    UINTN Length;
+
+    VA_START(List, Format);
+    Length = StrFormatV(Buffer, ARRAY_SIZE(Buffer) - 1, Format, List);
+    VA_END(List);
+
+    StrTerminate(Buffer, ARRAY_SIZE(Buffer), Length);
+
+    CHAR16 *s = Buffer;
+    while (*s)
+    {
+        CHAR8 c = *s;
+	    __asm__ __volatile__ (
+	        "out %0, %1\n\t"
+	        :
+	        : "n"(0xe9), "a"(c)
+    	    : /*"memory"*/
+    	);
+
+        s++;
+    }
+}
+
 /**
  * @brief Prints the formatted string.
  * 

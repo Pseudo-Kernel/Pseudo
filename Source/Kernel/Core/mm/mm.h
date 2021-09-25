@@ -3,6 +3,7 @@
 
 #include <base/base.h>
 #include <mm/xadtree.h>
+#include <mm/paging.h>
 
 typedef struct _XAD_CONTEXT
 {
@@ -155,6 +156,20 @@ MmAllocatePhysicalMemoryGather(
 	IN PAD_TYPE Type);
 
 
+ESTATUS
+MiMapMemory(
+    IN U64 *ToplevelTable,
+    IN U64 *ToplevelTableReverse,
+    IN PHYSICAL_ADDRESSES *PhysicalAddresses,
+    IN VIRTUAL_ADDRESS VirtualAddress, 
+    IN U64 Flags, 
+    IN BOOLEAN AllowNonDefaultPageSize,
+    IN OBJECT_POOL *PxePool);
+
+
+
+//#define MAP_MEMORY_FLAG_USE_PRE_INIT_PXE            0x8000000000000000ULL
+
 
 KEXPORT
 ESTATUS
@@ -162,4 +177,5 @@ MmMapMemory(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress,
     IN U64 Flags, 
-    IN BOOLEAN AllowNonDefaultPageSize);
+    IN BOOLEAN AllowNonDefaultPageSize,
+    IN U64 MapFlags);

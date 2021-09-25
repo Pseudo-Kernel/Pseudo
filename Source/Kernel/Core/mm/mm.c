@@ -619,14 +619,28 @@ MmFreePhysicalMemoryGather(
     return E_SUCCESS;
 }
 
-
+/**
+ * @brief Maps the physical addresses to virtual addresses.
+ * 
+ * @param [in] ToplevelTable            Pointer to top-level paging structure.
+ * @param [in] ToplevelTableReverse     Pointer to top-level reverse mapping (that is, physical-to-virtual mapping) structure.
+ * @param [in] PhysicalAddresses        Pointer to PHYSICAL_ADDRESSES structure which contains non-contiguous physical addresses.
+ * @param [in] VirtualAddress           Virtual address.
+ * @param [in] Flags                    PXE flags. See PxeFlags in MiArchX64SetPageMapping.
+ * @param [in] AllowNonDefaultPageSize  If FALSE, uses only 4K paging. Otherwise, uses 2M paging if possible.
+ * @param [in] PxePool                  PXE pool.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 MiMapMemory(
     IN U64 *ToplevelTable,
+    IN U64 *ToplevelTableReverse,
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress, 
     IN U64 Flags, 
-    IN BOOLEAN AllowNonDefaultPageSize)
+    IN BOOLEAN AllowNonDefaultPageSize,
+    IN OBJECT_POOL *PxePool)
 {
     if (PhysicalAddresses->PhysicalAddressCount > 
         PhysicalAddresses->PhysicalAddressMaximumCount)
@@ -646,8 +660,8 @@ MiMapMemory(
         SIZE_T Size = Range.End - Range.Start;
 
         // @todo: Revert page mapping if fails
-        ASSERT(MiArchX64SetPageMapping(ToplevelTable, TargetVirtualAddress, 
-            Range.Start, Size, Flags, FALSE, AllowNonDefaultPageSize));
+        ASSERT(MiArchX64SetPageMapping(ToplevelTable, ToplevelTableReverse, TargetVirtualAddress, 
+            Range.Start, Size, Flags, FALSE, AllowNonDefaultPageSize, PxePool));
 
         TargetVirtualAddress += Size;
     }
@@ -658,15 +672,33 @@ MiMapMemory(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Maps the physical addresses to virtual addresses.
+ * 
+ * @param [in] PhysicalAddresses        Pointer to PHYSICAL_ADDRESSES structure which contains non-contiguous physical addresses.
+ * @param [in] VirtualAddress           Virtual address.
+ * @param [in] PxeFlags                 PXE flags. See PxeFlags in MiArchX64SetPageMapping.
+ * @param [in] AllowNonDefaultPageSize  If FALSE, uses only 4K paging. Otherwise, uses 2M paging if possible.
+ * @param [in] Reserved                 Reserved for future use.
+ * 
+ * @return ESTATUS code.
+ */
 KEXPORT
 ESTATUS
 MmMapMemory(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress,
-    IN U64 Flags, 
-    IN BOOLEAN AllowNonDefaultPageSize)
+    IN U64 PxeFlags, 
+    IN BOOLEAN AllowNonDefaultPageSize,
+    IN U64 Reserved)
 {
-    return MiMapMemory(MiPML4TBase, PhysicalAddresses, VirtualAddress, 
-        Flags, AllowNonDefaultPageSize);
+//    OBJECT_POOL *PxePool = NULL;
+//    if (MapFlags & MAP_MEMORY_FLAG_USE_PRE_INIT_PXE)
+//    {
+//        PxePool = &MiPreInitPxePool;
+//    }
+
+    return MiMapMemory(MiPML4TBase, MiRPML4TBase, PhysicalAddresses, VirtualAddress, 
+        PxeFlags, AllowNonDefaultPageSize, &MiPreInitPxePool/* PxePool */);
 }
 

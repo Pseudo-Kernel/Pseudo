@@ -71,10 +71,10 @@ PiPreInitialize(
         LoaderBlockTemp->LoaderData.VideoFramebufferSize,
         &PiBootImageContext))
     {
-        BootGfxFatalStop("Failed to initialize graphics");
+        FATAL("Failed to initialize graphics");
     }
 
-    BootGfxPrintTextFormat("Pre-init graphics initialized\n");
+    BGXTRACE("Pre-init graphics initialized\n");
 
     //
     // Initialize the pre-init pool and XAD trees.
@@ -84,7 +84,7 @@ PiPreInitialize(
 
     if (!E_IS_SUCCESS(Status))
     {
-        FATAL("Failed to initialize memory");
+        FATAL("Failed to initialize memory (0x%08x)", Status);
     }
 
     //
