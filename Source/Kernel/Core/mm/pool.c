@@ -1,4 +1,16 @@
 
+/**
+ * @file pool.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements kernel pool routines (allocation and free).
+ * @version 0.1
+ * @date 201?-??-??
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ * @todo Use spinlock which supports interrupt blocking (see todo in lock.c).\n
+ */
+
 #include <base/base.h>
 #include <ke/ke.h>
 #include <mm/paging.h>

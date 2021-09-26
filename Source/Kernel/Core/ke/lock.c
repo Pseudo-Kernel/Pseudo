@@ -1,4 +1,18 @@
 
+/**
+ * @file lock.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements simple spinlock.
+ * @version 0.1
+ * @date 201?-??-??
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ * @todo Implement interrupt disable when acquire, enable when release.\n
+ *       Current implementation does not disable the interrupt.\n
+ *       On x64, this can be done by setting LAPIC.TPR to higher value or clearing RFLAGS.IF.\n
+ */
+
 #include <base/base.h>
 #include <ke/lock.h>
 

@@ -40,9 +40,8 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Launch QEMU",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/Filesystem/EFI/BOOT/BOOTx64.efi",
@@ -73,9 +72,6 @@
                     "description": "Set disassembly syntax to intel-style",
                     "text": "set disassembly-flavor intel",
                 },
-//                {
-//                    "text": "display x/7i $pc-16",
-//                },
                 {
                     "description": "Connect to remote target (QEMU)",
                     "text": "target remote 127.0.0.1:7000",
@@ -93,6 +89,59 @@
                 },
             ],
             "preLaunchTask": "Start Virtual Machine",
+        },
+        {
+            "name": "(gdb) Launch VMware",
+            "type": "cppdbg",
+            "request": "attach",
+            "program": "${workspaceFolder}/Filesystem/EFI/BOOT/BOOTx64.efi",
+            "processId": "${command:pickProcess}",
+            "showDisplayString": true,
+            "args": [
+                "--nx", "--nh"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true, // true
+            "MIMode": "gdb",
+            "miDebuggerPath": "D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\gdb.exe",
+            "targetArchitecture": "x86_64",
+            "setupCommands": [
+                {
+                    "description": "Set target architecture to x86-64",
+                    "text": "set architecture i386:x86-64"
+                },
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                //"gdb.exe --nx --nh --init-command=gdb_init_options.txt"
+                {
+                    "description": "Set remote connection timeout",
+                    "text": "set remotetimeout 30",
+                },
+                {
+                    "description": "Set disassembly syntax to intel-style",
+                    "text": "set disassembly-flavor intel",
+                },
+                {
+                    "description": "Connect to remote target (VMware)",
+                    "text": "target remote 127.0.0.1:8864",
+                },
+                {
+                    "description": "Show disassembled instruction from PC",
+                    "text": "disassemble $pc, +30",
+                },
+                {
+                    // Add additional symbol file here...
+                    
+                    // add-symbol-file <path> <textaddress>
+                    //"text": "add-symbol-file '${workspaceFolder}/Filesystem/EFI/BOOT/Core.sys' 0x401000",
+                    "text": "add-symbol-file 'D:/Repository/Pseudo/TestExec/Filesystem/EFI/BOOT/Core.sys' 0xffff8f0000001000",
+                },
+            ],
         },
     ]
 }

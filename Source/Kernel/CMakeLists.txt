@@ -48,7 +48,9 @@ set(SRC_LIST
     # ke
     core/ke/ke.h
     core/ke/lock.h
+    core/ke/keinit.h
     core/ke/lock.c
+    core/ke/keinit.c
     # misc
     core/misc/common.h
     core/misc/list.h
@@ -86,7 +88,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 # Compile options.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -O3 -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O3 -save-temps -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 #    PRIVATE -O0 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.

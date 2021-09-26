@@ -10,7 +10,7 @@
             "args": [
                 "-FilePath", "./qemu/qemu-system-x86_64.exe", 
                 // QEMU args
-                "-monitor stdio -S -gdb tcp:127.0.0.1:7000 -debugcon stdio -L . -smp cpus=4,cores=4 -m size=512m,maxmem=8g --bios \"./OVMF/ovmf-x64/OVMF-pure-efi.fd\" -net none -hda \"vm.vhd\"",
+                "-monitor stdio -S -gdb tcp:127.0.0.1:7000 -debugcon stdio -L . -smp cpus=4,cores=4 -m size=1g,maxmem=8g --bios \"./OVMF/ovmf-x64/OVMF-pure-efi.fd\" -net none -hda \"vm.vhd\"",
             ],
 //            "isBackground": true,
             "group": {
