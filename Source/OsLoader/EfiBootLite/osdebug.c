@@ -34,12 +34,12 @@ TracePortE9(
     while (*s)
     {
         CHAR8 c = *s;
-	    __asm__ __volatile__ (
-	        "out %0, %1\n\t"
-	        :
-	        : "n"(0xe9), "a"(c)
-    	    : /*"memory"*/
-    	);
+        __asm__ __volatile__ (
+            "out %0, %1\n\t"
+            :
+            : "n"(0xe9), "a"(c)
+            : /*"memory"*/
+        );
 
         s++;
     }

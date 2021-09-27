@@ -18,6 +18,7 @@
 #include <init/bootgfx.h>
 #include <mm/mminit.h>
 #include <mm/pool.h>
+#include <ke/keinit.h>
 
 /**
  * @brief Kernel main entry point.
@@ -67,7 +68,32 @@ KiKernelStart(
         MmFreePool(Test);
     }
 
-    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Test done. System halt.\n");
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Test done.\n");
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Initializing table registers...\n");
+
+    KiInitialize();
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Done.\n\n");
+
+    U64 Cr0 = 0, Cr2 = 0, Cr3 = 0, Cr4 = 0, Cr8 = 0;
+    __asm__ __volatile__ (
+        "mov %0, cr0\n\t"
+        "mov %1, cr2\n\t"
+        "mov %2, cr3\n\t"
+        "mov %3, cr4\n\t"
+        "mov %4, cr8\n\t"
+        : "=r"(Cr0), "=r"(Cr2), "=r"(Cr3), "=r"(Cr4), "=r"(Cr8)
+        :
+        : "memory"
+    );
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, 
+        "CR0 = 0x%016llx, CR2 = 0x%016llx, CR3 = 0x%016llx,\n"
+        "CR4 = 0x%016llx, CR8 = 0x%016llx\n",
+        Cr0, Cr2, Cr3, Cr4, Cr8);
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "System halt.\n");
 
 	for (;;)
 	{

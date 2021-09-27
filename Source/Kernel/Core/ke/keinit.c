@@ -61,6 +61,9 @@ KiInterruptNop(
     */
 
     __asm__ __volatile__ (
+        "cli\n\t"
+        "hlt\n\t"
+
         "push fs\n\t"
         "push gs\n\t"
         "push rax\n\t"
@@ -145,32 +148,25 @@ KiInitializeGdtIdt(
     IN ARCH_X64_IDTENTRY *Idt)
 {
     U64 DefaultDescriptor64 = 
-        ARCH_X64_SEGMENT_PRESENT | ARCH_X64_SEGMENT_64BIT | 
-        ARCH_X64_SEGMENT_DEFAULT | ARCH_X64_SEGMENT_GRANULARITY;
+        ARCH_X64_SEGMENT_PRESENT | ARCH_X64_SEGMENT_CODE_DATA | ARCH_X64_SEGMENT_GRANULARITY;
+    U64 DefaultCodeDescriptor64 = DefaultDescriptor64 | ARCH_X64_SEGMENT_64BIT | 
+        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_CODE_EXECUTE_READ);
+    U64 DefaultDataDescriptor64 = DefaultDescriptor64 | ARCH_X64_SEGMENT_DEFAULT | 
+        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_DATA_READWRITE);
 
     KiSetSegmentDescriptor(Gdt, NULL_XS, 0);
-    KiSetSegmentDescriptor(Gdt, KERNEL_CS32, 0);
-    KiSetSegmentDescriptor(Gdt, KERNEL_DS32, 0);
+    KiSetSegmentDescriptor(Gdt, KERNEL_CS32, 0); // currently not used
+    KiSetSegmentDescriptor(Gdt, KERNEL_DS32, 0); // currently not used
 
-    KiSetSegmentDescriptor(Gdt, KERNEL_CS, 
-        DefaultDescriptor64 | ARCH_X64_SEGMENT_DPL(0) | 
-        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_CODE_EXECUTE_READ));
-    KiSetSegmentDescriptor(Gdt, KERNEL_DS,
-        DefaultDescriptor64 | ARCH_X64_SEGMENT_DPL(0) |
-        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_DATA_READWRITE));
-    KiSetSegmentDescriptor(Gdt, KERNEL_GS,
-        DefaultDescriptor64 | ARCH_X64_SEGMENT_DPL(0) |
-        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_DATA_READWRITE));
+    KiSetSegmentDescriptor(Gdt, KERNEL_CS, DefaultCodeDescriptor64 | ARCH_X64_SEGMENT_DPL(0));
+    KiSetSegmentDescriptor(Gdt, KERNEL_DS, DefaultDataDescriptor64 | ARCH_X64_SEGMENT_DPL(0));
+    KiSetSegmentDescriptor(Gdt, KERNEL_FS, DefaultDataDescriptor64 | ARCH_X64_SEGMENT_DPL(0));
+    KiSetSegmentDescriptor(Gdt, KERNEL_GS, DefaultDataDescriptor64 | ARCH_X64_SEGMENT_DPL(0));
 
-    KiSetSegmentDescriptor(Gdt, USER_CS,
-        DefaultDescriptor64 | ARCH_X64_SEGMENT_DPL(3) |
-        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_CODE_EXECUTE_READ));
-    KiSetSegmentDescriptor(Gdt, USER_DS,
-        DefaultDescriptor64 | ARCH_X64_SEGMENT_DPL(3) |
-        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_DATA_READWRITE));
-    KiSetSegmentDescriptor(Gdt, USER_GS,
-        DefaultDescriptor64 | ARCH_X64_SEGMENT_DPL(3) |
-        ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_DATA_READWRITE));
+    KiSetSegmentDescriptor(Gdt, USER_CS, DefaultCodeDescriptor64 | ARCH_X64_SEGMENT_DPL(3));
+    KiSetSegmentDescriptor(Gdt, USER_DS, DefaultDataDescriptor64 | ARCH_X64_SEGMENT_DPL(3));
+    KiSetSegmentDescriptor(Gdt, USER_FS, DefaultDataDescriptor64 | ARCH_X64_SEGMENT_DPL(3));
+    KiSetSegmentDescriptor(Gdt, USER_GS, DefaultDataDescriptor64 | ARCH_X64_SEGMENT_DPL(3));
 
     for (U16 Vector = 0; Vector < IDTENTRY_MAXIMUM_COUNT; Vector++)
     {
@@ -200,6 +196,55 @@ KiLoadGdtIdt(
         "lidt [%1]\n\t"
         :
         : "r"(&Gdtr), "r"(&Idtr)
+        : "memory"
+    );
+}
+
+__attribute__((naked, noinline))
+VOID
+KiReloadSegments(
+    VOID)
+{
+/*
+    __asm__ __volatile__ (
+        "mov ds, %0\n\t"
+        "mov es, %1\n\t"
+        "mov fs, %2\n\t"
+        "mov gs, %3\n\t"
+        "mov ss, %4\n\t"
+        "pop rax\n\t"
+        "push %5\n\t"
+        "push rax\n\t"
+        "retf\n\t"
+        :
+        : "a"(KERNEL_DS), "a"(KERNEL_DS), "a"(KERNEL_FS), 
+          "a"(KERNEL_GS), "a"(KERNEL_SS), "i"(KERNEL_CS)
+        : "memory"
+    );
+*/
+    __asm__ __volatile__ (
+        "mov ax, %0\n\t"
+        "mov ds, ax\n\t"
+        "mov es, ax\n\t"
+        "mov ax, %1\n\t"
+        "mov fs, ax\n\t"
+        "mov ax, %2\n\t"
+        "mov gs, ax\n\t"
+        "mov ax, %3\n\t"
+        "mov ss, ax\n\t"
+        "pop rax\n\t"
+        "push %4\n\t"
+        "push rax\n\t"
+
+        //
+        // NOTE: default operation size of retf is 32-bit even in the long mode.
+        //       use lretq (or rex.W retf) instead.
+        //
+
+        "lretq\n\t" // same as rex.W retf
+        :
+        : "i"(KERNEL_DS), "i"(KERNEL_FS), "i"(KERNEL_GS), "i"(KERNEL_SS), 
+          "i"(KERNEL_CS)
         : "memory"
     );
 }
@@ -243,16 +288,8 @@ KiInitializeProcessor(
     // Load new segment registers.
     //
 
-    __asm__ __volatile__ (
-        "mov cs, %0\n\t"
-        "mov ds, %1\n\t"
-        "mov es, %2\n\t"
-        "mov fs, %3\n\t"
-        "mov ss, %4\n\t"
-        :
-        : "r"(KERNEL_CS), "r"(KERNEL_DS), "r"(KERNEL_DS), "r"(KERNEL_DS), "r"(KERNEL_SS)
-        : "memory"
-    );
+    KiReloadSegments();
+
 
 
     // 
@@ -276,6 +313,6 @@ KERNELAPI
 KiInitialize(
     VOID)
 {
-
+    KiInitializeProcessor();
 }
 

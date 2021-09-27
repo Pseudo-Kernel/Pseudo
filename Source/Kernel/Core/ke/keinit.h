@@ -119,11 +119,13 @@ typedef struct _ARCH_X64_TSS
 // GDT[3] = 64-bit code selector for kernel.
 // GDT[4] = 64-bit data selector for kernel.
 // GDT[5] = 64-bit data selector for kernel (special purpose).
-// GDT[6] = 64-bit tss selector for kernel.
-// GDT[7] = 64-bit code selector for application.
-// GDT[8] = 64-bit data selector for application.
-// GDT[9] = 64-bit data selector for application (special purpose).
-// GDT[10..15] = Reserved.
+// GDT[6] = 64-bit data selector for kernel (special purpose).
+// GDT[7] = 64-bit tss selector for kernel.
+// GDT[8] = 64-bit code selector for application.
+// GDT[9] = 64-bit data selector for application.
+// GDT[10] = 64-bit data selector for application (special purpose).
+// GDT[11] = 64-bit data selector for application (special purpose).
+// GDT[12..15] = Reserved.
 // GDT[16..??] = Free to use.
 // 
 
@@ -132,14 +134,21 @@ typedef struct _ARCH_X64_TSS
 #define KERNEL_DS32                                         ((2 << 3) | 0) // Index=2, RPL=0
 #define KERNEL_CS                                           ((3 << 3) | 0) // Index=3, RPL=0
 #define KERNEL_DS                                           ((4 << 3) | 0) // Index=4, RPL=0
+#define KERNEL_FS                                           ((5 << 3) | 0) // Index=5, RPL=0
+#define KERNEL_GS                                           ((6 << 3) | 0) // Index=5, RPL=0
 #define KERNEL_SS                                           KERNEL_DS
-#define KERNEL_GS                                           ((5 << 3) | 0) // Index=5, RPL=0
-#define KERNEL_TSS                                          ((6 << 3) | 0) // Index=6, RPL=0
-#define USER_CS                                             ((7 << 3) | 3) // Index=7, RPL=3
-#define USER_DS                                             ((8 << 3) | 3) // Index=8, RPL=3
+#define KERNEL_TSS                                          ((7 << 3) | 0) // Index=6, RPL=0
+#define USER_CS                                             ((8 << 3) | 3) // Index=7, RPL=3
+#define USER_DS                                             ((9 << 3) | 3) // Index=8, RPL=3
+#define USER_FS                                             ((10 << 3) | 0) // Index=5, RPL=0
+#define USER_GS                                             ((11 << 3) | 3) // Index=9, RPL=3
 #define USER_SS                                             USER_DS
-#define USER_GS                                             ((9 << 3) | 3) // Index=9, RPL=3
 
 #define SELECTOR_TO_INDEX(_selector)                        ((_selector) >> 3)
 
+
+VOID
+KERNELAPI
+KiInitialize(
+    VOID);
 
