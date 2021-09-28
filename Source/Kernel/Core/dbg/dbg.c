@@ -52,9 +52,9 @@ DbgpNormalTraceSerialN(
     while ((c = *s++))
     {
         // while(!LINE_STATUS.TransmitEmpty)
-        while(!(__PseudoIntrin_InPort8(Base + COM_IO_LINE_STATUS) & 0x20));
+        while(!(__inbyte(Base + COM_IO_LINE_STATUS) & 0x20));
 
-        __PseudoIntrin_OutPort8(Base + COM_IO_DATA, c);
+        __outbyte(Base + COM_IO_DATA, c);
     }
 
     return TRUE;
@@ -117,18 +117,18 @@ DbgInitializeSerial(
         // Interrupt disabled
         U16 Base = DbgSerialPortBase[i];
 
-        __PseudoIntrin_OutPort8(Base + COM_IO_IER, 0x00);
+        __outbyte(Base + COM_IO_IER, 0x00);
 
         // DLAB=1 (MSB of LINECTL)
-        __PseudoIntrin_OutPort8(Base + COM_IO_LINE_CTL, 0x80);
-        __PseudoIntrin_OutPort8(Base + COM_IO_DIVISOR_LOW, (U8)(Divisor & 0xff));
-        __PseudoIntrin_OutPort8(Base + COM_IO_DIVISOR_HIGH, (U8)(Divisor >> 0x08));
+        __outbyte(Base + COM_IO_LINE_CTL, 0x80);
+        __outbyte(Base + COM_IO_DIVISOR_LOW, (U8)(Divisor & 0xff));
+        __outbyte(Base + COM_IO_DIVISOR_HIGH, (U8)(Divisor >> 0x08));
 
         // LINECTL -> Parity none(??xx0), 1 stop bit(0), 8-bit(11) -> ??xx0011
-        __PseudoIntrin_OutPort8(Base + COM_IO_LINE_CTL, 0x03);
+        __outbyte(Base + COM_IO_LINE_CTL, 0x03);
 
         // DTR/RTS set
-        __PseudoIntrin_OutPort8(Base + COM_IO_MODEM_CTL, 0x03);
+        __outbyte(Base + COM_IO_MODEM_CTL, 0x03);
     }
 }
 

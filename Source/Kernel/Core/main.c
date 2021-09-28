@@ -52,16 +52,22 @@ KiKernelStart(
     BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "NonPagedPool/PagedPool allocation test\n");
 
     PVOID Test = NULL;
+    U64 Tsc = __rdtsc();
     Test = MmAllocatePool(PoolTypeNonPaged, 0x1234, 0, 0);
-    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "NonPagedPool allocation result 0x%llx\n", Test);
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, 
+        "NonPagedPool allocation result 0x%llx (took %lld cycles)\n", 
+        Test, __rdtsc() - Tsc);
 
     if (Test)
     {
         MmFreePool(Test);
     }
 
+    Tsc = __rdtsc();
     Test = MmAllocatePool(PoolTypePaged, 0x4321, 0, 0);
-    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "PagedPool allocation result 0x%llx\n", Test);
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, 
+        "PagedPool allocation result 0x%llx (took %lld cycles)\n", 
+        Test, __rdtsc() - Tsc);
 
     if (Test)
     {
@@ -97,8 +103,8 @@ KiKernelStart(
 
 	for (;;)
 	{
-		__PseudoIntrin_DisableInterrupt();
-		__PseudoIntrin_Halt();
+		_disable();
+		__halt();
 	}
 
 	return 0;

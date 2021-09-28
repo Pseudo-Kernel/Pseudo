@@ -191,6 +191,10 @@ KiLoadGdtIdt(
     ARCH_X64_XDTR Gdtr = { .Base = (U64)Gdt, .Limit = GdtLimit, };
     ARCH_X64_XDTR Idtr = { .Base = (U64)Idt, .Limit = IdtLimit, };
 
+    __lgdt(&Gdtr);
+    __lidt(&Idtr);
+
+/*
     __asm__ __volatile__ (
         "lgdt [%0]\n\t"
         "lidt [%1]\n\t"
@@ -198,6 +202,7 @@ KiLoadGdtIdt(
         : "r"(&Gdtr), "r"(&Idtr)
         : "memory"
     );
+*/
 }
 
 __attribute__((naked, noinline))
@@ -223,14 +228,14 @@ KiReloadSegments(
     );
 */
     __asm__ __volatile__ (
-        "mov ax, %0\n\t"
+        "mov eax, %0\n\t"
         "mov ds, ax\n\t"
         "mov es, ax\n\t"
-        "mov ax, %1\n\t"
+        "mov eax, %1\n\t"
         "mov fs, ax\n\t"
-        "mov ax, %2\n\t"
+        "mov eax, %2\n\t"
         "mov gs, ax\n\t"
-        "mov ax, %3\n\t"
+        "mov eax, %3\n\t"
         "mov ss, ax\n\t"
         "pop rax\n\t"
         "push %4\n\t"
@@ -245,7 +250,7 @@ KiReloadSegments(
         :
         : "i"(KERNEL_DS), "i"(KERNEL_FS), "i"(KERNEL_GS), "i"(KERNEL_SS), 
           "i"(KERNEL_CS)
-        : "memory"
+        : "rax", "memory"
     );
 }
 

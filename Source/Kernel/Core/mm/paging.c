@@ -58,12 +58,15 @@ KERNELAPI
 MiArchX64InvalidateSinglePage(
     IN VIRTUAL_ADDRESS InvalidateAddress)
 {
+    __invlpg((void *)InvalidateAddress);
+/*
     __asm__ __volatile__ (
         "invlpg [%0]"
         :
         : "r"(InvalidateAddress)
         : "memory"
     );
+*/
 }
 
 /**

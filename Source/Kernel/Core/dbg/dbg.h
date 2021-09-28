@@ -98,6 +98,6 @@ DbgFootprint(
 			"  Line   : %d\n"	\
 			"\n",	\
 			__LINE__);	\
-		for(;;) __PseudoIntrin_Halt();	\
+		for(;;) __halt();	\
 	}	\
 }

@@ -605,10 +605,10 @@ BootGfxFatalStop(
 	BootFonPrintTextN(&PiBootGfx.Screen, PiBootGfx.BootFont, Buffer, BufferLength, FALSE, &PrintLength);
 
 	// System stop.
-	__PseudoIntrin_DisableInterrupt();
+	_disable();
 
 	for (;;)
-		__PseudoIntrin_Halt();
+		__halt();
 }
 
 BOOLEAN
