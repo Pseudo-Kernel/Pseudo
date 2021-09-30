@@ -154,6 +154,11 @@ KiInitializeGdtIdt(
     U64 DefaultDataDescriptor64 = DefaultDescriptor64 | ARCH_X64_SEGMENT_DEFAULT | 
         ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_DATA_READWRITE);
 
+    for (U16 i = 0; i < GDTENTRY_MAXIMUM_COUNT; i++)
+    {
+        Gdt[i] = 0;
+    }
+
     KiSetSegmentDescriptor(Gdt, NULL_XS, 0);
     KiSetSegmentDescriptor(Gdt, KERNEL_CS32, 0); // currently not used
     KiSetSegmentDescriptor(Gdt, KERNEL_DS32, 0); // currently not used
@@ -265,6 +270,10 @@ KiInitializeProcessor(
         FATAL("Failed to allocate processor structure");
     }
 
+    //
+    // Initialize GDT and IDT.
+    //
+
     ARCH_X64_IDTENTRY *Idt = MmAllocatePool(PoolTypeNonPaged, IDT_LIMIT + 1, 0x10, 0);
     if (!Idt)
     {
@@ -277,25 +286,65 @@ KiInitializeProcessor(
         FATAL("Failed to allocate GDT");
     }
 
-//    ARCH_X64_TSS *Tss = MmAllocatePool(PoolTypeNonPaged, sizeof(ARCH_X64_TSS), 0x10, 0);
-//    if (!Tss)
-//    {
-//        FATAL("Failed to allocate TSS");
-//    }
-//
-//    Tss->IoMapBase = sizeof(Tss);
-
-
     KiInitializeGdtIdt(Gdt, Idt);
-    KiLoadGdtIdt(Gdt, GDT_LIMIT, Idt, IDT_LIMIT);
 
     //
-    // Load new segment registers.
+    // Initialize TSS with 7 interrupt stacks.
     //
 
-    KiReloadSegments();
+    ARCH_X64_TSS *Tss = MmAllocatePool(PoolTypeNonPaged, sizeof(ARCH_X64_TSS), 0x10, 0);
+    SIZE_T TssLimit = sizeof(*Tss) - 1;
+    if (!Tss)
+    {
+        FATAL("Failed to allocate TSS");
+    }
+
+    PTR Ist[7] = { 0 }, Rsp0 = 0;
+    SIZE_T StackSize = 0x20000;
+    Rsp0 = (PTR)MmAllocatePool(PoolTypeNonPaged, StackSize, 0x10, 0);
+    if (!Rsp0)
+    {
+        FATAL("Failed to initialize TSS (RSP0)");
+    }
+
+    for (INT i = 0; i < COUNTOF(Ist); i++)
+    {
+        Ist[i] = (PTR)MmAllocatePool(PoolTypeNonPaged, StackSize, 0x10, 0);
+        if (!Ist[i])
+        {
+            FATAL("Failed to initialize TSS (IST)");
+        }
+    }
+
+    memset(Tss, 0, sizeof(*Tss));
+    Tss->Rsp0 = Rsp0 + StackSize - sizeof(U64) * 2;
+    Tss->Ist1 = Ist[0] + StackSize - sizeof(U64) * 2;
+    Tss->Ist2 = Ist[1] + StackSize - sizeof(U64) * 2;
+    Tss->Ist3 = Ist[2] + StackSize - sizeof(U64) * 2;
+    Tss->Ist4 = Ist[3] + StackSize - sizeof(U64) * 2;
+    Tss->Ist5 = Ist[4] + StackSize - sizeof(U64) * 2;
+    Tss->Ist6 = Ist[5] + StackSize - sizeof(U64) * 2;
+    Tss->Ist7 = Ist[6] + StackSize - sizeof(U64) * 2;
+    Tss->IoMapBase = sizeof(Tss); // disable I/O permission
+
+    // 
+    // Setup TSS to the GDT.
+    // Note that TSS(or LDT) descriptor takes 16-byte.
+    // 
+
+    // TSS selector.
+    KiSetSegmentDescriptor(Gdt, KERNEL_TSS, 
+        ARCH_X64_SEGMENT_PRESENT | ARCH_X64_SEGMENT_TYPE(ARCH_X64_SEGMENT_TYPE_SYSTEM_TSS) | ARCH_X64_SEGMENT_DPL(0) | 
+        (((U64)Tss & 0xffffff) << 0x10) | (((U64)Tss & 0xff0000) << 0x20) | 
+        ((U64)TssLimit & 0xffff) | (((U64)TssLimit & 0xf0000) << 0x20));
+
+    // Higher 32-bit offset.
+    KiSetSegmentDescriptor(Gdt, KERNEL_HIGH_TSS, (((U64)Tss >> 0x20) & 0xffffffff));
 
 
+    //
+    // Load GDTR, IDTR, and TR.
+    //
 
     // 
     // The operating system must create at least one 64-bit TSS after activating IA-32e mode. 
@@ -304,12 +353,21 @@ KiInitializeProcessor(
     //
     // [From: Intel SDM. 7.7 TASK MANAGEMENT IN 64-BIT MODE]
     // 
-    
+
+    KiLoadGdtIdt(Gdt, GDT_LIMIT, Idt, IDT_LIMIT);
+    __ltr(KERNEL_TSS);
+
+
+    //
+    // Load new segment registers.
+    //
+
+    KiReloadSegments();
 
     Processor->Self = Processor;
     Processor->Idt = Idt;
     Processor->Gdt = Gdt;
-    Processor->Tss = NULL;
+    Processor->Tss = Tss;
     Processor->ProcessorId = -1;
 }
 

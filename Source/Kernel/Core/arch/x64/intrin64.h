@@ -346,6 +346,32 @@ __invlpg(
     );
 }
 
+_DEFINE_INTRINSIC(void)
+__ltr(
+    unsigned short Selector)
+{
+    __asm__ __volatile__ (
+        "ltr %0\n\t"
+        :
+        : "r"(Selector)
+        : "memory"
+    );
+}
+
+_DEFINE_INTRINSIC(unsigned short)
+__str(
+    void)
+{
+    unsigned short Value = 0;
+    __asm__ __volatile__ (
+        "str %0\n\t"
+        : "=r"(Value)
+        :
+        :
+    );
+
+    return Value;
+}
 
 _DEFINE_INTRINSIC(void)
 _mm_pause(

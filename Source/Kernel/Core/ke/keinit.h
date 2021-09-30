@@ -121,11 +121,14 @@ typedef struct _ARCH_X64_TSS
 // GDT[5] = 64-bit data selector for kernel (special purpose).
 // GDT[6] = 64-bit data selector for kernel (special purpose).
 // GDT[7] = 64-bit tss selector for kernel.
-// GDT[8] = 64-bit code selector for application.
-// GDT[9] = 64-bit data selector for application.
-// GDT[10] = 64-bit data selector for application (special purpose).
-// GDT[11] = 64-bit data selector for application (special purpose).
-// GDT[12..15] = Reserved.
+// GDT[8] = 64-bit tss base address (cannot be used).
+// GDT[9] = reserved.
+// GDT[10] = reserved.
+// GDT[11] = reserved.
+// GDT[12] = 64-bit code selector for application.
+// GDT[13] = 64-bit data selector for application.
+// GDT[14] = 64-bit data selector for application (special purpose).
+// GDT[15] = 64-bit data selector for application (special purpose).
 // GDT[16..??] = Free to use.
 // 
 
@@ -138,10 +141,12 @@ typedef struct _ARCH_X64_TSS
 #define KERNEL_GS                                           ((6 << 3) | 0) // Index=5, RPL=0
 #define KERNEL_SS                                           KERNEL_DS
 #define KERNEL_TSS                                          ((7 << 3) | 0) // Index=6, RPL=0
-#define USER_CS                                             ((8 << 3) | 3) // Index=7, RPL=3
-#define USER_DS                                             ((9 << 3) | 3) // Index=8, RPL=3
-#define USER_FS                                             ((10 << 3) | 0) // Index=5, RPL=0
-#define USER_GS                                             ((11 << 3) | 3) // Index=9, RPL=3
+#define KERNEL_HIGH_TSS                                     ((8 << 3) | 0) // Index=6, RPL=0
+
+#define USER_CS                                             ((12 << 3) | 3) // Index=7, RPL=3
+#define USER_DS                                             ((13 << 3) | 3) // Index=8, RPL=3
+#define USER_FS                                             ((14 << 3) | 0) // Index=5, RPL=0
+#define USER_GS                                             ((15 << 3) | 3) // Index=9, RPL=3
 #define USER_SS                                             USER_DS
 
 #define SELECTOR_TO_INDEX(_selector)                        ((_selector) >> 3)
