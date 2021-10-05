@@ -798,6 +798,94 @@ _InterlockedExchange64(
 
 #define	_InterlockedExchangePointer		_InterlockedExchange64
 
+
+
+_DEFINE_INTRINSIC(char)
+_InterlockedCompareExchange8(
+    char volatile * _Destination, 
+    char _Exchange, 
+    char _Comparand)
+{
+    char Expected = _Comparand;
+	__atomic_compare_exchange_n(_Destination, &Expected, _Exchange, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return Expected;
+}
+
+_DEFINE_INTRINSIC(short)
+_InterlockedCompareExchange16(
+    short volatile * _Destination, 
+    short _Exchange, 
+    short _Comparand)
+{
+    short Expected = _Comparand;
+	__atomic_compare_exchange_n(_Destination, &Expected, _Exchange, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return Expected;
+}
+
+_DEFINE_INTRINSIC(long)
+_InterlockedCompareExchange(
+    long volatile * _Destination, 
+    long _Exchange, 
+    long _Comparand)
+{
+    long Expected = _Comparand;
+	__atomic_compare_exchange_n(_Destination, &Expected, _Exchange, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return Expected;
+}
+
+_DEFINE_INTRINSIC(__int64)
+_InterlockedCompareExchange64(
+    __int64 volatile * _Destination,
+    __int64 _Exchange, 
+    __int64 _Comparand)
+{
+    __int64 Expected = _Comparand;
+	__atomic_compare_exchange_n(_Destination, &Expected, _Exchange, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return Expected;
+}
+
+_DEFINE_INTRINSIC(unsigned char)
+_InterlockedCompareExchange128(
+    __int64 volatile * _Destination, 
+    __int64 _ExchangeHigh, 
+    __int64 _ExchangeLow, 
+    __int64 * _ComparandResult)
+{
+    // Compare RDX:RAX with m128. If equal, set ZF and load RCX:RBX into m128. Else, clear ZF and load m128 into RDX:RAX.
+
+    // IF RDX:RAX == *m128
+    //   ZF = 1
+    //   *m128 = RCX:RBX
+    // ELSE
+    //   ZF = 0
+    //   RDX:RAX = *m128
+    // FI
+    //
+
+    unsigned char result = 0;
+    __asm__ __volatile__ (
+        "lock cmpxchg16b oword ptr [%0]\n\t"
+        "setz %1\n\t"
+        : "+r"(_Destination), "=q"(result), "+a"(*_ComparandResult), "+d"(*(_ComparandResult + 1))
+        : "b"(_ExchangeLow), "c"(_ExchangeHigh)
+        : "cc", "memory"
+    );
+
+    return result;
+}
+
+_DEFINE_INTRINSIC(void *)
+_InterlockedCompareExchangePointer(
+    void * volatile * _Destination, 
+    void * _Exchange, 
+    void * _Comparand)
+{
+    void * Expected = _Comparand;
+	__atomic_compare_exchange_n(_Destination, &Expected, _Exchange, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return Expected;
+}
+
+
 _DEFINE_INTRINSIC(void)
 _mm_lfence(
     void)

@@ -11,6 +11,8 @@
  * @todo There are many works to do:\n
  *       - Interrupt registration and dispatch
  *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
+ *       - Thread scheduling and load balancing
+ *       - Synchronization primitives
  */
 
 #include <base/base.h>

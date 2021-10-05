@@ -48,8 +48,12 @@ set(SRC_LIST
     # ke
     core/ke/ke.h
     core/ke/lock.h
+    core/ke/irql.h
+    core/ke/interrupt.h
     core/ke/keinit.h
     core/ke/lock.c
+    core/ke/irql.c
+    core/ke/interrupt.c
     core/ke/keinit.c
     # misc
     core/misc/common.h

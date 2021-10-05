@@ -127,7 +127,7 @@ MiLinkPoolBlock(
     if (!BlockList)
         return FALSE;
 
-    POOL_ASSERT( KeIsSpinLockAcquired(&BlockList->Lock) );
+    POOL_ASSERT( KeIsSpinlockAcquired(&BlockList->Lock) );
     DListInsertBefore(&BlockList->BlockListHead, &BlockHeader->BlockList);
 
     return TRUE;
@@ -146,7 +146,7 @@ MiInitializePoolBlockList(
     if (!AreaSize || AreaSize < sizeof(POOL_HEADER))
         return FALSE;
 
-    KeInitializeSpinLock(&PoolObject->Lock);
+    KeInitializeSpinlock(&PoolObject->Lock);
 
     PoolObject->AreaStart = AreaStart;
     PoolObject->AreaSize = AreaSize;
@@ -209,7 +209,7 @@ MmAllocatePool(
     }
 
 
-    KeAcquireSpinLock(&BlockList->Lock);
+    KeAcquireSpinlock(&BlockList->Lock);
 
     ListHead = &BlockList->BlockListHead;
     ListCurrent = ListHead->Next;
@@ -287,7 +287,7 @@ MmAllocatePool(
         break;
     }
 
-    KeReleaseSpinLock(&BlockList->Lock);
+    KeReleaseSpinlock(&BlockList->Lock);
 
     return (VOID *)BlockAddress;
 }
@@ -319,7 +319,7 @@ MmFreePool(
 
     ListHead = &BlockList->BlockListHead;
 
-    KeAcquireSpinLock(&BlockList->Lock);
+    KeAcquireSpinlock(&BlockList->Lock);
 
     //
     // Verify the header checksum.
@@ -414,7 +414,7 @@ MmFreePool(
     if (BlockHeaderUpdate)
         MiUpdatePoolHeaderChecksum(BlockHeaderUpdate);
 
-    KeReleaseSpinLock(&BlockList->Lock);
+    KeReleaseSpinlock(&BlockList->Lock);
 }
 
 
@@ -428,7 +428,7 @@ MmEnumeratePoolBlockList(
     PDLIST_ENTRY ListHead;
     PDLIST_ENTRY ListCurrent;
 
-    KeAcquireSpinLock(&BlockList->Lock);
+    KeAcquireSpinlock(&BlockList->Lock);
 
     ListHead = &BlockList->BlockListHead;
     ListCurrent = ListHead->Next;
@@ -449,7 +449,7 @@ MmEnumeratePoolBlockList(
             BlockStart, BlockHeader->BlockSize, BlockHeader->BlockSizeReserved, BlockHeader->BlockSizeUnused);
     }
 
-    KeReleaseSpinLock(&BlockList->Lock);
+    KeReleaseSpinlock(&BlockList->Lock);
 }
 
 VOID

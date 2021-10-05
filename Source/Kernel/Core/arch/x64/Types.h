@@ -63,16 +63,17 @@ typedef	S32							SSIZE_T, *PSSIZE_T;
 
 
 
-
-
 // Other types.
 #ifndef __WINDOWS__
 typedef	U8							BOOLEAN, *PBOOLEAN;
 
 typedef CHAR8                       CHAR, *PCHAR;
 typedef PCHAR                       PSZ;
-typedef S32                         INT;
-typedef U32                         UINT;
+
+typedef unsigned long               ULONG;
+typedef unsigned int                UINT;
+typedef long                        LONG;
+typedef int                         INT;
 
 #endif
 

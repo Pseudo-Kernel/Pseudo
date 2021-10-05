@@ -152,6 +152,29 @@ typedef struct _ARCH_X64_TSS
 #define SELECTOR_TO_INDEX(_selector)                        ((_selector) >> 3)
 
 
+#pragma pack(push, 2)
+typedef struct _ARCH_X64_XDTR
+{
+    U16 Limit;
+    U64 Base;
+} ARCH_X64_XDTR;
+#pragma pack(pop)
+
+typedef struct _KPROCESSOR
+{
+    struct _KPROCESSOR *Self;
+
+    U64 *Gdt;
+    ARCH_X64_IDTENTRY *Idt;
+    ARCH_X64_TSS *Tss;
+
+    U8 ProcessorId;
+
+    //PVOID CurrentThread;
+} KPROCESSOR;
+
+
+
 VOID
 KERNELAPI
 KiInitialize(
