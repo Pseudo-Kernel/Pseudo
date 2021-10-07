@@ -14,6 +14,7 @@
 #include <base/base.h>
 #include <ke/lock.h>
 #include <ke/keinit.h>
+#include <ke/interrupt.h>
 #include <mm/mm.h>
 #include <mm/pool.h>
 #include <init/bootgfx.h>
@@ -356,5 +357,28 @@ KiInitialize(
     VOID)
 {
     KiInitializeProcessor();
+
+    //
+    // Initialize IRQ groups.
+    //
+
+    for (KIRQL Irql = IRQL_LOWEST; Irql <= IRQL_HIGHEST; Irql++)
+    {
+        KIRQ_GROUP *IrqGroup = &KiIrqGroup[Irql];
+
+        KeInitializeSpinlock(&IrqGroup->GroupLock);
+        IrqGroup->PreviousIrql = IRQL_LOWEST;
+        IrqGroup->GroupIrql = IRQL_LOWEST;
+
+        for (ULONG i = 0; i < IRQS_PER_IRQ_GROUP; i++)
+        {
+            KIRQ *Irq = &IrqGroup->Irq[i];
+            Irq->Allocated = FALSE;
+            Irq->Shared = FALSE;
+            Irq->SharedCount = 0;
+            DListInitializeHead(&Irq->InterruptListHead);
+        }
+    }
+
 }
 

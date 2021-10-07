@@ -61,6 +61,7 @@ typedef struct _KINTERRUPT
     PVOID InterruptContext;                 // Interrupt context to be passed to InterruptRoutine()
     U8 InterruptVector;                     // Index of IDT[]. (InterruptVector[7:4] = IRQL = TPR[7:4])
     BOOLEAN Connected;                      // TRUE if connected to the interrupt chain
+    BOOLEAN AutoEoi;                        // TRUE if InterruptRoutine() handles the EOI.
 //    KAFFINITY InterruptAffinity;
 //    ULONG32 Flags;
 
@@ -96,3 +97,31 @@ extern KIRQ_GROUP KiIrqGroup[IRQ_GROUPS_MAX];
 #define INTERRUPT_IRQ_LEGACY_ISA        0x00000002  // Legacy ISA IRQ.
 #define INTERRUPT_IRQ_HINT_EXACT_MATCH  0x00000004  // 
 #define INTERRUPT_AUTO_EOI              0x10000000  // Sends the EOI automatically if specified.
+
+
+
+ESTATUS
+KERNELAPI
+KeConnectInterrupt(
+    IN PKINTERRUPT Interrupt,
+    IN ULONG Vector,
+    IN ULONG Flags);
+
+ESTATUS
+KERNELAPI
+KeDisconnectInterrupt(
+    IN PKINTERRUPT Interrupt);
+
+ESTATUS
+KERNELAPI
+KeInitializeInterrupt(
+    OUT PKINTERRUPT Interrupt,
+    IN PKINTERRUPT_ROUTINE InterruptRoutine,
+    IN PVOID InterruptContext,
+    IN U64 Reserved /*InterruptAffinity*/);
+
+VOID
+KERNELAPI
+KiCallInterruptChain(
+    IN U8 Vector);
+

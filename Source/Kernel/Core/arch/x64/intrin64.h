@@ -19,33 +19,6 @@ void __cpuidex(
 );
 
 
-
-long _InterlockedCompareExchange(
-   long volatile * Destination,
-   long Exchange,
-   long Comparand
-);
-
-short _InterlockedCompareExchange16(
-   short volatile * Destination,
-   short Exchange,
-   short Comparand
-);
-
-__int64 _InterlockedCompareExchange64(
-   __int64 volatile * Destination,
-   __int64 Exchange,
-   __int64 Comparand
-);
-
-unsigned char _InterlockedCompareExchange128(
-   __int64 volatile * Destination,
-   __int64 ExchangeHigh,
-   __int64 ExchangeLow,
-   __int64 * Comparand
-);
-
-
 long _InterlockedExchangeAdd(
 	long volatile *Addend,
 	long Value

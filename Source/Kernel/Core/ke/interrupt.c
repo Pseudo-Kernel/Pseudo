@@ -19,6 +19,9 @@
 
 KIRQ_GROUP KiIrqGroup[IRQ_GROUPS_MAX];
 
+#define VECTOR_TO_IRQ_GROUP_POINTER(_vector)                (&KiIrqGroup[VECTOR_TO_IRQL(_vector)])
+#define VECTOR_TO_IRQ_POINTER(_vector)          \
+    (&VECTOR_TO_IRQ_GROUP_POINTER(Vector)->Irq[VECTOR_TO_GROUP_IRQ_INDEX(Vector)])
 
 
 VOID
@@ -400,6 +403,9 @@ KeConnectInterrupt(
     if (E_IS_SUCCESS(Status))
     {
         ULONG Index = VECTOR_TO_GROUP_IRQ_INDEX(Vector);
+
+        Interrupt->AutoEoi = !!(Flags & INTERRUPT_AUTO_EOI);
+
         _InterlockedExchange8((volatile char *)&Interrupt->InterruptVector, Vector);
         DListInsertAfter(&IrqGroup->Irq[Index].InterruptListHead, &Interrupt->InterruptList);
         Interrupt->Connected = TRUE;
@@ -470,10 +476,63 @@ KeInitializeInterrupt(
     memset(Interrupt, 0, sizeof(*Interrupt));
 
     Interrupt->Connected = FALSE;
+    Interrupt->AutoEoi = FALSE;
     Interrupt->InterruptContext = InterruptContext;
     Interrupt->InterruptRoutine = InterruptRoutine;
     Interrupt->InterruptVector = 0;
     DListInitializeHead(&Interrupt->InterruptList);
 
     return E_SUCCESS;
+}
+
+VOID
+KERNELAPI
+KiCallInterruptChain(
+    IN U8 Vector)
+{
+    ULONG Index = VECTOR_TO_GROUP_IRQ_INDEX(Vector);
+    KIRQ_GROUP *IrqGroup = VECTOR_TO_IRQ_GROUP_POINTER(Vector);
+
+    KiAcquireIrqGroupLock(IrqGroup);
+
+    DASSERT(IrqGroup->Irq[Index].Allocated);
+
+    PDLIST_ENTRY ListHead = &IrqGroup->Irq[Index].InterruptListHead;
+    PDLIST_ENTRY Next = ListHead->Next;
+    BOOLEAN Dispatched = FALSE;
+
+    while (ListHead != Next)
+    {
+        PKINTERRUPT Interrupt = CONTAINING_RECORD(Next, KINTERRUPT, InterruptList);
+        DASSERT(Interrupt->Connected && Interrupt->InterruptVector == Vector);
+
+        KINTERRUPT_RESULT Result = Interrupt->InterruptRoutine(Interrupt, Interrupt->InterruptContext);
+
+        if (Result == InterruptError || Result == InterruptAccepted)
+        {
+            if (Interrupt->AutoEoi)
+            {
+                //
+                // @todo : Handle auto EOI.
+                //         Write zero to LAPIC EOI register.
+                //
+            }
+
+            Dispatched = TRUE;
+            break;
+        }
+        else if (Result == InterruptCallNext)
+        {
+            // Call next interrupt
+            continue;
+        }
+        else
+        {
+            DASSERT(FALSE);
+        }
+    }
+
+    DASSERT(Dispatched);
+    
+    KiReleaseIrqGroupLock(IrqGroup);
 }
