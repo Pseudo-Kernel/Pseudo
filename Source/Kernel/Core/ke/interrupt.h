@@ -7,7 +7,7 @@
 // IRQLs.
 //
 
-#define	IRQL_VALID(_irql)					(IRQL_LOWEST <= (_irql) && (_irql) <= IRQL_HIGHEST)
+#define IRQL_VALID(_irql)                   (IRQL_LOWEST <= (_irql) && (_irql) <= IRQL_HIGHEST)
 #define VECTOR_VALID(_vector)               (0x00 <= (_vector) && (_vector) <= 0xff)
 #define IRQ_VECTOR_VALID(_vector)           (0x20 <= (_vector) && (_vector) <= 0xff) // Vector 0x00 to 0x1f is reserved for other purposes
 
@@ -16,25 +16,25 @@
 #define VECTOR_TO_GROUP_IRQ_INDEX(_vector)  ((ULONG)(_vector) & 0x0f)
 
 // The interrupt-priority class is the value of bits 7:4 of the interrupt vector.
-#define	IRQL_LOWEST							0       // Lowest
-#define	IRQL_NOT_USED_1						1       // Not used (Vector range 0x00 - 0x1f is reserved by intel.)
-#define	IRQL_NORMAL							2       // Normal
-#define	IRQL_CONTEXT_SWITCH					3       // Context switch
-#define	IRQL_LEGACY_ISA						4       // Legacy ISA
-#define	IRQL_DEVICE_1						5       // Used by devices
-#define	IRQL_DEVICE_2						6       // Used by devices
-#define	IRQL_DEVICE_3						7       // Used by devices
-#define	IRQL_DEVICE_4						8       // Used by devices
-#define	IRQL_DEVICE_5						9       // Used by devices
-#define	IRQL_DEVICE_6						10      // Used by devices
-#define	IRQL_DEVICE_7						11      // Used by devices
-#define	IRQL_DEVICE_8						12      // Used by devices
-#define	IRQL_RESERVED_SPURIOUS				13      // Spurious vector
-#define	IRQL_HIGH							14      // High priority
-#define	IRQL_IPI							15      // Used by IPI delivery (Highest priority)
-#define	IRQL_HIGHEST						IRQL_IPI
+#define IRQL_LOWEST                         0       // Lowest
+#define IRQL_NOT_USED_1                     1       // Not used (Vector range 0x00 - 0x1f is reserved by intel.)
+#define IRQL_NORMAL                         2       // Normal
+#define IRQL_CONTEXT_SWITCH                 3       // Context switch
+#define IRQL_LEGACY                         4       // Legacy (Old PIC Interrupts)
+#define IRQL_DEVICE_1                       5       // Used by devices
+#define IRQL_DEVICE_2                       6       // Used by devices
+#define IRQL_DEVICE_3                       7       // Used by devices
+#define IRQL_DEVICE_4                       8       // Used by devices
+#define IRQL_DEVICE_5                       9       // Used by devices
+#define IRQL_DEVICE_6                       10      // Used by devices
+#define IRQL_DEVICE_7                       11      // Used by devices
+#define IRQL_DEVICE_8                       12      // Used by devices
+#define IRQL_RESERVED_SPURIOUS              13      // Spurious vector
+#define IRQL_HIGH                           14      // High priority
+#define IRQL_IPI                            15      // Used by IPI delivery (Highest priority)
+#define IRQL_HIGHEST                        IRQL_IPI
 
-#define	IRQL_COUNT							(IRQL_HIGHEST - IRQL_LOWEST + 1)
+#define IRQL_COUNT                          (IRQL_HIGHEST - IRQL_LOWEST + 1)
 
 
 

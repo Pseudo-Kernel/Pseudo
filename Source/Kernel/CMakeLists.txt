@@ -55,6 +55,9 @@ set(SRC_LIST
     core/ke/irql.c
     core/ke/interrupt.c
     core/ke/keinit.c
+    # drivers/builtin
+    core/drivers/builtin/8259pic.h
+    core/drivers/builtin/8259pic.c
     # misc
     core/misc/common.h
     core/misc/list.h
