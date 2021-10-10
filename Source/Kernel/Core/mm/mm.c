@@ -37,6 +37,7 @@ XAD_CONTEXT MiXadContext;
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmReallocateVirtualMemory(
     IN PVOID ReservedZero,
     IN OUT PTR *Address,
@@ -119,6 +120,7 @@ MmReallocateVirtualMemory(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmAllocateVirtualMemory2(
     IN PVOID ReservedZero,
     IN OUT PTR *Address,
@@ -164,6 +166,7 @@ MmAllocateVirtualMemory2(
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmAllocateVirtualMemory(
     IN PVOID ReservedZero,
     IN OUT PTR *Address,
@@ -183,6 +186,7 @@ MmAllocateVirtualMemory(
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmFreeVirtualMemory(
     IN PTR Address,
     IN SIZE_T Size)
@@ -245,6 +249,7 @@ MmFreeVirtualMemory(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmReallocatePhysicalMemory(
     IN OUT PTR *Address,
     IN SIZE_T Size,
@@ -326,6 +331,7 @@ MmReallocatePhysicalMemory(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmAllocatePhysicalMemory2(
     IN OUT PTR *Address,
     IN SIZE_T Size,
@@ -358,6 +364,7 @@ MmAllocatePhysicalMemory2(
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmAllocatePhysicalMemory(
     IN OUT PTR *Address,
     IN SIZE_T Size,
@@ -376,6 +383,7 @@ MmAllocatePhysicalMemory(
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmFreePhysicalMemory(
     IN PTR Address,
     IN SIZE_T Size)
@@ -436,6 +444,7 @@ MmFreePhysicalMemory(
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmAllocatePhysicalMemoryGather(
     IN OUT PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN SIZE_T Size,
@@ -560,6 +569,7 @@ ExitLoop:
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmFreePhysicalMemoryGather(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses)
 {
@@ -633,6 +643,7 @@ MmFreePhysicalMemoryGather(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MiMapMemory(
     IN U64 *ToplevelTable,
     IN U64 *ToplevelTableReverse,
@@ -685,6 +696,7 @@ MiMapMemory(
  */
 KEXPORT
 ESTATUS
+KERNELAPI
 MmMapMemory(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress,

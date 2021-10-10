@@ -21,6 +21,7 @@
  * @return None.
  */
 VOID
+VARCALL
 RsBtTrace(
     IN PSZ Format,
     ...)
@@ -46,6 +47,7 @@ RsBtTrace(
  * @return None.
  */
 VOID
+KERNELAPI
 RsBtTraverse(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_LINK *Next,
@@ -78,6 +80,7 @@ RsBtTraverse(
  * @return None.
  */
 VOID
+KERNELAPI
 RsBtInitialize(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_OPERATIONS *Operations,
@@ -100,6 +103,7 @@ RsBtInitialize(
  */
 inline
 RS_BINARY_TREE_LINK *
+KERNELAPI
 RsBtGetChildNode(
     IN RS_BINARY_TREE_LINK *Node,
     IN INT NodeIndex)
@@ -125,6 +129,7 @@ RsBtGetChildNode(
  */
 inline
 RS_BINARY_TREE_LINK *
+KERNELAPI
 RsBtSetChildNode(
     IN RS_BINARY_TREE_LINK *Node,
     IN RS_BINARY_TREE_LINK *NewChild,
@@ -160,6 +165,7 @@ RsBtSetChildNode(
  */
 inline
 INT
+KERNELAPI
 RsBtNodeIndexFromChild(
     IN RS_BINARY_TREE_LINK *Child)
 {
@@ -192,6 +198,7 @@ RsBtNodeIndexFromChild(
  */
 inline
 RS_BINARY_TREE_LINK *
+KERNELAPI
 RsBtGetInorderPredecessor(
     IN RS_BINARY_TREE_LINK *Node)
 {
@@ -216,6 +223,7 @@ RsBtGetInorderPredecessor(
  */
 inline
 RS_BINARY_TREE_LINK *
+KERNELAPI
 RsBtGetInorderSuccessor(
     IN RS_BINARY_TREE_LINK *Node)
 {
@@ -241,6 +249,7 @@ RsBtGetInorderSuccessor(
  */
 inline
 VOID
+KERNELAPI
 RsBtSetRoot(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_LINK *Root)
@@ -261,6 +270,7 @@ RsBtSetRoot(
  */
 inline
 BOOLEAN
+KERNELAPI
 RsBtTreeContainsNode(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_LINK *Node)
@@ -291,6 +301,7 @@ RsBtTreeContainsNode(
  * @return None.
  */
 VOID
+KERNELAPI
 RsBtLinkNode(
     IN RS_BINARY_TREE_LINK *Parent,
     IN RS_BINARY_TREE_LINK *NewChild,
@@ -322,6 +333,7 @@ RsBtLinkNode(
  * @return None.
  */
 VOID
+KERNELAPI
 RsBtUnlinkNode(
     IN RS_BINARY_TREE_LINK *Node,
     IN UINT UnlinkFlags,
@@ -384,6 +396,7 @@ RsBtUnlinkNode(
  * @return TRUE if node is a leaf node, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsBtIsLeaf(
     IN RS_BINARY_TREE_LINK *Node)
 {
@@ -402,6 +415,7 @@ RsBtIsLeaf(
  * @return TRUE if insertion succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsBtInsertLeaf(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_LINK *LeafNode)
@@ -471,6 +485,7 @@ RsBtInsertLeaf(
  * @return TRUE if removal succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsBtRemoveNode(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_LINK *Node,
@@ -651,6 +666,7 @@ RsBtRemoveNode(
  */
 inline
 VOID
+KERNELAPI
 RsBtDeleteNode(
     IN RS_BINARY_TREE *Tree,
     IN RS_BINARY_TREE_LINK *Node)
@@ -670,6 +686,7 @@ RsBtDeleteNode(
  * @return TRUE if lookup succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsBtLookup(
     IN RS_BINARY_TREE *Tree,
     IN PVOID Key,
@@ -716,6 +733,7 @@ RsBtLookup(
  * @return TRUE if insertion succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsBtInsert(
     IN RS_BINARY_TREE *Tree,
     IN PVOID Key)
@@ -756,6 +774,7 @@ RsBtInsert(
  */
 inline
 S8
+KERNELAPI
 RsAvlGetBalance(
     IN RS_AVL_NODE *Node)
 {
@@ -783,6 +802,7 @@ RsAvlGetBalance(
  */
 inline
 S8
+KERNELAPI
 RsAvlUpdateHeight(
     IN RS_AVL_NODE *Node)
 {
@@ -816,6 +836,7 @@ RsAvlUpdateHeight(
  * @return None.
  */
 VOID
+KERNELAPI
 RsAvlUpdateHeightAncestors(
     IN RS_AVL_NODE *Node,
     IN BOOLEAN StopIfUnbalancedFound,
@@ -858,6 +879,7 @@ RsAvlUpdateHeightAncestors(
  * @return None.
  */
 VOID
+KERNELAPI
 RsAvlRotate(
     IN RS_BINARY_TREE *Tree,
     IN RS_AVL_NODE *Target,
@@ -990,6 +1012,7 @@ RsAvlRotate(
  * @return TRUE if rebalancing performed, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsAvlRebalance(
     IN RS_BINARY_TREE *Tree,
     IN RS_AVL_NODE *Unbalanced,
@@ -1100,6 +1123,7 @@ RsAvlRebalance(
  * @return TRUE if insertion succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsAvlInsert(
     IN RS_BINARY_TREE *Tree,
     IN PVOID Key,
@@ -1163,6 +1187,7 @@ RsAvlInsert(
  *
  */
 BOOLEAN
+KERNELAPI
 RsAvlRemove(
     IN RS_BINARY_TREE *Tree,
     IN RS_AVL_NODE *Node)
@@ -1201,6 +1226,7 @@ RsAvlRemove(
  * @return TRUE if deletion succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsAvlDelete(
     IN RS_BINARY_TREE *Tree,
     IN RS_AVL_NODE *Node)
@@ -1230,6 +1256,7 @@ RsAvlDelete(
  * @return TRUE if deletion succeeds, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 RsAvlDeleteByKey(
     IN RS_BINARY_TREE *Tree,
     IN PVOID Key)

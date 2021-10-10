@@ -24,6 +24,7 @@ set(SRC_LIST
     core/arch/arch.h
     core/arch/x64/intrin64.h
     core/arch/x64/types.h
+    core/arch/x64/processor.h
     # base
     core/base/base.h
     core/base/compiler.h
@@ -57,7 +58,9 @@ set(SRC_LIST
     core/ke/keinit.c
     # drivers/builtin
     core/drivers/builtin/8259pic.h
+    core/drivers/builtin/8254pit.h
     core/drivers/builtin/8259pic.c
+    core/drivers/builtin/8254pit.c
     # misc
     core/misc/common.h
     core/misc/list.h
@@ -95,7 +98,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 # Compile options.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -O3 -save-temps -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O2 -mno-red-zone -save-temps -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 #    PRIVATE -O0 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.

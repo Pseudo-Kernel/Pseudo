@@ -33,6 +33,6 @@ typedef	struct _GUID {
 
 #include <misc/misc.h>
 #include <dbg/dbg.h>
-#include <ke/ke.h>
+
 
 

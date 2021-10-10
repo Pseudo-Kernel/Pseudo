@@ -11,6 +11,8 @@
  * @todo Need to test all lock-related routines. (KeXxxSpinlockXxx)\n
  */
 
+#include <base/base.h>
+#include <ke/ke.h>
 #include <ke/lock.h>
 #include <init/bootgfx.h>
 

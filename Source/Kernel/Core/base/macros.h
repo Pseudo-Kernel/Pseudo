@@ -4,8 +4,10 @@
 // Calling Conventions.
 //
 
-// __cdecl, __stdcall are accepted but ignored by compiler on x64.
-#define	KERNELAPI					//__stdcall
+#define	KERNELAPI					__attribute__((sysv_abi))
+
+// NOTE: Must specify msabi for variadic functions or it goes crash!
+#define VARCALL                     __attribute__((ms_abi))
 
 
 //

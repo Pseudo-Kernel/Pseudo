@@ -13,14 +13,26 @@
  *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
  *       - Thread scheduling and load balancing
  *       - Synchronization primitives
+ * 
+ * @todo Current issues:\n
+ *       - Kernel crashes randomly when interrupt is enabled [RESOLVED].
+ *         Resolved by adding -mno-red-zone option.
+ *       - Kernel crashes when handling arguments in variadic function (which uses sysv_abi) [RESOLVED].
+ *         Looks like va_start() gives invalid result.
+ *         Resolved by using ms_abi for variadic function.
+ *       - Compilation fails with internal compiler error when compile with -O3.
  */
 
 #include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
+#include <ke/ke.h>
 #include <mm/mminit.h>
 #include <mm/pool.h>
-#include <ke/keinit.h>
+
+#include <drivers/builtin/8254pit.h>
+#include <drivers/builtin/8259pic.h>
+
 
 /**
  * @brief Kernel main entry point.
@@ -34,7 +46,6 @@
  */
 __attribute__((ms_abi))
 U64
-KERNELAPI
 KiKernelStart(
 	IN PTR LoadedBase, 
 	IN OS_LOADER_BLOCK *LoaderBlock, 
@@ -83,6 +94,26 @@ KiKernelStart(
     KiInitialize();
 
     BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Done.\n\n");
+
+
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Setting 8254 timer...\n");
+
+    // Interrupt Test
+
+    Bid_8259EnableInterrupt(~0, IRQL_TO_VECTOR_START(IRQL_LEGACY));
+    Bid_8254Initialize();
+    Bid_8259MaskInterrupt(~(1 << 0));
+
+    _enable();
+
+    for (U32 i = 0; ; i++)
+    {
+        __halt();
+        BGXTRACE("Tick = %lld\r", Bid_8254GetTickCount());
+//        BGXTRACE("Cnt = %d\n", i);
+    }
+
+
 
     U64 Cr0 = 0, Cr2 = 0, Cr3 = 0, Cr4 = 0, Cr8 = 0;
     __asm__ __volatile__ (

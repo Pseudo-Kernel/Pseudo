@@ -27,8 +27,7 @@ DbgpNormalTraceN(
         return FALSE;
 
 #if KERNEL_BUILD_TARGET_EMULATOR
-    __PseudoIntrin_OutPortBuffer8(DBG_SPECIAL_IO_PORT, (U8 *)TraceMessage, Length);
-//  __outbytestring(DBG_SPECIAL_IO_PORT, TraceMessage, (U32)Length);
+    __outbytestring(DBG_SPECIAL_IO_PORT, (U8 *)TraceMessage, Length);
 #else
 
 #endif
@@ -74,7 +73,7 @@ DbgTraceN(
 }
 
 BOOLEAN
-KERNELAPI
+VARCALL
 DbgTraceF(
     IN DBG_TRACE_LEVEL TraceLevel,
     IN CHAR8 *Format,
@@ -138,7 +137,12 @@ DbgInitialize(
     IN OS_LOADER_BLOCK *LoaderBlock,
     IN DBG_TRACE_LEVEL DefaultTraceLevel)
 {
-    DbgpTrace = DbgpNormalTraceSerialN; //DbgpNormalTraceN;
+#if KERNEL_BUILD_TARGET_EMULATOR
+    DbgpTrace = DbgpNormalTraceN;
+#else
+    DbgpTrace = DbgpNormalTraceSerialN;
+#endif
+
     DbgPrintTraceLevel = DefaultTraceLevel;
 
     DbgInitializeSerial();

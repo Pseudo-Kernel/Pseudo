@@ -254,7 +254,7 @@ BootGfxPrintText(
 	IN CHAR8 *Text);
 
 BOOLEAN
-KERNELAPI
+VARCALL
 BootGfxPrintTextFormat(
 	IN CHAR8 *Format,
 	...);
@@ -279,7 +279,7 @@ BootGfxSetBkColor(
 	IN U32 BackgroundColor);
 
 VOID
-KERNELAPI
+VARCALL
 BootGfxFatalStop(
 	IN CHAR8 *Format,
 	...);

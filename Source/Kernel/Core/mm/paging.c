@@ -11,6 +11,7 @@
  */
 
 #include <base/base.h>
+#include <ke/lock.h>
 #include <mm/pool.h>
 #include <mm/mminit.h>
 #include <misc/objpool.h>

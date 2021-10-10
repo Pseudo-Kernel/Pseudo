@@ -17,6 +17,7 @@
 
 
 SIZE_T
+KERNELAPI
 ClStrFormatU8V(
 	OUT CHAR8 *Buffer,
 	IN SIZE_T BufferLength,
@@ -24,6 +25,7 @@ ClStrFormatU8V(
 	IN va_list VarList);
 
 SIZE_T
+VARCALL
 ClStrFormatU8(
 	OUT CHAR8 *Buffer,
 	IN SIZE_T BufferLength,
@@ -31,6 +33,7 @@ ClStrFormatU8(
 	...);
 
 SIZE_T
+KERNELAPI
 ClStrTerminateU8(
 	IN OUT CHAR8 *Buffer,
 	IN SIZE_T BufferLength,

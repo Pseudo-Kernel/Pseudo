@@ -13,6 +13,7 @@
 
 
 #include <base/base.h>
+#include <ke/lock.h>
 #include <ke/irql.h>
 #include <ke/interrupt.h>
 #include <init/bootgfx.h>
@@ -24,7 +25,15 @@ KIRQ_GROUP KiIrqGroup[IRQ_GROUPS_MAX];
     (&VECTOR_TO_IRQ_GROUP_POINTER(Vector)->Irq[VECTOR_TO_GROUP_IRQ_INDEX(Vector)])
 
 
+/**
+ * @brief Acquires IRQ group lock.
+ * 
+ * @param [in] IrqGroup     IRQ Group.
+ * 
+ * @return None.
+ */
 VOID
+KERNELAPI
 KiAcquireIrqGroupLock(
     IN KIRQ_GROUP *IrqGroup)
 {
@@ -34,7 +43,15 @@ KiAcquireIrqGroupLock(
     IrqGroup->PreviousIrql = PrevIrql;
 }
 
+/**
+ * @brief Releases IRQ group lock.
+ * 
+ * @param [in] IrqGroup     IRQ Group.
+ * 
+ * @return None.
+ */
 VOID
+KERNELAPI
 KiReleaseIrqGroupLock(
     IN KIRQ_GROUP *IrqGroup)
 {
@@ -44,9 +61,23 @@ KiReleaseIrqGroupLock(
     KeReleaseSpinlockLowerIrql(&IrqGroup->GroupLock, PrevIrql);
 }
 
-
+/**
+ * @brief Allocates the IRQ vector by given IRQL and count.
+ * 
+ * @param [in] GroupIrql        Vector IRQL.
+ * @param [in] Count            Allocate count.
+ * @param [in] VectorHint       Hint of starting vector. KeAllocateIrqVector tries to allocate IRQ vector\n
+ *                              starting with VectorHint. If zero is specified, this parameter is ignored.
+ * @param [in] Flags            Combination of bit flags. See INTERRUPT_IRQ_XXX.
+ * @param [out] StartingVector  Result vector.
+ * @param [in] LockGroupIrq     Specifies whether the IRQ group locking is performed.\n
+ *                              IRQ group locking will not be performed if FALSE is specified.
+ * 
+ * @return ESTATUS status code.
+ */
 ESTATUS
-KiAllocateIrqVector(
+KERNELAPI
+KeAllocateIrqVector(
     IN KIRQL GroupIrql,
     IN ULONG Count,
     OPTIONAL IN ULONG VectorHint, // Ignored if 0
@@ -216,8 +247,22 @@ KiAllocateIrqVector(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Tests whether the given IRQ vector is allocated.
+ * 
+ * @param [in] Vector           IRQ vector.
+ * @param [in] Flags            Combination of bit flags. See INTERRUPT_IRQ_XXX.
+ * @param [out] Allocated       Allocation state. If given vector is allocated, TRUE will be passed to the caller.
+ * @param [in] LockGroupIrq     Specifies whether the IRQ group locking is performed.\n
+ *                              IRQ group locking will not be performed if FALSE is specified.
+ * 
+ * @return ESTATUS status code.
+ * 
+ * @warning Caller must not trust *Allocated if function fails.
+ */
 ESTATUS
-KiIsIrqVectorAllocated(
+KERNELAPI
+KeIsIrqVectorAllocated(
     IN ULONG Vector,
     IN ULONG Flags,
     OUT BOOLEAN *Allocated,
@@ -272,8 +317,20 @@ KiIsIrqVectorAllocated(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Frees the IRQ vector.
+ * 
+ * @param [in] StartingVector   Starting vector to be freed.
+ * @param [in] Count            Vector count.
+ * @param [in] LockGroupIrq     Specifies whether the IRQ group locking is performed.\n
+ *                              IRQ group locking will not be performed if FALSE is specified.
+ * 
+ * @return ESTATUS status code.
+ * 
+ */
 ESTATUS
-KiFreeIrqVector(
+KERNELAPI
+KeFreeIrqVector(
     IN ULONG StartingVector,
     IN ULONG Count,
     IN BOOLEAN LockGroupIrq)
@@ -375,6 +432,16 @@ KiFreeIrqVector(
     return Status;
 }
 
+/**
+ * @brief Connects the interrupt object to interrupt chain.
+ * 
+ * @param [in] Interrupt    Interrupt object.
+ * @param [in] Vector       Desired vector. The caller must call KeAllocateIrqVector() to allocate vector.
+ * @param [in] Flags        Combination of bit flags. See INTERRUPT_IRQ_XXX.
+ * 
+ * @return ESTATUS status code.
+ * 
+ */
 ESTATUS
 KERNELAPI
 KeConnectInterrupt(
@@ -398,7 +465,7 @@ KeConnectInterrupt(
     KiAcquireIrqGroupLock(IrqGroup);
 
     BOOLEAN Allocated = FALSE;
-    ESTATUS Status = KiIsIrqVectorAllocated(Vector, Flags, &Allocated, FALSE);
+    ESTATUS Status = KeIsIrqVectorAllocated(Vector, Flags, &Allocated, FALSE);
 
     if (E_IS_SUCCESS(Status))
     {
@@ -416,12 +483,21 @@ KeConnectInterrupt(
     return Status;
 }
 
+/**
+ * @brief Disconnects the interrupt object from interrupt chain.
+ * 
+ * @param [in] Interrupt    Interrupt object.
+ * 
+ * @return ESTATUS status code.
+ * 
+ * @warning Do not call KeConnectInterrupt() and KeDisconnectInterrupt() concurrently for same KINTERRUPT\n
+ *          as it may cause race condition.
+ */
 ESTATUS
 KERNELAPI
 KeDisconnectInterrupt(
     IN PKINTERRUPT Interrupt)
 {
-    // NOTE: Do not call KeConnectInterrupt() and KeDisconnectInterrupt() concurrently for same KINTERRUPT.
     if (!Interrupt->Connected)
     {
         return E_INVALID_PARAMETER;
@@ -465,6 +541,16 @@ KeDisconnectInterrupt(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Initializes the interrupt object.
+ * 
+ * @param [out] Interrupt           Interrupt object.
+ * @param [in] InterruptRoutine     Interrupt service routine.
+ * @param [in] InterruptContext     Interrupt context.
+ * @param [in] Reserved             Reserved for future use.
+ * 
+ * @return ESTATUS status code.
+ */
 ESTATUS
 KERNELAPI
 KeInitializeInterrupt(
@@ -485,6 +571,13 @@ KeInitializeInterrupt(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Calls the interrupt chain by given vector.
+ * 
+ * @param [in] Vector   IDT vector number.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 KiCallInterruptChain(

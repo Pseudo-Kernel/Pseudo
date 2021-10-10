@@ -188,6 +188,7 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     U64 R11;
     U64 R10;
     U64 R9;
+    U64 R8;
     U64 Rdi;
     U64 Rsi;
     U64 Rbp;
@@ -214,8 +215,9 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     __attribute__((naked)) VOID     \
     INTERRUPT_HANDLER_NAME(_vector) (VOID)
 
-#define ASM_INTERRUPT_FRAME_PUSH    \
-    "sub rsp, 0x80\n\t" /* red zone */ \
+/* todo: make sure that rsp is 16-byte aligned after interrupt frame is pushed */
+#define ASM_INTERRUPT_FRAME_PUSH_ERRCODE    \
+    "push 0\n\t" /* error code placeholder */   \
     "push fs\n\t"   \
     "push gs\n\t"   \
     "push rax\n\t"  \
@@ -225,15 +227,18 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "push rbp\n\t"  \
     "push rsi\n\t"  \
     "push rdi\n\t"  \
+    "push r8\n\t"   \
     "push r9\n\t"   \
     "push r10\n\t"  \
     "push r11\n\t"  \
     "push r12\n\t"  \
     "push r13\n\t"  \
     "push r14\n\t"  \
-    "push r15\n\t"
+    "push r15\n\t"  \
+    "sub rsp, 0x88\n\t" /* red zone size + 8 byte */
 
-#define ASM_INTERRUPT_FRAME_POP    \
+#define ASM_INTERRUPT_FRAME_POP_ERRCODE    \
+    "add rsp, 0x88\n\t"  /* red zone size + 8 byte */  \
     "pop r15\n\t"   \
     "pop r14\n\t"   \
     "pop r13\n\t"   \
@@ -241,6 +246,7 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "pop r11\n\t"   \
     "pop r10\n\t"   \
     "pop r9\n\t"    \
+    "pop r8\n\t"    \
     "pop rdi\n\t"   \
     "pop rsi\n\t"   \
     "pop rbp\n\t"   \
@@ -250,7 +256,47 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "pop rax\n\t"   \
     "pop gs\n\t"    \
     "pop fs\n\t"    \
-    "add rsp, 0x80\n\t"  /* red zone */
+    "add rsp, 0x08\n\t" /* pop error code */
+
+#define ASM_INTERRUPT_FRAME_PUSH    \
+    "sub rsp, 0x88\n\t" /* red zone size + 8 byte */ \
+    "push fs\n\t"   \
+    "push gs\n\t"   \
+    "push rax\n\t"  \
+    "push rcx\n\t"  \
+    "push rdx\n\t"  \
+    "push rbx\n\t"  \
+    "push rbp\n\t"  \
+    "push rsi\n\t"  \
+    "push rdi\n\t"  \
+    "push r8\n\t"   \
+    "push r9\n\t"   \
+    "push r10\n\t"  \
+    "push r11\n\t"  \
+    "push r12\n\t"  \
+    "push r13\n\t"  \
+    "push r14\n\t"  \
+    "push r15\n\t" /* todo: make sure that rsp is 16-byte aligned after r15 push */
+
+#define ASM_INTERRUPT_FRAME_POP    \
+    "pop r15\n\t"   \
+    "pop r14\n\t"   \
+    "pop r13\n\t"   \
+    "pop r12\n\t"   \
+    "pop r11\n\t"   \
+    "pop r10\n\t"   \
+    "pop r9\n\t"    \
+    "pop r8\n\t"    \
+    "pop rdi\n\t"   \
+    "pop rsi\n\t"   \
+    "pop rbp\n\t"   \
+    "pop rbx\n\t"   \
+    "pop rdx\n\t"   \
+    "pop rcx\n\t"   \
+    "pop rax\n\t"   \
+    "pop gs\n\t"    \
+    "pop fs\n\t"    \
+    "add rsp, 0x88\n\t"  /* red zone size + 8 byte */
 
 
 /*
@@ -273,13 +319,14 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     __attribute__((naked)) VOID     \
     INTERRUPT_HANDLER_NAME(_vector) (VOID) {\
     __asm__ __volatile__ (  \
-        ASM_INTERRUPT_FRAME_PUSH        \
-        "mov rdi, %1\n\t" /* sysvabi uses rdi for 1st argument */    \
-        "call KiCallInterruptChain\n\t" \
-        ASM_INTERRUPT_FRAME_POP         \
+        ASM_INTERRUPT_FRAME_PUSH_ERRCODE    \
+        "mov rdi, %0\n\t" /* sysvabi uses rdi for 1st argument */   \
+        "mov rcx, %0\n\t" /* msabi uses rcx for 1st argument */     \
+        "call KiCallInterruptChain\n\t"     \
+        ASM_INTERRUPT_FRAME_POP_ERRCODE     \
         "iretq\n\t"         \
         :                   \
-        : "i"(0x80), "i"((_vector))    \
+        : "i"((_vector))    \
         : "memory"          \
     );                      \
 }

@@ -12,6 +12,7 @@
 
 #include <base/base.h>
 #include <misc/misc.h>
+#include <ke/lock.h>
 #include <mm/pool.h>
 
 /**

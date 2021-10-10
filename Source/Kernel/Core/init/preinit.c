@@ -14,6 +14,7 @@
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 #include <init/zip.h>
+#include <ke/ke.h>
 #include <mm/pool.h>
 #include <mm/mminit.h>
 

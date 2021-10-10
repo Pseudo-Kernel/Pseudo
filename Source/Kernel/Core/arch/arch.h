@@ -29,9 +29,10 @@
 
 
 #if _ARCH_TYPE_ == _ARCH_TYPE_X86_
-#include "x86/Types.h"
+#include "x86/types.h"
 #elif _ARCH_TYPE_ == _ARCH_TYPE_X64_
-#include "x64/Types.h"
+#include "x64/types.h"
+#include "x64/processor.h"
 #include "x64/intrin64.h"
 #else
 #error Unknown architecture!

@@ -302,10 +302,10 @@ KiInterruptNop(
     __asm__ __volatile__ (
         "cli\n\t"
         "hlt\n\t"
-        ASM_INTERRUPT_FRAME_PUSH
-        "cli\n\t"
-        "hlt\n\t" // Halts the system
-        ASM_INTERRUPT_FRAME_POP
+//        ASM_INTERRUPT_FRAME_PUSH
+//        "cli\n\t"
+//        "hlt\n\t" // Halts the system
+//        ASM_INTERRUPT_FRAME_POP
         "iretq\n\t"
         :
         :
@@ -624,6 +624,7 @@ KiInitializeGdtIdt(
 }
 
 VOID
+KERNELAPI
 KiLoadGdtIdt(
     IN U64 *Gdt,
     IN U16 GdtLimit,
@@ -825,7 +826,7 @@ KiInitialize(
 
         KeInitializeSpinlock(&IrqGroup->GroupLock);
         IrqGroup->PreviousIrql = IRQL_LOWEST;
-        IrqGroup->GroupIrql = IRQL_LOWEST;
+        IrqGroup->GroupIrql = Irql;
 
         for (ULONG i = 0; i < IRQS_PER_IRQ_GROUP; i++)
         {

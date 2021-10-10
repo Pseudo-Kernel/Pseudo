@@ -4,6 +4,7 @@
 #include <init/bootgfx.h>
 
 #include <mm/xadtree.h>
+#include <ke/lock.h>
 #include <mm/pool.h>
 #include <mm/mm.h>
 
@@ -18,6 +19,7 @@
  * @return None.
  */
 VOID
+KERNELAPI
 MiXadInitialize(
     OUT MMXAD *Xad,
     IN U64 Start,
@@ -46,6 +48,7 @@ MiXadInitialize(
  * @return XAD pointer.
  */
 MMXAD *
+KERNELAPI
 MiXadAllocate(
     IN XAD_CONTEXT *CallerContext)
 {
@@ -71,6 +74,7 @@ MiXadAllocate(
  * @return None.
  */
 VOID
+KERNELAPI
 MiXadDelete(
     IN PVOID CallerContext,
     IN MMXAD *Xad)
@@ -89,6 +93,7 @@ MiXadDelete(
  * @return Key structure of XAD.
  */
 ADDRESS *
+KERNELAPI
 MiXadGetAddress(
     IN PVOID CallerContext,
     IN MMXAD *Xad)
@@ -106,6 +111,7 @@ MiXadGetAddress(
  * @return None.
  */
 VOID
+KERNELAPI
 MiXadSetAddress(
     IN PVOID CallerContext,
     IN MMXAD *Xad,
@@ -126,6 +132,7 @@ MiXadSetAddress(
  *         1 if Address1 < Address2.
  */
 INT
+KERNELAPI
 MiXadCompareAddress(
     IN PVOID CallerContext,
     IN ADDRESS *Address1,
@@ -172,6 +179,7 @@ MiXadCompareAddress(
  * @return Returns written string length.
  */
 SIZE_T
+KERNELAPI
 MiXadConvertAddressRangeToString(
     IN PVOID CallerContext,
     IN ADDRESS *Address,
@@ -220,6 +228,7 @@ MiXadDereference(
  * @return Returns size level. (=floor(log2(Size))).
  */
 INT
+KERNELAPI
 MiXadSizeToSizeLevel(
     IN U64 Size)
 {
@@ -253,6 +262,7 @@ MiXadSizeToSizeLevel(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MiXadUpdateSizeLinks(
     IN MMXAD_TREE *XadTree,
     IN MMXAD *Xad)
@@ -281,6 +291,7 @@ MiXadUpdateSizeLinks(
  * @return TRUE always.
  */
 BOOLEAN
+KERNELAPI
 MmXadDebugTraverse(
     IN PVOID CallerContext,
     IN MMXAD *Xad)
@@ -302,6 +313,7 @@ MmXadDebugTraverse(
  * @return TRUE always.
  */
 BOOLEAN
+KERNELAPI
 MmXadInitializeTree(
     OUT MMXAD_TREE *XadTree,
     IN PVOID CallerContext)
@@ -336,6 +348,7 @@ MmXadInitializeTree(
  * @return None.
  */
 VOID
+KERNELAPI
 MmXadAcquireLock(
     IN MMXAD_TREE *XadTree)
 {
@@ -350,6 +363,7 @@ MmXadAcquireLock(
  * @return None.
  */
 VOID
+KERNELAPI
 MmXadReleaseLock(
     IN MMXAD_TREE *XadTree)
 {
@@ -369,6 +383,7 @@ MmXadReleaseLock(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmXadLookupAddress(
     IN MMXAD_TREE *XadTree,
     OUT MMXAD **Xad,
@@ -482,6 +497,7 @@ MmXadLookupAddress(
  * @return TRUE if valid, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 MmXadIsAddressRangeValid(
     IN ADDRESS_RANGE *AddressRange)
 {
@@ -497,6 +513,7 @@ MmXadIsAddressRangeValid(
  * @return TRUE if SourceAddressRange includes TestAddressRange, FALSE otherwise.
  */
 BOOLEAN
+KERNELAPI
 MmXadIsInAddressRange(
     IN ADDRESS_RANGE *SourceAddressRange,
     IN ADDRESS_RANGE *TestAddressRange)
@@ -522,6 +539,7 @@ MmXadIsInAddressRange(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmXadInsertAddress(
     IN MMXAD_TREE *XadTree,
     OUT MMXAD **Xad,
@@ -564,6 +582,7 @@ MmXadInsertAddress(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmXadDeleteAddress(
     IN MMXAD_TREE *XadTree,
     IN ADDRESS *Address)
@@ -591,6 +610,7 @@ MmXadDeleteAddress(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MiXadMergeAdjacentAddresses(
     IN MMXAD_TREE *XadTree,
     IN PTR AddressStartHint)
@@ -679,6 +699,7 @@ MiXadMergeAdjacentAddresses(
  * @return ESTATUS code.
  */
 ESTATUS
+KERNELAPI
 MmXadReclaimAddress(
     IN MMXAD_TREE *XadTree,
     IN MMXAD *Xad,

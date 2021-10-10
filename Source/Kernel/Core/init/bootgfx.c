@@ -1,6 +1,8 @@
-﻿#include <base/base.h>
+﻿
+#include <base/base.h>
 #include <init/bootgfx.h>
 #include <init/zip.h>
+#include <dbg/dbg.h>
 
 // http://bytepointer.com/resources/win16_ne_exe_format_win3.0.htm
 
@@ -31,11 +33,6 @@ BootFonCharBlt(
 	IN U32 CharHeight,
 	IN BOOLEAN TransparentBackground)
 {
-	U32 i, j, k;
-	U32 u, v;
-	U32 X, Y;
-	U32 *BltBuffer;
-
 	if (Screen->TextCursorX >= Screen->TextResolutionX ||
 		Screen->TextCursorY >= Screen->TextResolutionY)
 	{
@@ -48,21 +45,21 @@ BootFonCharBlt(
 		return TRUE;
 	}
 
-	u = (CharWidth + 0x07) >> 3;
-	v = CharHeight;
+	U32 u = (CharWidth + 0x07) >> 3;
+	U32 v = CharHeight;
 
-	X = Screen->TextCursorX * CharWidth;
-	Y = Screen->TextCursorY * CharHeight;
+	U32 X = Screen->TextCursorX * CharWidth;
+	U32 Y = Screen->TextCursorY * CharHeight;
 
-	BltBuffer = (U32 *)Screen->FrameBuffer.FrameBufferCopy;
+	volatile U32 *BltBuffer = (U32 *)Screen->FrameBuffer.FrameBufferCopy;
 
-	for (i = 0; i < u; i++) // x
+	for (U32 i = 0; i < u; i++) // x
 	{
-		for (j = 0; j < v; j++) // y
+		for (U32 j = 0; j < v; j++) // y
 		{
 			U8 b = *Bits++;
 
-			for (k = 0; k < 8; k++)
+			for (U32 k = 0; k < 8; k++)
 			{
 				U32 DestX = X + k + (i << 3);
 				U32 DestY = Y + j;
@@ -86,6 +83,7 @@ BootFonCharBlt(
 			}
 		}
 	}
+
 
 	Screen->TextCursorX++;
 
@@ -564,7 +562,7 @@ BootGfxPrintText(
 }
 
 BOOLEAN
-KERNELAPI
+VARCALL
 BootGfxPrintTextFormat(
 	IN CHAR8 *Format, 
 	...)
@@ -582,7 +580,7 @@ BootGfxPrintTextFormat(
 }
 
 VOID
-KERNELAPI
+VARCALL
 BootGfxFatalStop(
 	IN CHAR8 *Format,
 	...)

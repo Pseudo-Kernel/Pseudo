@@ -92,6 +92,7 @@ typedef struct _PHYSICAL_ADDRESSES
 //	VOID);
 
 ESTATUS
+KERNELAPI
 MmReallocateVirtualMemory(
     IN PVOID ReservedZero,
     IN OUT PTR *Address,
@@ -100,6 +101,7 @@ MmReallocateVirtualMemory(
     IN VAD_TYPE Type);
 
 ESTATUS
+KERNELAPI
 MmAllocateVirtualMemory2(
     IN PVOID ReservedZero,
     IN OUT PTR *Address,
@@ -109,6 +111,7 @@ MmAllocateVirtualMemory2(
 
 KEXPORT
 ESTATUS
+KERNELAPI
 MmAllocateVirtualMemory(
     IN PVOID ReservedZero,
 	IN OUT PTR *Address,
@@ -117,11 +120,13 @@ MmAllocateVirtualMemory(
 
 KEXPORT
 ESTATUS
+KERNELAPI
 MmFreeVirtualMemory(
 	IN PTR Address,
 	IN SIZE_T Size);
 
 ESTATUS
+KERNELAPI
 MmReallocatePhysicalMemory(
     IN OUT PTR *Address,
     IN SIZE_T Size,
@@ -129,6 +134,7 @@ MmReallocatePhysicalMemory(
     IN PAD_TYPE Type);
 
 ESTATUS
+KERNELAPI
 MmAllocatePhysicalMemory2(
     IN OUT PTR *Address,
     IN SIZE_T Size,
@@ -137,6 +143,7 @@ MmAllocatePhysicalMemory2(
 
 KEXPORT
 ESTATUS
+KERNELAPI
 MmAllocatePhysicalMemory(
 	IN OUT PTR *Address,
 	IN SIZE_T Size,
@@ -144,12 +151,14 @@ MmAllocatePhysicalMemory(
 
 KEXPORT
 ESTATUS
+KERNELAPI
 MmFreePhysicalMemory(
 	IN PTR Address,
 	IN SIZE_T Size);
 
 KEXPORT
 ESTATUS
+KERNELAPI
 MmAllocatePhysicalMemoryGather(
 	IN OUT PHYSICAL_ADDRESSES *PhysicalAddresses,
 	IN SIZE_T Size,
@@ -157,6 +166,7 @@ MmAllocatePhysicalMemoryGather(
 
 
 ESTATUS
+KERNELAPI
 MiMapMemory(
     IN U64 *ToplevelTable,
     IN U64 *ToplevelTableReverse,
@@ -173,6 +183,7 @@ MiMapMemory(
 
 KEXPORT
 ESTATUS
+KERNELAPI
 MmMapMemory(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress,

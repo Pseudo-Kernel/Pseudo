@@ -59,7 +59,7 @@ DbgTraceN(
 	IN SIZE_T Length);
 
 BOOLEAN
-KERNELAPI
+VARCALL
 DbgTraceF(
 	IN DBG_TRACE_LEVEL TraceLevel,
 	IN CHAR8 *Format,

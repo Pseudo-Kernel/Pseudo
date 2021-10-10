@@ -48,10 +48,13 @@ typedef enum _KINTERRUPT_RESULT
 } KINTERRUPT_RESULT;
 
 
+
+typedef struct _KINTERRUPT          KINTERRUPT, *PKINTERRUPT;
+
 typedef
 KINTERRUPT_RESULT
-(*PKINTERRUPT_ROUTINE)(
-    IN struct _KINTERRUPT *Interrupt,
+(KERNELAPI *PKINTERRUPT_ROUTINE)(
+    IN PKINTERRUPT Interrupt,
     IN PVOID InterruptContext);
 
 
@@ -66,7 +69,7 @@ typedef struct _KINTERRUPT
 //    ULONG32 Flags;
 
     DLIST_ENTRY InterruptList;
-} KINTERRUPT, *PKINTERRUPT;
+} KINTERRUPT;
 
 
 #define IRQS_PER_IRQ_GROUP                  16  // 16 IRQs per 1 IRQL (IRQL = TPR[7:4] = CR8[3:0])
@@ -99,6 +102,31 @@ extern KIRQ_GROUP KiIrqGroup[IRQ_GROUPS_MAX];
 #define INTERRUPT_AUTO_EOI              0x10000000  // Sends the EOI automatically if specified.
 
 
+
+ESTATUS
+KERNELAPI
+KeAllocateIrqVector(
+    IN KIRQL GroupIrql,
+    IN ULONG Count,
+    OPTIONAL IN ULONG VectorHint, // Ignored if 0
+    IN ULONG Flags,
+    OUT ULONG *StartingVector,
+    IN BOOLEAN LockGroupIrq);
+
+ESTATUS
+KERNELAPI
+KeIsIrqVectorAllocated(
+    IN ULONG Vector,
+    IN ULONG Flags,
+    OUT BOOLEAN *Allocated,
+    IN BOOLEAN LockGroupIrq);
+
+ESTATUS
+KERNELAPI
+KeFreeIrqVector(
+    IN ULONG StartingVector,
+    IN ULONG Count,
+    IN BOOLEAN LockGroupIrq);
 
 ESTATUS
 KERNELAPI

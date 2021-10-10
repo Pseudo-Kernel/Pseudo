@@ -13,6 +13,7 @@
 #include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
+#include <ke/lock.h>
 #include <mm/pool.h>
 #include <mm/mminit.h>
 #include <mm/paging.h>

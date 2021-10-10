@@ -60,45 +60,54 @@ typedef struct _MMXAD_TREE
 
 
 BOOLEAN
+KERNELAPI
 MmXadDebugTraverse(
     IN PVOID CallerContext,
     IN MMXAD *Xad);
 
 
 BOOLEAN
+KERNELAPI
 MmXadIsAddressRangeValid(
 	IN ADDRESS_RANGE *AddressRange);
 
 BOOLEAN
+KERNELAPI
 MmXadIsInAddressRange(
 	IN ADDRESS_RANGE *SourceAddressRange,
 	IN ADDRESS_RANGE *TestAddressRange);
 
 VOID
+KERNELAPI
 MmXadAcquireLock(
     IN MMXAD_TREE *XadTree);
 
 VOID
+KERNELAPI
 MmXadReleaseLock(
     IN MMXAD_TREE *XadTree);
 
 BOOLEAN
+KERNELAPI
 MmXadInitializeTree(
 	OUT MMXAD_TREE *XadTree,
 	IN PVOID CallerContext);
 
 ESTATUS
+KERNELAPI
 MmXadInsertAddress(
 	IN MMXAD_TREE *XadTree,
 	OUT MMXAD **Xad,
 	IN ADDRESS *Address);
 
 ESTATUS
+KERNELAPI
 MmXadDeleteAddress(
 	IN MMXAD_TREE *XadTree,
 	IN ADDRESS *Address);
 
 ESTATUS
+KERNELAPI
 MmXadReclaimAddress(
 	IN MMXAD_TREE *XadTree,
 	IN MMXAD *Xad,
@@ -112,6 +121,7 @@ MmXadReclaimAddress(
 #define	XAD_LAF_TYPE				0x04 //!< Uses TypeHint.
 
 ESTATUS
+KERNELAPI
 MmXadLookupAddress(
 	IN MMXAD_TREE *XadTree,
 	OUT MMXAD **Xad,

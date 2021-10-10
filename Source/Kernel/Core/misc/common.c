@@ -2,6 +2,7 @@
 #include <base/base.h>
 
 SIZE_T
+KERNELAPI
 ClStrLengthU8(
     IN CHAR8 *Buffer,
     IN SIZE_T BufferLength)
@@ -15,6 +16,7 @@ ClStrLengthU8(
 }
 
 SIZE_T
+KERNELAPI
 ClStrLengthU16(
     IN CHAR16 *Buffer,
     IN SIZE_T BufferLength)
@@ -28,6 +30,7 @@ ClStrLengthU16(
 }
 
 SIZE_T
+KERNELAPI
 FormatHelper_InternalStrFillU8(
     IN OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -51,6 +54,7 @@ FormatHelper_InternalStrFillU8(
 
 
 SIZE_T
+KERNELAPI
 FormatHelper_InternalStrCopyU16ToU8(
     IN OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -74,6 +78,7 @@ FormatHelper_InternalStrCopyU16ToU8(
 }
 
 SIZE_T
+KERNELAPI
 FormatHelper_InternalStrCopyU8(
     IN OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -98,6 +103,7 @@ FormatHelper_InternalStrCopyU8(
 
 
 SIZE_T
+KERNELAPI
 FormatHelper_StrCopyU16ToU8(
     OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -133,6 +139,7 @@ FormatHelper_StrCopyU16ToU8(
 }
 
 SIZE_T
+KERNELAPI
 FormatHelper_StrCopyU8(
     OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -168,6 +175,7 @@ FormatHelper_StrCopyU8(
 }
 
 SIZE_T
+KERNELAPI
 FormatHelper_ValueToStringU8(
     OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -326,6 +334,7 @@ FormatHelper_ValueToStringU8(
 }
 
 SIZE_T
+KERNELAPI
 ClStrFormatU8V(
     OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -591,6 +600,7 @@ _Return :
 }
 
 SIZE_T
+VARCALL
 ClStrFormatU8(
     OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -608,6 +618,7 @@ ClStrFormatU8(
 }
 
 SIZE_T
+KERNELAPI
 ClStrTerminateU8(
     IN OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
@@ -625,6 +636,7 @@ ClStrTerminateU8(
 }
 
 SIZE_T
+KERNELAPI
 ClStrCopyU8(
     OUT CHAR8 *Buffer,
     IN SIZE_T BufferLength,
