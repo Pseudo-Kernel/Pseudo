@@ -8,6 +8,14 @@
  * 
  * @copyright Copyright (c) 2021
  * 
+ * @note Compiler & toolchain:\n
+ *       - Compiler: gcc version 10.2.0 (GCC) [mingw-w64-x86_64-gcc (MSYS2)]\n
+ *                   ('pacman -S mingw-w64-x86_64-gcc' to install)
+ *       - Toolchain: [mingw-w64-x86_64-toolchain (MSYS2)]\n
+ *                   ('pacman -S mingw-w64-x86_64-toolchain' to install)
+ *       - Debugger: gdb version 8.1 (mingw-w64, x86_64-8.1.0-posix-seh-rt_v6-rev0)\n
+ *                   (Recent gdb doesn't working with vscode/QEMU)
+ * 
  * @todo There are many works to do:\n
  *       - Interrupt registration and dispatch
  *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
@@ -15,10 +23,10 @@
  *       - Synchronization primitives
  * 
  * @todo Current issues:\n
- *       - Kernel crashes randomly when interrupt is enabled [RESOLVED].
+ *       - Kernel crashes randomly when interrupt is enabled [RESOLVED].\n
  *         Resolved by adding -mno-red-zone option.
- *       - Kernel crashes when handling arguments in variadic function (which uses sysv_abi) [RESOLVED].
- *         Looks like va_start() gives invalid result.
+ *       - Kernel crashes when handling arguments in variadic function (which uses sysv_abi) [RESOLVED].\n
+ *         Looks like va_start() gives invalid result.\n
  *         Resolved by using ms_abi for variadic function.
  *       - Compilation fails with internal compiler error when compile with -O3.
  */

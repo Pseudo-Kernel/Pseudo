@@ -51,7 +51,7 @@ BootFonCharBlt(
 	U32 X = Screen->TextCursorX * CharWidth;
 	U32 Y = Screen->TextCursorY * CharHeight;
 
-	volatile U32 *BltBuffer = (U32 *)Screen->FrameBuffer.FrameBufferCopy;
+	U32 *BltBuffer = (U32 *)Screen->FrameBuffer.FrameBufferCopy;
 
 	for (U32 i = 0; i < u; i++) // x
 	{

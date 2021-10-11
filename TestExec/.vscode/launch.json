@@ -46,16 +46,20 @@
             "request": "launch",
             "program": "${workspaceFolder}/Filesystem/EFI/BOOT/BOOTx64.efi",
             "showDisplayString": true,
-//            "program": "${command:cmake.launchTargetPath}",
             "args": [
                 "--nx", "--nh"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": true, // true
+            "externalConsole": true,
             "MIMode": "gdb",
+
+            /* NOTE: Currently working gdb version is 8.1 (tested on mingw-w64, x86_64-8.1.0-posix-seh-rt_v6-rev0).
+                     Recent version of gdb (10.1) requires handling qGetTIBAddr packet.
+                     (Debugging fails with error message. Looks like QEMU doesn't handle this.) */
             "miDebuggerPath": "D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\gdb.exe",
+            
             "targetArchitecture": "x86_64",
             "setupCommands": [
                 {
