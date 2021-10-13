@@ -1,4 +1,15 @@
 
+/**
+ * @file xadtree.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements binary tree structure for physical/virtual address descriptor.
+ * @version 0.1
+ * @date 2021-09-14
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
+
 #include <base/base.h>
 #include <base/gerror.h>
 #include <init/bootgfx.h>

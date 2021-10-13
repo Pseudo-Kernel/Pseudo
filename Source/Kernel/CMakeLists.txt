@@ -42,10 +42,12 @@ set(SRC_LIST
     core/init/preinit.h
     core/init/zip.h
     core/init/init.h
+    core/init/acpi.h
     core/init/bootgfx.c
     core/init/preinit.c
     core/init/zipread.c
     core/init/init.c
+    core/init/acpi.c
     # ke
     core/ke/ke.h
     core/ke/lock.h

@@ -8,7 +8,8 @@
  * 
  * @copyright Copyright (c) 2021
  * 
- * @todo Implement MmMapMemory which maps physical address to virtual address.\n
+ * @todo Acquire lock when accessing XAD structure.
+ * 
  */
 
 #include <mm/mm.h>

@@ -5,4 +5,7 @@
     "cmake.configureSettings": {
         "CMAKE_C_COMPILER": "gcc",
     },
+    "cmake.preferredGenerators": [
+        "MinGW Makefiles",
+    ],
 }

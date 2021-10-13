@@ -16,10 +16,6 @@
 
 	"settings": {
 		"terminal.integrated.windowsEnableConpty": false,
-		"terminal.integrated.env.windows": {
-			// CONFIG: Must include path for Mingw-w64 bin, CMake bin.
-			"PATH": "${env:PATH};D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin;C:\\CMake\\bin;"
-		},
 
         // C/C++ extension settings
 		"C_Cpp.default.cStandard": "c11",
@@ -33,8 +29,8 @@
             "**/.vscode": true
         },
         "C_Cpp.autoAddFileAssociations": false,
-        // CONFIG: Compiler path
-        "C_Cpp.default.compilerPath": "D:\\mingw-w64\\x86_64-8.1.0-posix-seh-rt_v6-rev0\\mingw64\\bin\\gcc.exe",
+        // CONFIG: Compiler path (intellisense)
+        "C_Cpp.default.compilerPath": "D:/msys64/mingw64/bin/gcc.exe",
 
 		"files.exclude": {
 			"**/*.s": true,

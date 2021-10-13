@@ -14,6 +14,7 @@
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 #include <init/zip.h>
+#include <init/acpi.h>
 #include <ke/ke.h>
 #include <mm/pool.h>
 #include <mm/mminit.h>
@@ -93,5 +94,17 @@ PiPreInitialize(
     //
 
     MiPreDumpXad();
+
+
+    //
+    // Read and vaildate ACPI table.
+    //
+
+    Status = PiAcpiPreInitialize((PVOID)LoaderBlockTemp->Configuration.AcpiTable);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        FATAL("Failed to getting ACPI tables (0x%08x)", Status);
+    }
 }
 
