@@ -12,7 +12,7 @@
 
 
 #include <base/base.h>
-#include <drivers/builtin/8259pic.h>
+#include <hal/8259pic.h>
 
 /**
  * @brief Masks the interrupt for master/slave PIC.
@@ -28,7 +28,7 @@
  */
 VOID
 KERNELAPI
-Bid_8259MaskInterrupt(
+HalPicMaskInterrupt(
     IN U16 InterruptMask)
 {
     // 1 for interrupt disabled, 0 for enabled
@@ -40,14 +40,14 @@ Bid_8259MaskInterrupt(
  * @brief Initializes the master/slave PICs and masks interrupts.
  * 
  * @param [in] InterruptMask    16-bit interrupt mask for IRQ0 to IRQ15.\n
- *                              See Bid_8259MaskInterrupt().
+ *                              See HalPicMaskInterrupt().
  * @param [in] VectorBase       IDT base index for IRQ0.
  * 
  * @return None.
  */
 VOID
 KERNELAPI
-Bid_8259EnableInterrupt(
+HalPicEnableInterrupt(
     IN U16 InterruptMask, 
     IN U8 VectorBase)
 {
@@ -111,7 +111,7 @@ Bid_8259EnableInterrupt(
  */
 VOID
 KERNELAPI
-Bid_8259Eoi(
+HalPicSendEoi(
     IN U8 ServicingVector)
 {
     if (ServicingVector >= 0x08)
@@ -133,7 +133,7 @@ Bid_8259Eoi(
  */
 U16
 KERNELAPI
-Bid_8259ReadRegister(
+HalPicReadRegister(
     IN U8 Value)
 {
     //
@@ -159,10 +159,10 @@ Bid_8259ReadRegister(
  */
 BOOLEAN
 KERNELAPI
-Bid_8259GetInServicingVector(
+HalPicGetInServicingVector(
     OUT U8 *ServicingVector)
 {
-    U16 InServiceRegister = Bid_8259ReadRegister(PIC_OCW3_READ_ISR);
+    U16 InServiceRegister = HalPicReadRegister(PIC_OCW3_READ_ISR);
 
     for (U8 Vector = 0; Vector < 16; Vector++)
     {
@@ -184,12 +184,29 @@ Bid_8259GetInServicingVector(
  */
 BOOLEAN
 KERNELAPI
-Bid_8259InServicing(
+HalPicInServicing(
     IN U8 ServicingVector)
 {
-    U16 InServiceRegister = Bid_8259ReadRegister(PIC_OCW3_READ_ISR);
+    U16 InServiceRegister = HalPicReadRegister(PIC_OCW3_READ_ISR);
 
     DASSERT(0 <= ServicingVector && ServicingVector <= 0x0f);
 
     return (InServiceRegister & (1 << ServicingVector)) != 0;
+}
+
+
+/**
+ * @brief Reads edge/level triggered register (ELCR).
+ * 
+ * @return 16-bit trigger mode for IRQ0..15.\n
+ *         Each bit represents trigger mode for corresponding IRQ.\n
+ *         For example, IRQ0 is level-triggered if LSB is set.\n
+ *                      IRQ15 is edge-triggered if MSB is cleared.\n
+ */
+U16
+KERNELAPI
+HalPicReadTriggerModeRegister(
+    VOID)
+{
+    return (__inbyte(PIC1_ELCR2) << 8) | __inbyte(PIC0_ELCR1);
 }

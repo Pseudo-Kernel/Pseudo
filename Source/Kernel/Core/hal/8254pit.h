@@ -31,16 +31,16 @@
 
 BOOLEAN
 KERNELAPI
-Bid_8254SetupTimer(
+Hal_8254SetupTimer(
     IN U32 Frequency);
 
 U64
 KERNELAPI
-Bid_8254GetTickCount(
+Hal_8254GetTickCount(
     VOID);
 
 VOID
 KERNELAPI
-Bid_8254Initialize(
+Hal_8254Initialize(
     VOID);
 

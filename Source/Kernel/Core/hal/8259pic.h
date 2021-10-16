@@ -8,6 +8,20 @@
 #define PIC1_COMMAND        0xa0
 #define PIC1_DATA           0xa1
 
+
+//
+// Edge/Level trigerred register.
+// (Each bit represents trigger mode; 0 = edge-triggered, 1 = level-triggered.)
+//
+
+#define PIC0_ELCR1          0x4d0 // [7:3] trigger mode for IRQ3..7 / [2:0] zero.
+#define PIC1_ELCR2          0x4d1 // [7:6, 4:1] trigger mode for IRQ15..14, IRQ12..9 / [5, 0] zero.
+
+
+//
+// Initialization control word (ICW).
+//
+
 #define PIC_ICW1_DEFAULT    0x10 // default bit
 #define PIC_ICW1_ICW4       0x01 // 1 - ICW4 needed, 0 - not needed
 #define PIC_ICW1_SNGL       0x02 // 1 - single mode, 0 - cascade mode
@@ -19,6 +33,11 @@
 #define PIC_ICW4_MS         0x04 // BUF:MS 0:x - non-buffered-mode
 #define PIC_ICW4_BUF        0x08 //        1:0 - buffered mode (slave), 1:1 - buffered mode (master)
 #define PIC_ICW4_SFNM       0x10 // 1 - special fully nested mode, 0 - not special
+
+
+//
+// Operational control word (OCW).
+//
 
 #define PIC_OCW2_EOI        0x20
 #define PIC_OCW3_READ_IRR   0x0a // read irr
@@ -33,31 +52,36 @@
 
 VOID
 KERNELAPI
-Bid_8259MaskInterrupt(
+HalPicMaskInterrupt(
     IN U16 InterruptMask);
 
 VOID
 KERNELAPI
-Bid_8259EnableInterrupt(
+HalPicEnableInterrupt(
     IN U16 InterruptMask, 
     IN U8 VectorBase);
 
 VOID
 KERNELAPI
-Bid_8259Eoi(
+HalPicSendEoi(
     IN U8 ServicingVector);
 
 U16
 KERNELAPI
-Bid_8259ReadRegister(
+HalPicReadRegister(
     IN U8 Value);
 
 BOOLEAN
 KERNELAPI
-Bid_8259GetInServicingVector(
+HalPicGetInServicingVector(
     OUT U8 *ServicingVector);
 
 BOOLEAN
 KERNELAPI
-Bid_8259InServicing(
+HalPicInServicing(
     IN U8 ServicingVector);
+
+U16
+KERNELAPI
+HalPicReadTriggerModeRegister(
+    VOID);

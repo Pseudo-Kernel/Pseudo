@@ -38,8 +38,8 @@
 #include <mm/mminit.h>
 #include <mm/pool.h>
 
-#include <drivers/builtin/8254pit.h>
-#include <drivers/builtin/8259pic.h>
+#include <hal/8254pit.h>
+#include <hal/8259pic.h>
 
 
 /**
@@ -52,8 +52,8 @@
  * 
  * @return This function never returns.
  */
-__attribute__((ms_abi))
 U64
+__attribute__((ms_abi))
 KiKernelStart(
 	IN PTR LoadedBase, 
 	IN OS_LOADER_BLOCK *LoaderBlock, 
@@ -108,16 +108,16 @@ KiKernelStart(
 
     // Interrupt Test
 
-    Bid_8259EnableInterrupt(~0, IRQL_TO_VECTOR_START(IRQL_LEGACY));
-    Bid_8254Initialize();
-    Bid_8259MaskInterrupt(~(1 << 0));
+    HalPicEnableInterrupt(~0, IRQL_TO_VECTOR_START(IRQL_LEGACY));
+    Hal_8254Initialize();
+    HalPicMaskInterrupt(~(1 << 0));
 
     _enable();
 
     for (U32 i = 0; ; i++)
     {
         __halt();
-        BGXTRACE("Tick = %lld\r", Bid_8254GetTickCount());
+        BGXTRACE("Tick = %lld\r", Hal_8254GetTickCount());
 //        BGXTRACE("Cnt = %d\n", i);
     }
 

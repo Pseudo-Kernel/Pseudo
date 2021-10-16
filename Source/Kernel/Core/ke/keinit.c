@@ -18,6 +18,7 @@
 #include <mm/mm.h>
 #include <mm/pool.h>
 #include <init/bootgfx.h>
+#include <hal/acpi.h>
 
 PTR KiInterruptHandlers[0x100] =
 {
@@ -837,6 +838,12 @@ KiInitialize(
             DListInitializeHead(&Irq->InterruptListHead);
         }
     }
+
+    //
+    // Start processors.
+    //
+
+//    PiAcpiPreInitializ
 
 }
 

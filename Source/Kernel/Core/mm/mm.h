@@ -184,9 +184,18 @@ MiMapMemory(
 KEXPORT
 ESTATUS
 KERNELAPI
-MmMapMemory(
+MmMapPages(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress,
     IN U64 Flags, 
     IN BOOLEAN AllowNonDefaultPageSize,
     IN U64 MapFlags);
+
+KEXPORT
+ESTATUS
+KERNELAPI
+MmMapSinglePage(
+    IN PHYSICAL_ADDRESS PhysicalAddress,
+    IN VIRTUAL_ADDRESS VirtualAddress,
+    IN U64 PxeFlags);
+

@@ -15,8 +15,8 @@
 #include <init/bootgfx.h>
 #include <mm/mm.h>
 #include <mm/pool.h>
-#include <drivers/builtin/8259pic.h>
-#include <drivers/builtin/8254pit.h>
+#include <hal/8259pic.h>
+#include <hal/8254pit.h>
 
 typedef struct _BID_8254_PIT_CONTEXT
 {
@@ -42,12 +42,12 @@ U32 Bid_8254TimerFrequency;
  */
 KINTERRUPT_RESULT
 KERNELAPI
-Bid_8254Isr_PIC(
+Hal_8254Isr_PIC(
     IN PKINTERRUPT Interrupt,
     IN PVOID InterruptContext)
 {
     Bid_8254TickCount++;
-    Bid_8259Eoi(PIT_VECTOR);
+    HalPicSendEoi(PIT_VECTOR);
 
     return InterruptAccepted;
 }
@@ -61,7 +61,7 @@ Bid_8254Isr_PIC(
  */
 BOOLEAN
 KERNELAPI
-Bid_8254SetupTimer(
+Hal_8254SetupTimer(
 	IN U32 Frequency)
 {
 	if (!Frequency)
@@ -90,7 +90,7 @@ Bid_8254SetupTimer(
  */
 U64
 KERNELAPI
-Bid_8254GetTickCount(
+Hal_8254GetTickCount(
     VOID)
 {
     return Bid_8254TickCount;
@@ -103,7 +103,7 @@ Bid_8254GetTickCount(
  */
 VOID
 KERNELAPI
-Bid_8254Initialize(
+Hal_8254Initialize(
 	VOID)
 {
     PKINTERRUPT Interrupt = MmAllocatePool(PoolTypeNonPaged, sizeof(KINTERRUPT), 0x10, 0);
@@ -113,7 +113,7 @@ Bid_8254Initialize(
     }
 
     ULONG Vector = 0;
-    ESTATUS Status = KeInitializeInterrupt(Interrupt, &Bid_8254Isr_PIC, NULL, 0);
+    ESTATUS Status = KeInitializeInterrupt(Interrupt, &Hal_8254Isr_PIC, NULL, 0);
 
     DASSERT(E_IS_SUCCESS(Status));
     Status = KeAllocateIrqVector(IRQL_LEGACY, 1, PIT_VECTOR, INTERRUPT_IRQ_HINT_EXACT_MATCH, &Vector, TRUE);
@@ -133,5 +133,5 @@ Bid_8254Initialize(
     Bid_8254Context.Vector = Vector;
 
 	Bid_8254TickCount = 0;
-	Bid_8254SetupTimer(1000); // 1 Interrupt per millisecond
+	Hal_8254SetupTimer(1000); // 1 Interrupt per millisecond
 }

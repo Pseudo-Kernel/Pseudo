@@ -42,12 +42,10 @@ set(SRC_LIST
     core/init/preinit.h
     core/init/zip.h
     core/init/init.h
-    core/init/acpi.h
     core/init/bootgfx.c
     core/init/preinit.c
     core/init/zipread.c
     core/init/init.c
-    core/init/acpi.c
     # ke
     core/ke/ke.h
     core/ke/lock.h
@@ -58,11 +56,17 @@ set(SRC_LIST
     core/ke/irql.c
     core/ke/interrupt.c
     core/ke/keinit.c
-    # drivers/builtin
-    core/drivers/builtin/8259pic.h
-    core/drivers/builtin/8254pit.h
-    core/drivers/builtin/8259pic.c
-    core/drivers/builtin/8254pit.c
+    # hal
+    core/hal/8259pic.h
+    core/hal/8254pit.h
+    core/hal/ioapic.h
+    core/hal/acpi.h
+    core/hal/halinit.h
+    core/hal/8259pic.c
+    core/hal/8254pit.c
+    core/hal/ioapic.c
+    core/hal/acpi.c
+    core/hal/halinit.c
     # misc
     core/misc/common.h
     core/misc/list.h

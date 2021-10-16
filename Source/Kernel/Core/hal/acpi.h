@@ -90,9 +90,13 @@ typedef struct _ACPI_XSDT
 // MADT record type definitions.
 //
 
-#define ACPI_MADT_RECORD_LAPIC              0
-#define ACPI_MADT_RECORD_IOAPIC             1
-#define ACPI_MADT_RECORD_INTSRC_OVERRIDE    2
+#define ACPI_MADT_RECORD_LOCAL_APIC                 0
+#define ACPI_MADT_RECORD_IOAPIC                     1
+#define ACPI_MADT_RECORD_INTSRC_OVERRIDE            2
+#define ACPI_MADT_RECORD_NMI_SOURCE                 3
+#define ACPI_MADT_RECORD_APIC_NMI                   4
+#define ACPI_MADT_RECORD_APIC_ADDRESS_OVERRIDE      5
+
 
 typedef struct _ACPI_MADT_RECORD_HEADER
 {
@@ -146,42 +150,47 @@ typedef struct _ACPI_IOAPIC
 #define ACPI_INT_OVERRIDE_TRIG_EDGE                         1
 #define ACPI_INT_OVERRIDE_TRIG_LEVEL                        3
 
+typedef union _MPS_INTI_FLAGS
+{
+    struct
+    {
+        // Polarity of the APIC I/O Input signals:
+        // 00 - Conforms to the specifications of the bus
+        //      (For example, EISA is active-low for level-triggered interrupts)
+        // 01 - Active high
+        // 10 - Reserved
+        // 11 - Active low
+        U16 Polarity:2;
+
+        // Trigger mode of the APIC I/O Input signals:
+        // 00 - Conforms to specifications of the bus
+        //      (For example, ISA is edge-trigerred)
+        // 01 - Edge-triggered
+        // 10 - Reserved
+        // 11 - Level-triggered
+        U16 TriggerMode:2;
+
+        U16 Reserved:12;
+    };
+
+    U16 Value;
+} MPS_INTI_FLAGS;
+
 typedef struct _ACPI_INTERRUPT_SOURCE_OVERRIDE
 {
     // Entry Type 2.
     ACPI_MADT_RECORD_HEADER Header;
     U8 BusSource;       // Constant(it'll be only 0), meaning ISA
-    U8 IrqSource;       // IRQ
+    U8 Irq;             // Bus-relative interrupt source (IRQ)
 
     //
     // Global System Interrupt.
+    // The Global System Interrupt that this bus-relative interrupt source will signal.
     //
-    // The Global System Interrupt Vector that this bus-
-    // relative interrupt source will trigger.
-    //
-    U32 GSI_Vector;
-    
-    union
-    {
-        struct
-        {
-            // Polarity of the APIC I/O Input signals:
-            // 00 - Conforms to the specifications of the bus
-            // 01 - Active high
-            // 10 - Reserved
-            // 11 - Active low
-            U16 Polarity:2;
 
-            // Trigger mode of the APIC I/O Input signals:
-            // 00 - Conforms to specifications of the bus
-            // 01 - Edge-triggered
-            // 10 - Reserved
-            // 11 - Level Triggered
-            U16 TriggerMode:2;
-            U16 Reserved:12;
-        };
-        U16 Flags;
-    };
+    U32 GSI;
+    
+    MPS_INTI_FLAGS Flags;
 
     //
     // For example, if your machine has the ISA Programmable Interrupt Timer (PIT)
@@ -190,9 +199,46 @@ typedef struct _ACPI_INTERRUPT_SOURCE_OVERRIDE
     // is '0' and the Global System Interrupt is '2.'
     //
 
-    // Redirect: MADT.INT_OVERRIDE.IrqSource -> MADT.INT_OVERRIDE.GSI_Vector - MADT.IOAPIC.GSI_Base
+    // Redirect: MADT.INT_OVERRIDE.Irq -> MADT.INT_OVERRIDE.GSI - MADT.IOAPIC.GSI_Base
 } ACPI_INTERRUPT_SOURCE_OVERRIDE, *PACPI_INTERRUPT_SOURCE_OVERRIDE;
 
+
+typedef struct _ACPI_NMI_SOURCE
+{
+    // Entry Type 3.
+    ACPI_MADT_RECORD_HEADER Header;
+    MPS_INTI_FLAGS Flags;
+    U32 GSI;
+} ACPI_NMI_SOURCE, *PACPI_NMI_SOURCE;
+
+typedef struct _ACPI_LOCAL_APIC_NMI
+{
+    // Entry Type 4.
+    ACPI_MADT_RECORD_HEADER Header;
+    U8 AcpiProcessorId;
+    MPS_INTI_FLAGS Flags;
+    U8 LocalApicLINTn;
+} ACPI_LOCAL_APIC_NMI, *PACPI_LOCAL_APIC_NMI;
+
+typedef struct _ACPI_LOCAL_APIC_ADDRESS_OVERRIDE
+{
+    // Entry Type 5.
+    ACPI_MADT_RECORD_HEADER Header;
+    U16 Reserved;
+    U64 LocalApicAddress;
+} ACPI_LOCAL_APIC_ADDRESS_OVERRIDE, *PACPI_LOCAL_APIC_ADDRESS_OVERRIDE;
+
+
+typedef union _ACPI_MADT_RECORD_UNION
+{
+    ACPI_MADT_RECORD_HEADER RecordHeader;
+    ACPI_LOCAL_APIC LocalApic;
+    ACPI_IOAPIC IoApic;
+    ACPI_INTERRUPT_SOURCE_OVERRIDE InterruptOverride;
+    ACPI_NMI_SOURCE NmiSource;
+    ACPI_LOCAL_APIC_NMI ApicNmi;
+    ACPI_LOCAL_APIC_ADDRESS_OVERRIDE ApicAddressOverride;
+} ACPI_MADT_RECORD_UNION, *PACPI_MADT_RECORD_UNION;
 
 
 typedef struct _ACPI_MADT
@@ -294,10 +340,17 @@ typedef struct _ACPI_FADT
 
 #pragma pack(pop)
 
+extern ACPI_XSDT *HalAcpiXsdt;
 
 
 ESTATUS
 KERNELAPI
-PiAcpiPreInitialize(
+HalAcpiPreInitialize(
     IN PVOID Rsdp);
+
+ACPI_DESCRIPTION_HEADER *
+KERNELAPI
+HalAcpiLookupDescriptionPointer(
+    IN ACPI_XSDT *Xsdt,
+    IN const CHAR *Signature);
 

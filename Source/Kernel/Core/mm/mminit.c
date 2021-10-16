@@ -396,7 +396,7 @@ MmInitialize(
             FATAL("Failed to initialize pool (0x%08x)", Status);
         }
 
-        Status = MmMapMemory(Addresses, PoolVirtualBase, ARCH_X64_PXE_WRITABLE, TRUE, 0/*MAP_MEMORY_FLAG_USE_PRE_INIT_PXE*/);
+        Status = MmMapPages(Addresses, PoolVirtualBase, ARCH_X64_PXE_WRITABLE, TRUE, 0/*MAP_MEMORY_FLAG_USE_PRE_INIT_PXE*/);
         if (!E_IS_SUCCESS(Status))
         {
             FATAL("Failed to initialize pool (0x%08x)", Status);

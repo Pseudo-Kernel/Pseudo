@@ -698,7 +698,7 @@ MiMapMemory(
 KEXPORT
 ESTATUS
 KERNELAPI
-MmMapMemory(
+MmMapPages(
     IN PHYSICAL_ADDRESSES *PhysicalAddresses,
     IN VIRTUAL_ADDRESS VirtualAddress,
     IN U64 PxeFlags, 
@@ -713,5 +713,40 @@ MmMapMemory(
 
     return MiMapMemory(MiPML4TBase, MiRPML4TBase, PhysicalAddresses, VirtualAddress, 
         PxeFlags, AllowNonDefaultPageSize, &MiPreInitPxePool/* PxePool */);
+}
+
+/**
+ * @brief Maps the single physical page to virtual addresses.
+ * 
+ * @param [in] PhysicalAddress          4K-aligned physical page address.
+ * @param [in] VirtualAddress           Virtual address.
+ * @param [in] PxeFlags                 PXE flags. See PxeFlags in MiArchX64SetPageMapping.
+ * 
+ * @return ESTATUS code.
+ */
+KEXPORT
+ESTATUS
+KERNELAPI
+MmMapSinglePage(
+    IN PHYSICAL_ADDRESS PhysicalAddress,
+    IN VIRTUAL_ADDRESS VirtualAddress,
+    IN U64 PxeFlags)
+{
+    if (PhysicalAddress & PAGE_MASK)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    PHYSICAL_ADDRESSES PhysicalAddresses = {
+        .Mapped = FALSE,
+        .PhysicalAddressCount = 1,
+        .PhysicalAddressMaximumCount = 1,
+        .StartingVirtualAddress = 0,
+        .PhysicalAddresses[0].Range.Start = PhysicalAddress,
+        .PhysicalAddresses[0].Range.End = PhysicalAddress + PAGE_SIZE - 1,
+    };
+
+    return MiMapMemory(MiPML4TBase, MiRPML4TBase, &PhysicalAddresses, VirtualAddress, 
+        PxeFlags, FALSE, &MiPreInitPxePool/* PxePool */);
 }
 
