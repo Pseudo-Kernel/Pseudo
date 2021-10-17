@@ -79,7 +79,14 @@ HalGSIToLegacyIrq(
     return FALSE;
 }
 
-
+/**
+ * @brief Validates the descriptor checksum.
+ * 
+ * @param [in] Descriptor       Pointer to the descriptor.
+ * @param [in] DescriptorSize   Size of descriptor.
+ * 
+ * @return TRUE if checksum is valid, FALSE otherwise.
+ */
 BOOLEAN
 KERNELAPI
 HalAcpiChecksumDescriptor(
@@ -95,6 +102,14 @@ HalAcpiChecksumDescriptor(
     return !Checksum;
 }
 
+/**
+ * @brief Validates the XSDT.
+ * 
+ * @param [in] Rsdp         Pointer to ACPI_ROOT_POINTER structure.
+ * 
+ * @return Pointer to ACPI_XSDT if succeeds.\n
+ *         If validation fails, this function returns NULL.
+ */
 ACPI_XSDT *
 KERNELAPI
 HalAcpiValidateXSDT(
@@ -120,6 +135,15 @@ HalAcpiValidateXSDT(
     return Xsdt;
 }
 
+/**
+ * @brief Finds the description pointer by signature.
+ * 
+ * @param [in] Xsdt         Pointer to ACPI_XSDT.
+ * @param [in] Signature    4-byte ascii string.
+ * 
+ * @return Pointer to ACPI_DESCRIPTION_HEADER if succeeds.\n
+ *         If validation fails, this function returns NULL.
+ */
 ACPI_DESCRIPTION_HEADER *
 KERNELAPI
 HalAcpiLookupDescriptionPointer(
@@ -138,6 +162,13 @@ HalAcpiLookupDescriptionPointer(
     return NULL;
 }
 
+/**
+ * @brief Do ACPI pre-initialization.\n
+ * 
+ * @param [in] Rsdp     Pointer to ACPI_ROOT_POINTER.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 KERNELAPI
 HalAcpiPreInitialize(
@@ -387,6 +418,14 @@ HalAcpiPreInitialize(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Returns first local apic structure.
+ * 
+ * @param [in] Madt             Pointer to ACPI_MADT.
+ * 
+ * @return Returns pointer to ACPI_LOCAL_APIC if succeeds.\n
+ *         This function returns NULL if it fails.
+ */
 ACPI_LOCAL_APIC *
 KERNELAPI
 HalAcpiGetFirstProcessor(
@@ -408,6 +447,15 @@ HalAcpiGetFirstProcessor(
     return NULL;
 }
 
+/**
+ * @brief Returns next local apic structure.
+ * 
+ * @param [in] Madt             Pointer to ACPI_MADT.
+ * @param [in] ProcessorRecord  Pointer to ACPI_LOCAL_APIC from previous call.
+ * 
+ * @return Returns pointer to ACPI_LOCAL_APIC if succeeds.\n
+ *         This function returns NULL if there are no more apic structures to return.
+ */
 ACPI_LOCAL_APIC *
 KERNELAPI
 HalAcpiGetNextProcessor(
