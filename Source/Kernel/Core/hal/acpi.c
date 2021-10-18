@@ -255,7 +255,7 @@ HalAcpiPreInitialize(
     //
 
     ACPI_MADT_RECORD_HEADER *Record = FirstRecord;
-    while ((PTR)Record + Record->RecordLength < MadtEnd)
+    while ((PTR)Record < MadtEnd)
     {
         if (Record->EntryType == ACPI_MADT_RECORD_IOAPIC)
         {
@@ -316,7 +316,7 @@ HalAcpiPreInitialize(
     //
 
     Record = FirstRecord;
-    while ((PTR)Record + Record->RecordLength < MadtEnd)
+    while ((PTR)Record < MadtEnd)
     {
         if (Record->EntryType == ACPI_MADT_RECORD_INTSRC_OVERRIDE)
         {
