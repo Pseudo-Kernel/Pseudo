@@ -63,12 +63,14 @@ set(SRC_LIST
     core/hal/apic.h
     core/hal/acpi.h
     core/hal/halinit.h
+    core/hal/apstub16.h
     core/hal/8259pic.c
     core/hal/8254pit.c
     core/hal/ioapic.c
     core/hal/apic.c
     core/hal/acpi.c
     core/hal/halinit.c
+    core/hal/apstub16.c
     # misc
     core/misc/common.h
     core/misc/list.h
