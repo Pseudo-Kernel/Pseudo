@@ -15,6 +15,8 @@
 #include <base/base.h>
 #include <hal/apstub16.h>
 
+#define AP_STUB_FOOTPRINT               0
+
 /**
  * @brief 16-bit stub for AP initialization.\n
  *        This function performs mode switching and jumps to the 64-bit starting address.
@@ -35,9 +37,9 @@ HalpApplicationProcessorInitStub(
         "_i386ApInitPacket:\n\t"
         ".byte 0xe9\n\t"            // AP_INIT_PACKET::JumpOp
         ".word (_i386Init-_BASE)\n\t"
-        "nop\n\t"
-        ".int (_i386ApInitPacketHeaderEnd-_i386ApInitPacket)\n\t" // AP_INIT_PACKET::HeaderSize
-        ".int (_i386ApStubEnd-_i386ApInitPacket)\n\t"             // AP_INIT_PACKET::PacketSize
+        ".byte 0x00\n\t"            // Status code
+        ".word (_i386ApInitPacketHeaderEnd-_i386ApInitPacket)\n\t" // AP_INIT_PACKET::HeaderSize
+        ".word (_i386ApStubEnd-_i386ApInitPacket)\n\t"             // AP_INIT_PACKET::PacketSize
         ".ascii \"AP16INIT\"\n\t"   // AP_INIT_PACKET::Signature
         ".int 0x0\n\t"              // AP_INIT_PACKET::PML4Base
         ".int 0x0\n\t"              // AP_INIT_PACKET::LM64StackSize
@@ -59,19 +61,35 @@ HalpApplicationProcessorInitStub(
 
         "_i386Init:\n\t"
         "cli\n\t"
+
+#if AP_STUB_FOOTPRINT
+        // DEBUG!
+        "mov al, '1'\n\t"
+        "out 0xe9, al\n\t"
+        "mov al, '1'\n\t"
+        "out 0xe9, al\n\t"
+#endif
+
         "xor ax, ax\n\t"
         "mov ss, ax\n\t"
-        "mov ax, 0x200\n\t" // AP16_CODE_SEG
+        "mov ax, 0x400\n\t" // AP16_CODE_SEG
         "mov ds, ax\n\t"
         "mov es, ax\n\t"
         "mov fs, ax\n\t"
         "mov gs, ax\n\t"
+        "mov byte ptr [_i386ApInitPacket-_BASE], 1\n\t" // Status = 1
         "push ax\n\t"
         "push (_i386PrepareTransfer-_BASE)\n\t"
         "retf\n\t"
 
         // Setup the stack.
         "_i386PrepareTransfer:\n\t"
+#if AP_STUB_FOOTPRINT
+        // DEBUG!
+        "mov al, '2'\n\t"
+        "out 0xe9, al\n\t"
+#endif
+
         "mov sp, 0x7bfe\n\t" // AP16_TEMP_STACK_LIMIT
 
         // GDTR.Base must point physical address of GDT
@@ -86,6 +104,12 @@ HalpApplicationProcessorInitStub(
         // Locate Initial GDT.
         "mov dword ptr [_i386Gdtr-_BASE+2], eax\n\t"
         "lgdt [_i386Gdtr-_BASE]\n\t"
+
+#if AP_STUB_FOOTPRINT
+        // DEBUG!
+        "mov al, '3'\n\t"
+        "out 0xe9, al\n\t"
+#endif
 
         //
         // 1. Set CR4.PAE = 1
@@ -105,6 +129,7 @@ HalpApplicationProcessorInitStub(
         "mov ecx, 0xc0000080\n\t"   // IA32_EFER
         "rdmsr\n\t"
         "or eax, 0x100\n\t"         // EFER_LME
+        "wrmsr\n\t"
 
         // disable cache!
         "mov eax, cr0\n\t"
@@ -125,31 +150,57 @@ HalpApplicationProcessorInitStub(
         "mov gs, ax\n\t"
         "mov ss, ax\n\t"
 
+#if AP_STUB_FOOTPRINT
+        // DEBUG!
+        "mov al, '4'\n\t"
+        "out 0xe9, al\n\t"
+#endif
+
         // jmp AP_KERNEL_CS:(i386LongMode + (AP16_CODE_SEG * 10h))
         ".byte 0x66\n\t"
         ".byte 0xea\n\t"
-        ".int (_i386LongMode-_BASE + (0x200*0x10))\n\t"
+        ".int (_i386LongMode-_BASE + (0x400*0x10))\n\t"
         ".word 0x08\n\t" // AP_KERNEL_CS
 
         // Now we are in the long mode!!
         // edx = Previous CS.BASE
         // mov rsp, qword ptr [edx + i386ApInitPacket.AP_INIT_PACKET.LM64StackAddress]
-        // sub rsp, 20h
+        // sub rsp, 80h
         // call qword ptr [edx + i386ApInitPacket.AP_INIT_PACKET.LM64StartAddress]
-        // add rsp, 20h
-        "_i386LongMode:"
-        ".byte 0x67; .byte 0x48; .byte 0x8b; .byte 0xa2;\n\t"
-        ".int 0x18\n\t" // offset i386ApInitPacket.AP_INIT_PACKET.LM64StackAddress
-        ".byte 0x48\n\t"
-        "sub sp, 0x80\n\t"
-        ".byte 0x67; .byte 0xff; .byte 0x92;\n\t"
-        ".int 0x20\n\t" // offset i386ApInitPacket.AP_INIT_PACKET.LM64StartAddress
+        "_i386LongMode:\n\t"
+        ".code64\n\t"
+
+#if AP_STUB_FOOTPRINT
+        // DEBUG!
+        "mov al, '5'\n\t"
+        "out 0xe9, al\n\t"
+#endif
+
+        //
+        // Enable SSE instructions.
+        // Compiler may use SSE instructions when optimization is enabled.
+        // 
+        // If SSE instructions are not enabled, 
+        // kernel will crash when executing SSE instructions.
+        //
+
+        "mov rax, cr0\n\t"
+        "and rax, not 0x04\n\t" // CR0_EM
+        "or rax, 0x02\n\t"      // CR0_MP
+        "mov cr0, rax\n\t"
+        "mov rax, cr4\n\t"
+        "or rax, 0x600\n\t"     // CR4_OSFXSR | CR4_OSXMMEXCPT
+        "mov cr4, rax\n\t"
+
+        "mov rsp, qword ptr [edx+0x18]\n\t"
+        "sub rsp, 0x80\n\t"
+        "call qword ptr [edx+0x20]\n\t"
 
         "cli\n\t"
         "hlt\n\t"
 
         "_i386ApStubEnd:\n\t"
-        
+
         :
         :
         : "memory"

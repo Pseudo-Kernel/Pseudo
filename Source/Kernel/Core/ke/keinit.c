@@ -703,6 +703,19 @@ KERNELAPI
 KiInitializeProcessor(
     VOID)
 {
+    // CD=0 | NW=0 | WP=1 | NE=1 | EM=0 | MP=1 | TS=0
+    U64 Value = __readcr0();
+    Value |= (ARCH_X64_CR0_WP | ARCH_X64_CR0_NE | ARCH_X64_CR0_MP);
+    Value &= ~(ARCH_X64_CR0_CD | ARCH_X64_CR0_NW | ARCH_X64_CR0_EM | ARCH_X64_CR0_TS);
+    __writecr0(Value);
+
+    // MCE=1 | PGE=1 | OSFXSR=1 | OSXMMEXCPT=1 | TSD=0
+    Value = __readcr4();
+    Value |= (ARCH_X64_CR4_MCE | ARCH_X64_CR4_PGE | ARCH_X64_CR4_OSFXSR | ARCH_X64_CR4_OSXMMEXCPT);
+    Value &= ~ARCH_X64_CR4_TSD;
+    __writecr4(Value);
+
+
     KPROCESSOR *Processor = MmAllocatePool(PoolTypeNonPaged, sizeof(*Processor), 0x10, 0);
     if (!Processor)
     {
@@ -802,6 +815,8 @@ KiInitializeProcessor(
     //
 
     KiReloadSegments();
+    _writegsbase_u64((U64)Processor);
+
 
     Processor->Self = Processor;
     Processor->Idt = Idt;

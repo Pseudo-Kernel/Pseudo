@@ -170,8 +170,6 @@ HalApicStartProcessor(
 		FATAL("ResetVector must not be 0!");
 	}
 
-	BGXTRACE("Send IIPI-SIPI-SIPI to APIC_ID %d\n", ApicId);
-
     U32 High = LAPIC_ICR_HIGH_DESTINATION_FIELD(ApicId);
     U32 Low_IIPI = 
         LAPIC_ICR_DELIVERY_MODE(LAPIC_ICR_DELIVER_INIT) |

@@ -24,9 +24,12 @@
 #include <hal/acpi.h>
 #include <hal/8259pic.h>
 #include <hal/ioapic.h>
+#include <hal/apic.h>
+#include <hal/apstub16.h>
 
 
 ACPI_XSDT *HalAcpiXsdt;
+ACPI_MADT *HalAcpiMadt;
 
 U8 HalLegacyIrqToGSIMappings[16];
 U8 HalGSIToLegacyIrqMappings[256];
@@ -167,9 +170,9 @@ HalAcpiLookupDescriptionPointer(
  * 
  * @param [in] Rsdp     Pointer to ACPI_ROOT_POINTER.
  * 
- * @return ESTATUS code.
+ * @return None.
  */
-ESTATUS
+VOID
 KERNELAPI
 HalAcpiPreInitialize(
     IN PVOID Rsdp)
@@ -183,8 +186,7 @@ HalAcpiPreInitialize(
 
     if (!Xsdt)
     {
-        BGXTRACE("Failed to find XSDT\n");
-        return E_NOT_SUPPORTED;
+        FATAL("Failed to find XSDT\n");
     }
 
     BGXTRACE("Detected ACPI 2.0 or higher\n");
@@ -196,8 +198,7 @@ HalAcpiPreInitialize(
 
         if (!HalAcpiChecksumDescriptor(DescriptionHeader, DescriptionHeader->Length))
         {
-            BGXTRACE("Corrupted ACPI table (Checksum mismatch at description header 0x%016llx\n", DescriptionHeader);
-            return E_FAILED;
+            FATAL("Corrupted ACPI table (Checksum mismatch at description header 0x%016llx\n", DescriptionHeader);
         }
 
         BGXTRACE("Header 0x%016llx, signature `%c%c%c%c'\n", 
@@ -212,8 +213,7 @@ HalAcpiPreInitialize(
 
     if (!Fadt)
     {
-        BGXTRACE("FADT not exists!\n");
-        return E_NOT_SUPPORTED;
+        FATAL("FADT not exists!\n");
     }
 
     BGXTRACE_C(BGX_COLOR_LIGHT_CYAN, "FADT version %d.%d\n", Fadt->Header.Revision, Fadt->FadtMinorVersion);
@@ -222,14 +222,12 @@ HalAcpiPreInitialize(
 
     if (!Madt)
     {
-        BGXTRACE("MADT not exists!\n");
-        return E_NOT_SUPPORTED;
+        FATAL("MADT not exists!\n");
     }
 
     if (!Madt->PCAT_COMPAT)
     {
-        BGXTRACE("8259 PIC not exists!\n");
-        return E_NOT_SUPPORTED;
+        FATAL("8259 PIC not exists!\n");
     }
 
     ACPI_MADT_RECORD_HEADER *FirstRecord = (ACPI_MADT_RECORD_HEADER *)(Madt + 1);
@@ -414,8 +412,7 @@ HalAcpiPreInitialize(
     BGXTRACE("\n");
 
     HalAcpiXsdt = Xsdt;
-
-    return E_SUCCESS;
+    HalAcpiMadt = Madt;
 }
 
 /**
@@ -434,7 +431,7 @@ HalAcpiGetFirstProcessor(
     ACPI_MADT_RECORD_HEADER *Record = (ACPI_MADT_RECORD_HEADER *)(Madt + 1);
     PTR MadtEnd = (PTR)Madt + Madt->Header.Length;
 
-    while ((PTR)Record + Record->RecordLength < MadtEnd)
+    while ((PTR)Record < MadtEnd)
     {
         if (Record->EntryType == ACPI_MADT_RECORD_LOCAL_APIC)
         {
@@ -467,7 +464,7 @@ HalAcpiGetNextProcessor(
 
     Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
 
-    while ((PTR)Record + Record->RecordLength < MadtEnd)
+    while ((PTR)Record < MadtEnd)
     {
         if (Record->EntryType == ACPI_MADT_RECORD_LOCAL_APIC)
         {
@@ -479,3 +476,4 @@ HalAcpiGetNextProcessor(
 
     return NULL;
 }
+

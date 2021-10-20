@@ -29,6 +29,7 @@
  *         Looks like va_start() gives invalid result.\n
  *         Resolved by using ms_abi for variadic function.
  *       - Compilation fails with internal compiler error when compile with -O3.
+ *       - AP initialization is not working when starting 3rd processor. (1st=BSP, 2nd=AP)
  */
 
 #include <base/base.h>
@@ -38,6 +39,7 @@
 #include <mm/mminit.h>
 #include <mm/pool.h>
 
+#include <hal/halinit.h>
 #include <hal/8254pit.h>
 #include <hal/8259pic.h>
 
@@ -103,6 +105,7 @@ KiKernelStart(
 
     BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Done.\n\n");
 
+    HalInitialize();
 
     BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Setting 8254 timer...\n");
 

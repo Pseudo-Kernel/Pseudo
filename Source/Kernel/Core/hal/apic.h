@@ -136,3 +136,22 @@
 //
 
 #define LAPIC_ICR_HIGH_DESTINATION_FIELD(_v)    ((_v) << (56-32))
+
+
+U8
+KERNELAPI
+HalApicGetId(
+    IN PTR ApicBase);
+
+BOOLEAN
+KERNELAPI
+HalIsBootstrapProcessor(
+	VOID);
+
+VOID
+KERNELAPI
+HalApicStartProcessor(
+    IN PTR ApicBase,
+	IN ULONG ApicId, 
+	IN U8 ResetVector);
+

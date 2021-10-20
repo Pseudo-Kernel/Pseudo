@@ -896,6 +896,39 @@ _mm_mfence(
 }
 
 
+
+#if 1
+
+_DEFINE_INTRINSIC(unsigned long long)
+_readfsbase_u64(
+    void)
+{
+    return __readmsr(0xc0000100); // IA32_FS_BASE
+}
+
+_DEFINE_INTRINSIC(unsigned long long)
+_readgsbase_u64(
+    void)
+{
+    return __readmsr(0xc0000101); // IA32_GS_BASE
+}
+
+_DEFINE_INTRINSIC(void)
+_writefsbase_u64(
+    unsigned long long value)
+{
+    __writemsr(0xc0000100, value); // IA32_FS_BASE
+}
+
+_DEFINE_INTRINSIC(void)
+_writegsbase_u64(
+    unsigned long long value)
+{
+    __writemsr(0xc0000101, value); // IA32_GS_BASE
+}
+
+#else
+
 _DEFINE_INTRINSIC(unsigned long long)
 _readfsbase_u64(
     void)
@@ -956,6 +989,7 @@ _writegsbase_u64(
 
 //    __builtin_ia32_wrgsbase64(value);
 }
+#endif
 
 
 /*

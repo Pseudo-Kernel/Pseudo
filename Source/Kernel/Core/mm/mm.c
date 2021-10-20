@@ -13,7 +13,9 @@
  */
 
 #include <mm/mm.h>
+#include <mm/pool.h>
 #include <mm/paging.h>
+#include <init/bootgfx.h>
 
 MMXAD_TREE MiPadTree; //!< Physical address tree.
 MMXAD_TREE MiVadTree; //!< Virtual address tree for shared kernel space.
@@ -434,6 +436,34 @@ MmFreePhysicalMemory(
 }
 
 /**
+ * @brief Allocates PHYSICAL_ADDRESSES structure for given MaximumCount.
+ * 
+ * @param [in] PoolType         Pool type.
+ * @param [in] MaximumCount     Maximum count.
+ * 
+ * @return Pointer to PHYSICAL_ADDRESSES if succeeds, NULL otherwise.
+ */
+KEXPORT
+PHYSICAL_ADDRESSES *
+KERNELAPI
+MmAllocatePhysicalAddressesStructure(
+    IN POOL_TYPE PoolType,
+    IN U32 MaximumCount)
+{
+    SIZE_T StructureSize = SIZEOF_PHYSICAL_ADDRESSES(MaximumCount);
+    PHYSICAL_ADDRESSES *PhysicalAddresses = MmAllocatePool(PoolType, StructureSize, 0x10, 0);
+
+    if (!PhysicalAddresses || !MaximumCount)
+    {
+        return NULL;
+    }
+
+    INITIALIZE_PHYSICAL_ADDRESSES(PhysicalAddresses, 0, MaximumCount);
+
+    return PhysicalAddresses;
+}
+
+/**
  * @brief Allocates physical memory blocks for given size.
  *
  * @param [in,out] PhysicalAddresses    Pointer to caller-supplied variable which points
@@ -556,6 +586,8 @@ ExitLoop:
         PhysicalAddresses->PhysicalAddresses[i].Range = Range;
     }
 
+    PhysicalAddresses->AllocatedSize = AllocatedSize;
+
     MmXadReleaseLock(&MiPadTree);
 
     return E_SUCCESS;
@@ -624,10 +656,102 @@ MmFreePhysicalMemoryGather(
         DASSERT(E_IS_SUCCESS(Status));
     }
 
-
     MmXadReleaseLock(&MiPadTree);
 
     return E_SUCCESS;
+}
+
+/**
+ * @brief Allocates and maps the physical memory.
+ * 
+ * @param [in,out] PhysicalAddresses    Pointer to caller-supplied variable which points
+ *                                      physical address list to be stored. See PHYSICAL_ADDRESSES.
+ * @param [in] Size                     Allocation size.
+ * @param [in] PxeFlags                 PXE flags.
+ * @param [in] PadType                  Physical address type after allocation.
+ * @param [in] VadType                  Virtual address type after allocation.
+ * 
+ * @return ESTATUS code.
+ */
+KEXPORT
+ESTATUS
+KERNELAPI
+MmAllocateAndMapPagesGather(
+    IN OUT PHYSICAL_ADDRESSES *PhysicalAddresses,
+    IN SIZE_T Size,
+    IN U64 PxeFlags,
+    IN PAD_TYPE PadType,
+    IN VAD_TYPE VadType)
+{
+    ESTATUS Status = MmAllocatePhysicalMemoryGather(PhysicalAddresses, Size, PadType);
+    if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    PTR VirtualAddress = 0;
+    Status = MmAllocateVirtualMemory(NULL, &VirtualAddress, Size, VadType);
+    if (!E_IS_SUCCESS(Status))
+    {
+        MmFreePhysicalMemoryGather(PhysicalAddresses);
+        return Status;
+    }
+
+    Status = MmMapPages(PhysicalAddresses, VirtualAddress, PxeFlags, FALSE, 0);
+    if (!E_IS_SUCCESS(Status))
+    {
+        MmFreeVirtualMemory(VirtualAddress, Size);
+        MmFreePhysicalMemoryGather(PhysicalAddresses);
+        return Status;
+    }
+
+    return Status;
+}
+
+/**
+ * @brief Frees and unmaps the pages.
+ * 
+ * @param [in] PhysicalAddresses    List of physical addresses.
+ * 
+ * @return ESTATUS code.
+ * 
+ * @todo Currently unmapping is not performed as MmUnmapPages() is not implemented.
+ */
+KEXPORT
+ESTATUS
+KERNELAPI
+MmFreeAndUnmapPagesGather(
+    IN PHYSICAL_ADDRESSES *PhysicalAddresses)
+{
+    if (!PhysicalAddresses->Mapped)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    // todo: unmap virtual memory! (not implemented)
+    ESTATUS Status = E_SUCCESS; /* MmUnmapPages(...); */
+    /* if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    } */
+
+    Status = MmFreeVirtualMemory(
+        PhysicalAddresses->StartingVirtualAddress, PhysicalAddresses->AllocatedSize);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        // Simply panic as operations cannot be undone
+        FATAL("Invalid PHYSICAL_ADDRESSES structure (looks like virtual address is already freed)");
+    }
+
+    Status = MmFreePhysicalMemoryGather(PhysicalAddresses);
+    if (!E_IS_SUCCESS(Status))
+    {
+        // Simply panic as operations cannot be undone
+        FATAL("Invalid PHYSICAL_ADDRESSES structure (looks like physical addresses are already freed)");
+    }
+
+    return Status;
 }
 
 /**

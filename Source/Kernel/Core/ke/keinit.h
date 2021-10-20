@@ -3,6 +3,36 @@
 
 
 //
+// Bits for CR0.
+//
+
+#define ARCH_X64_CR0_MP                                     (1 << 1)
+#define ARCH_X64_CR0_EM                                     (1 << 2)
+#define ARCH_X64_CR0_TS                                     (1 << 3)
+#define ARCH_X64_CR0_NE                                     (1 << 5)
+#define ARCH_X64_CR0_WP                                     (1 << 16)
+#define ARCH_X64_CR0_NW                                     (1 << 29)
+#define ARCH_X64_CR0_CD                                     (1 << 30)
+
+// CD=0 | NW=0 | WP=1 | NE=1 | EM=0 | MP=1 | TS=0
+// MCE=1 | PGE=1 | OSFXSR=1 | OSXMMEXCPT=1 | TSD=0
+
+
+//
+// Bits for CR4.
+//
+
+#define ARCH_X64_CR4_TSD                                    (1 << 2)
+#define ARCH_X64_CR4_MCE                                    (1 << 6)
+#define ARCH_X64_CR4_PGE                                    (1 << 7)
+#define ARCH_X64_CR4_OSFXSR                                 (1 << 9)
+#define ARCH_X64_CR4_OSXMMEXCPT                             (1 << 10)
+#define ARCH_X64_CR4_FSGSBASE                               (1 << 16)
+#define ARCH_X64_CR4_PCIDE                                  (1 << 17)
+#define ARCH_X64_CR4_OSXSAVE                                (1 << 18)
+
+
+//
 // Flags for x64 GDT entries.
 //
 
@@ -106,6 +136,13 @@ typedef struct _ARCH_X64_TSS
 
 #define IDT_LIMIT                                           (IDTENTRY_MAXIMUM_COUNT * sizeof(ARCH_X64_IDTENTRY) - 1)
 #define GDT_LIMIT                                           (GDTENTRY_MAXIMUM_COUNT * sizeof(U64) - 1)
+
+
+//
+// Kernel stack size.
+//
+
+#define KERNEL_STACK_SIZE_DEFAULT                           0x100000 // 1M
 
 
 //
@@ -565,6 +602,10 @@ KiInterruptNop(
     VOID);
 
 
+VOID
+KERNELAPI
+KiInitializeProcessor(
+    VOID);
 
 VOID
 KERNELAPI

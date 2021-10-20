@@ -341,9 +341,10 @@ typedef struct _ACPI_FADT
 #pragma pack(pop)
 
 extern ACPI_XSDT *HalAcpiXsdt;
+extern ACPI_MADT *HalAcpiMadt;
 
 
-ESTATUS
+VOID
 KERNELAPI
 HalAcpiPreInitialize(
     IN PVOID Rsdp);
@@ -353,4 +354,15 @@ KERNELAPI
 HalAcpiLookupDescriptionPointer(
     IN ACPI_XSDT *Xsdt,
     IN const CHAR *Signature);
+
+ACPI_LOCAL_APIC *
+KERNELAPI
+HalAcpiGetFirstProcessor(
+    IN ACPI_MADT *Madt);
+
+ACPI_LOCAL_APIC *
+KERNELAPI
+HalAcpiGetNextProcessor(
+    IN ACPI_MADT *Madt,
+    IN ACPI_LOCAL_APIC *ProcessorRecord);
 
