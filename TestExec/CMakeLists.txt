@@ -13,6 +13,7 @@ set(CURDIR ${CMAKE_CURRENT_LIST_DIR})
 # Set our build tools.
 set(POWERSHELL powershell.exe)
 set(ZIPIMAGE zipimage.exe)
+set(VHDUUID vhd_setuuid.exe)
 set(BOOTIMGCREATE boot_image.ps1)
 set(QEMU qemu-system-x86_64.exe)
 
@@ -26,6 +27,8 @@ set(TARGET_IMAGE_FILE vm.vhd)            # Our OS filesystem image name
 set(TARGET_KERNEL_FILE core.sys)         # Our kernel binary name (same as $(BUILD_RELATIVE_PATH_KERNEL)/)
 set(TARGET_OSLOADER_FILE BOOTx64.efi)    # Our efi bootloader binary name (same as $(BUILD_RELATIVE_PATH_OSLOADER)/makefile)
 
+# UUID for VHD image.
+set(VHD_IMAGE_UUID 20210000-ffff-ffff-baad-deadbeeff00d)
 
 # Path of CMakeLists.txt
 set(LIST_PATH_KERNEL ${CURDIR}/../source/kernel)        # CMakeLists.txt path for Kernel project
@@ -67,6 +70,9 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E rm -f "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}"
     COMMAND ${POWERSHELL} -ExecutionPolicy RemoteSigned -File ${BOOTIMGCREATE} -BootImagePath "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}" -FilesystemContentsPath "${FILESYSTEM_PATH}" -AssignDriveLetterTemporary "X" -WorkingDirectory "${CURDIR}"
     #COMMAND ${CMAKE_COMMAND} -E touch_nocreate ${TARGET_IMAGE_FILE}
+
+    # Set our UUID to generated VHD image.
+    COMMAND ${VHDUUID} "${DISKPART_ACCEPTABLE_TARGET_IMAGE_PATH}" ${VHD_IMAGE_UUID}
 
     WORKING_DIRECTORY "${CURDIR}"
 #    DEPENDS "${TARGET_PATH_OSLOADER}" "${TARGET_PATH_KERNEL}"
