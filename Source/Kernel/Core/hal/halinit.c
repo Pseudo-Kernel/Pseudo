@@ -79,7 +79,7 @@ HalStartProcessors(
     ACPI_LOCAL_APIC *Apic = HalAcpiGetFirstProcessor(Madt);
     while (Apic)
     {
-        BGXTRACE("APIC_ID %hhu, AcpiProcessorId %hhu, Flags 0x%08x ", 
+        BGXTRACE("LocalAPIC: APIC_ID %hhu, AcpiProcessorId %hhu, Flags 0x%08x ", 
             Apic->ApicId, Apic->AcpiProcessorId, Apic->Flags);
 
         BOOLEAN BSP = FALSE;

@@ -28,8 +28,10 @@
  *       - Kernel crashes when handling arguments in variadic function (which uses sysv_abi) [RESOLVED].\n
  *         Looks like va_start() gives invalid result.\n
  *         Resolved by using ms_abi for variadic function.
- *       - Compilation fails with internal compiler error when compile with -O3.
- *       - AP initialization is not working when starting 3rd processor. (1st=BSP, 2nd=AP)
+ *       - Compilation fails with internal compiler error when compile with -O3 [RESOLVED].\n
+ *         Resolved by using recent version of gcc (10.3.0)
+ *       - AP initialization is not working when starting 3rd processor. (1st=BSP, 2nd=AP) [RESOLVED]\n
+ *         Resolved. Turned out to be a simple bug in 16-bit AP stub.
  */
 
 #include <base/base.h>

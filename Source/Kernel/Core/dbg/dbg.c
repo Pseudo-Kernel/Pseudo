@@ -46,14 +46,13 @@ DbgpNormalTraceSerialN(
         return FALSE;
 
     U16 Base = DbgSerialPortBase[0]; // COM1
-    CHAR8 *s = TraceMessage, c = 0;
 
-    while ((c = *s++))
+    for (SIZE_T i = 0; i < Length; i++)
     {
         // while(!LINE_STATUS.TransmitEmpty)
         while(!(__inbyte(Base + COM_IO_LINE_STATUS) & 0x20));
 
-        __outbyte(Base + COM_IO_DATA, c);
+        __outbyte(Base + COM_IO_DATA, TraceMessage[i]);
     }
 
     return TRUE;

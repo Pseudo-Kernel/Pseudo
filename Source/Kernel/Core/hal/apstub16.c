@@ -77,7 +77,6 @@ HalpApplicationProcessorInitStub(
         "mov es, ax\n\t"
         "mov fs, ax\n\t"
         "mov gs, ax\n\t"
-        "mov byte ptr [_i386ApInitPacket-_BASE], 1\n\t" // Status = 1
         "push ax\n\t"
         "push (_i386PrepareTransfer-_BASE)\n\t"
         "retf\n\t"
