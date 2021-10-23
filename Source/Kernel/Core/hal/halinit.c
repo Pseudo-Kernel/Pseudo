@@ -32,10 +32,10 @@ HalApplicationProcessorStart(
     VOID)
 {
     KiInitializeProcessor();
+    HalApicSetDefaultState(HalApicBase);
 
     // Acknowledge to BSP that processor is successfully started
-    HalAPInitPacket->Status = 1;
-    _mm_mfence();
+    _InterlockedExchange8((volatile char *)&HalAPInitPacket->Status, 4);
 
     for(;;)
     {
@@ -65,8 +65,12 @@ HalStartProcessor(
 
     HalApicStartProcessor(HalApicBase, ApicId, HAL_PROCESSOR_RESET_VECTOR);
 
-    while (HalAPInitPacket->Status == 0)
+    do
+    {
+        BGXTRACE("\rWaiting AP (%hhd)", HalAPInitPacket->Status);
         _mm_pause();
+    }
+    while (HalAPInitPacket->Status < 4);
 }
 
 VOID
@@ -105,7 +109,7 @@ HalStartProcessors(
                 FATAL("Failed to allocate/map kernel stack");
             }
 
-            BGXTRACE("Starting processor (APIC_ID %hhu) ... ", Apic->ApicId);
+            BGXTRACE("Starting processor (APIC_ID %hhu) ...\n", Apic->ApicId);
 
             HalStartProcessor(
                 Apic->ApicId, 
@@ -114,7 +118,7 @@ HalStartProcessors(
                 Addresses.Addresses.StartingVirtualAddress, 
                 KERNEL_STACK_SIZE_DEFAULT);
 
-            BGXTRACE("OK\n");
+            BGXTRACE(" -> OK\n");
         }
 
         Apic = HalAcpiGetNextProcessor(Madt, Apic);

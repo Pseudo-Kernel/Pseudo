@@ -32,6 +32,8 @@
  *         Resolved by using recent version of gcc (10.3.0)
  *       - AP initialization is not working when starting 3rd processor. (1st=BSP, 2nd=AP) [RESOLVED]\n
  *         Resolved. Turned out to be a simple bug in 16-bit AP stub.
+ *       - BSP hangs in real machine while sending INIT-SIPI-SIPI to first AP.\n
+ *         Looks like BSP hangs when writing ICR high/ICR low (first SIPI command).
  */
 
 #include <base/base.h>

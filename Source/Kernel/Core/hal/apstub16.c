@@ -83,6 +83,10 @@ HalpApplicationProcessorInitStub(
 
         // Setup the stack.
         "_i386PrepareTransfer:\n\t"
+
+        // Update status code (0).
+        "xor ax, ax\n\t"
+        "lock xchg byte ptr [_i386ApInitPacket-_BASE+3], al\n\t"
 #if AP_STUB_FOOTPRINT
         // DEBUG!
         "mov al, '2'\n\t"
@@ -103,6 +107,11 @@ HalpApplicationProcessorInitStub(
         // Locate Initial GDT.
         "mov dword ptr [_i386Gdtr-_BASE+2], eax\n\t"
         "lgdt [_i386Gdtr-_BASE]\n\t"
+
+
+        // Update status code (1).
+        "mov al, 0x01\n\t"
+        "lock xchg byte ptr [_i386ApInitPacket-_BASE+3], al\n\t"
 
 #if AP_STUB_FOOTPRINT
         // DEBUG!
@@ -149,6 +158,10 @@ HalpApplicationProcessorInitStub(
         "mov gs, ax\n\t"
         "mov ss, ax\n\t"
 
+        // Update status code (2).
+        "mov al, 0x02\n\t"
+        "lock xchg byte ptr [_i386ApInitPacket-_BASE+3+0x4000], al\n\t"
+
 #if AP_STUB_FOOTPRINT
         // DEBUG!
         "mov al, '4'\n\t"
@@ -168,12 +181,16 @@ HalpApplicationProcessorInitStub(
         // call qword ptr [edx + i386ApInitPacket.AP_INIT_PACKET.LM64StartAddress]
         "_i386LongMode:\n\t"
         ".code64\n\t"
-
+        
 #if AP_STUB_FOOTPRINT
         // DEBUG!
         "mov al, '5'\n\t"
         "out 0xe9, al\n\t"
 #endif
+        // Update status code (3).
+        "mov al, 0x03\n\t"
+        "lock xchg byte ptr [_i386ApInitPacket-_BASE+3+0x4000], al\n\t"
+
 
         //
         // Enable SSE instructions.
