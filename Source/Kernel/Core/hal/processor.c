@@ -253,7 +253,7 @@ HalInitializeProcessor(
     HalInitializePrivateData();
     HalRegisterApicInterrupt();
     HalApicSetDefaultState(HalApicBase);
-//    HalApicEnable();
+    HalApicEnable();
     HalApicSetSpuriousVector(HalApicBase, TRUE, VECTOR_SPURIOUS);
     HalApicSetTimerVector(HalApicBase, 0, VECTOR_LVT_TIMER);
     //HalApicSetErrorVector(HalApicBase, TRUE, VECTOR_LVT_ERROR);

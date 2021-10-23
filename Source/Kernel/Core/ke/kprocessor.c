@@ -303,7 +303,11 @@ KeGetCurrentProcessor(
 {
 #if 1
     // Currently not use IA32_GS_BASE/IA32_KERNEL_GS_BASE
-    U8 ProcessorId = HalApicGetId(HalApicBase);
+    U8 ApicId = HalApicGetId(HalApicBase);
+    U16 ProcessorId = KiApicIdToProcessorId[ApicId];
+    
+    DASSERT(ProcessorId < 0x100);
+
     return KiProcessorBlocks[ProcessorId];
 #else
     //
