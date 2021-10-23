@@ -2,10 +2,10 @@
 #pragma once
 
 #include <base/base.h>
+#include <hal/apstub16.h>
 
-
-#define HAL_PROCESSOR_RESET_VECTOR          0x04
-#define HAL_PROCESSOR_RESET_ADDRESS         (HAL_PROCESSOR_RESET_VECTOR << 12)
+extern VIRTUAL_ADDRESS HalApicBase;
+extern AP_INIT_PACKET volatile *HalAPInitPacket;
 
 
 VOID

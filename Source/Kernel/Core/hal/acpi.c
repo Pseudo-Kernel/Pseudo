@@ -10,8 +10,6 @@
  * 
  * @note This code assumes that ACPI tables are identity mapped.
  * 
- * @todo Implement helper routines for MADT structure.
- *       Initialize local APIC and start processor.
  */
 
 

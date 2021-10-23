@@ -34,6 +34,7 @@
  *         Resolved. Turned out to be a simple bug in 16-bit AP stub.
  *       - BSP hangs in real machine while sending INIT-SIPI-SIPI to first AP.\n
  *         Looks like BSP hangs when writing ICR high/ICR low (first SIPI command).
+ *       - Kernel crashes during AP initialization.\n
  */
 
 #include <base/base.h>

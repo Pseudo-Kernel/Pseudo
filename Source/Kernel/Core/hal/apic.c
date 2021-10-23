@@ -28,20 +28,41 @@
 VOID
 KERNELAPI
 HalApicEnable(
-    IN PHYSICAL_ADDRESS PhysicalApicBase)
+    VOID)
 {
     U64 Value = __readmsr(IA32_APIC_BASE);
 
     //
     // IA32_APIC_BASE_MSR[8] = BSP (1 = BSP, 0 = AP)
     // IA32_APIC_BASE_MSR[11] = APIC global enable/disable (enable = 1, disable = 0)
-    // IA32_APIC_BASE_MSR[M:12] = APIB base physical address
+    //
 
-    Value = (Value & 0xfff) | ((U64)PhysicalApicBase & ~0xfff) | 0x800;
+    __writemsr(IA32_APIC_BASE, Value | 0x800);
+}
+
+PHYSICAL_ADDRESS
+KERNELAPI
+HalApicGetBase(
+    VOID)
+{
+    U64 Value = __readmsr(IA32_APIC_BASE);
+
+    // IA32_APIC_BASE_MSR[M:12] = APIB base physical address
+    return (Value & ~0xfff);
+}
+
+VOID
+KERNELAPI
+HalApicSetBase(
+    IN PHYSICAL_ADDRESS PhysicalApicBase)
+{
+    U64 Value = __readmsr(IA32_APIC_BASE);
+
+    // IA32_APIC_BASE_MSR[M:12] = APIB base physical address
+    Value = (Value & 0xfff) | ((U64)PhysicalApicBase & ~0xfff);
 
     __writemsr(IA32_APIC_BASE, Value);
 }
-
 
 U8
 KERNELAPI
@@ -61,14 +82,19 @@ HalApicSetDefaultState(
 	// Initialize LAPIC registers to well-known state.
     //
 
-    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_DFR) = ~0;
-    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_INITIAL_COUNT) = 0;
-    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_PERFCNT) = 0x400;
-
-    // Timer, LINT0, LINT1 => all masked
+    // Mask all LVT entries.
+    // Timer, CMCI, LINT0, LINT1, ERROR, PERFCNT, THERMAL => Masked
     *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_TIMER) = 0x10000;
+    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_CMCI) = 0x10000;
     *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_LINT0) = 0x10000;
     *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_LINT1) = 0x10000;
+    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_ERROR) = 0x10000;
+    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_PERFCNT) = 0x10000;
+    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_THERMAL) = 0x10000;
+
+
+    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_DFR) = ~0;
+    *(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_INITIAL_COUNT) = 0;
 
     // We use cr8 (not the TPR register) to change TPR
     //*(U32 volatile *)LAPIC_REG(ApicBase, LAPIC_TPR) = 0;
@@ -171,7 +197,7 @@ HalApicStartProcessor(
 	}
 
     U32 High = LAPIC_ICR_HIGH_DESTINATION_FIELD(ApicId);
-    U32 Low_IIPI = 
+    U32 Low_IIPI = LAPIC_ICR_VECTOR(0) |
         LAPIC_ICR_DELIVERY_MODE(LAPIC_ICR_DELIVER_INIT) |
         LAPIC_ICR_DEST_MODE_PHYSICAL |
         LAPIC_ICR_LEVEL_ASSERT |
@@ -186,39 +212,57 @@ HalApicStartProcessor(
         LAPIC_ICR_DEST_SHORTHAND(LAPIC_ICR_DEST_NO_SHORTHAND);
 
     // Use rdtsc to wait delay (not accurate).
-    U64 ReferenceTscPerMilliseconds = 5000000; // Assume 5GHz/s.
+    U64 ReferenceTscPerMilliseconds = 50000000; // Assume 5GHz/s.
     volatile U64 TscExpire = 0;
 
+    U64 RFlags = __readeflags();
+    _disable();
+
 	// Wait for deliver pending
+    BGXTRACE("Wait for delivery pending before send INIT IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Send INIT IPI.
 	/* No Shorthand, Edge Triggered, INIT, Physical, Assert */
+    BGXTRACE("Send INIT IPI\n");
 	*ICR1 = High;
 	*ICR0 = Low_IIPI;
+    BGXTRACE("Wait for delivery pending after send INIT IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Wait 10ms.
+    BGXTRACE("Wait for 10ms delay\n");
     TscExpire = __rdtsc() + ReferenceTscPerMilliseconds * 10; // 10ms
     SPIN_WAIT(__rdtsc() < TscExpire);
 
 	// Send startup IPI.
 	/* No Shorthand, Edge Triggered, All, Physical, Assert */
+    BGXTRACE("Send STARTUP IPI\n");
 	*ICR1 = High;
 	*ICR0 = Low_SIPI;
+    BGXTRACE("Wait for delivery pending after send STARTUP IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Wait 200us.
+    BGXTRACE("Wait for 200us delay\n");
     TscExpire = __rdtsc() + ReferenceTscPerMilliseconds / 5; // 200us
     SPIN_WAIT(__rdtsc() < TscExpire);
 
 	// Send startup IPI.
 	/* No Shorthand, Edge Triggered, All, Physical, Assert */
+    BGXTRACE("Send STARTUP IPI\n");
 	*ICR1 = High;
 	*ICR0 = Low_SIPI;
+    BGXTRACE("Wait for delivery pending after send STARTUP IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Wait 200us.
+    BGXTRACE("Wait for 200us delay\n");
     TscExpire = __rdtsc() + ReferenceTscPerMilliseconds / 5; // 200us
     SPIN_WAIT(__rdtsc() < TscExpire);
+
+    BGXTRACE("IIPI-SIPI-SIPI done\n");
+
+    if (RFlags & RFLAG_IF)
+        _enable();
 }

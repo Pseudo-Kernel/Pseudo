@@ -16,11 +16,10 @@
 #include <ke/lock.h>
 #include <ke/irql.h>
 #include <ke/interrupt.h>
+#include <ke/kprocessor.h>
 #include <init/bootgfx.h>
 
-KIRQ_GROUP KiIrqGroup[IRQ_GROUPS_MAX];
-
-#define VECTOR_TO_IRQ_GROUP_POINTER(_vector)                (&KiIrqGroup[VECTOR_TO_IRQL(_vector)])
+#define VECTOR_TO_IRQ_GROUP_POINTER(_vector)                (&KeGetCurrentProcessor()->IrqGroups[VECTOR_TO_IRQL(_vector)])
 #define VECTOR_TO_IRQ_POINTER(_vector)          \
     (&VECTOR_TO_IRQ_GROUP_POINTER(Vector)->Irq[VECTOR_TO_GROUP_IRQ_INDEX(Vector)])
 
@@ -132,7 +131,7 @@ KeAllocateIrqVector(
         IndexLimit = Count - 1;
     }
 
-    KIRQ_GROUP *IrqGroup = &KiIrqGroup[GroupIrql];
+    KIRQ_GROUP *IrqGroup = &KeGetCurrentProcessor()->IrqGroups[GroupIrql];
     ULONG AllocationBitmap = 0;
     ULONG TargetMask = ((1 << Count) - 1);
 
@@ -274,7 +273,7 @@ KeIsIrqVectorAllocated(
         return E_INVALID_PARAMETER;
     }
 
-    KIRQ_GROUP *IrqGroup = &KiIrqGroup[GroupIrql];
+    KIRQ_GROUP *IrqGroup = &KeGetCurrentProcessor()->IrqGroups[GroupIrql];
 
     if (LockGroupIrq)
     {
@@ -359,7 +358,7 @@ KeFreeIrqVector(
         return E_INVALID_PARAMETER;
     }
 
-    KIRQ_GROUP *IrqGroup = &KiIrqGroup[GroupIrql];
+    KIRQ_GROUP *IrqGroup = &KeGetCurrentProcessor()->IrqGroups[GroupIrql];
 
     if (LockGroupIrq)
     {
@@ -460,7 +459,7 @@ KeConnectInterrupt(
         return E_INVALID_PARAMETER;
     }
 
-    KIRQ_GROUP *IrqGroup = &KiIrqGroup[Irql];
+    KIRQ_GROUP *IrqGroup = &KeGetCurrentProcessor()->IrqGroups[Irql];
 
     KiAcquireIrqGroupLock(IrqGroup);
 
@@ -511,7 +510,7 @@ KeDisconnectInterrupt(
         return E_INVALID_PARAMETER;
     }
 
-    KIRQ_GROUP *IrqGroup = &KiIrqGroup[Irql];
+    KIRQ_GROUP *IrqGroup = &KeGetCurrentProcessor()->IrqGroups[Irql];
 
     KiAcquireIrqGroupLock(IrqGroup);
 
@@ -628,4 +627,35 @@ KiCallInterruptChain(
     DASSERT(Dispatched);
     
     KiReleaseIrqGroupLock(IrqGroup);
+}
+
+/**
+ * @brief Initializes IRQ groups.
+ * 
+ * @return None.
+ */
+VOID
+KERNELAPI
+KiInitializeIrqGroups(
+    VOID)
+{
+    KIRQ_GROUP *IrqGroups = KeGetCurrentProcessor()->IrqGroups;
+
+    for (KIRQL Irql = IRQL_LOWEST; Irql <= IRQL_HIGHEST; Irql++)
+    {
+        KIRQ_GROUP *Group = &IrqGroups[Irql];
+
+        KeInitializeSpinlock(&Group->GroupLock);
+        Group->PreviousIrql = IRQL_LOWEST;
+        Group->GroupIrql = Irql;
+
+        for (ULONG i = 0; i < IRQS_PER_IRQ_GROUP; i++)
+        {
+            KIRQ *Irq = &Group->Irq[i];
+            Irq->Allocated = FALSE;
+            Irq->Shared = FALSE;
+            Irq->SharedCount = 0;
+            DListInitializeHead(&Irq->InterruptListHead);
+        }
+    }
 }

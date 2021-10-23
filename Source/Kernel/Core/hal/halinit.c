@@ -1,130 +1,34 @@
 ﻿
+/**
+ * @file halinit.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2021-10-16
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ * @todo Initialize local APIC and start processor.
+ */
 
 #include <base/base.h>
 #include <ke/ke.h>
+#include <ke/kprocessor.h>
 #include <mm/mm.h>
 #include <mm/pool.h>
 #include <init/bootgfx.h>
 #include <init/preinit.h>
 #include <hal/acpi.h>
-#include <hal/ioapic.h>
 #include <hal/apic.h>
 #include <hal/halinit.h>
-#include <hal/apstub16.h>
+#include <hal/processor.h>
 
-
-extern U8 HalLegacyIrqToGSIMappings[16];
-extern U8 HalGSIToLegacyIrqMappings[256];
 
 VIRTUAL_ADDRESS HalLowArea1MSpace;
 AP_INIT_PACKET volatile *HalAPInitPacket;
 
 VIRTUAL_ADDRESS HalApicBase;
 
-typedef
-VOID
-(KERNELAPI *PKPROCESSOR_START_ROUTINE)(
-    VOID);
-
-VOID
-KERNELAPI
-HalApplicationProcessorStart(
-    VOID)
-{
-    KiInitializeProcessor();
-    HalApicSetDefaultState(HalApicBase);
-
-    // Acknowledge to BSP that processor is successfully started
-    _InterlockedExchange8((volatile char *)&HalAPInitPacket->Status, 4);
-
-    for(;;)
-    {
-        __halt();
-    }
-}
-
-VOID
-KERNELAPI
-HalStartProcessor(
-    IN U8 ApicId,
-    IN U32 PML4TPhysicalBase,
-    IN PKPROCESSOR_START_ROUTINE StartRoutine,
-    IN U64 StackBase,
-    IN U64 StackSize)
-{
-    HalAPInitPacket->Status = 0;
-    HalAPInitPacket->PML4Base = PML4TPhysicalBase;
-    HalAPInitPacket->LM64StartAddress = (U64)StartRoutine;
-    HalAPInitPacket->LM64StackAddress = StackBase;
-    HalAPInitPacket->LM64StackSize = StackSize;
-
-    HalAPInitPacket->SegmentDescriptors[0] = 0; // null
-    HalAPInitPacket->SegmentDescriptors[1] = 0x00af9a000000ffff; // code64
-    HalAPInitPacket->SegmentDescriptors[2] = 0x00cf92000000ffff; // data64
-    _mm_mfence();
-
-    HalApicStartProcessor(HalApicBase, ApicId, HAL_PROCESSOR_RESET_VECTOR);
-
-    do
-    {
-        BGXTRACE("\rWaiting AP (%hhd)", HalAPInitPacket->Status);
-        _mm_pause();
-    }
-    while (HalAPInitPacket->Status < 4);
-}
-
-VOID
-KERNELAPI
-HalStartProcessors(
-    VOID)
-{
-    ACPI_MADT *Madt = HalAcpiMadt;
-
-    ACPI_LOCAL_APIC *Apic = HalAcpiGetFirstProcessor(Madt);
-    while (Apic)
-    {
-        BGXTRACE("LocalAPIC: APIC_ID %hhu, AcpiProcessorId %hhu, Flags 0x%08x ", 
-            Apic->ApicId, Apic->AcpiProcessorId, Apic->Flags);
-
-        BOOLEAN BSP = FALSE;
-
-        if (Apic->ApicId == HalApicGetId(HalApicBase))
-        {
-            BGXTRACE("[BSP]");
-            BSP = TRUE;
-        }
-
-        BGXTRACE("\n");
-
-        if (Apic->ProcessorEnabled && !BSP)
-        {
-            PHYSICAL_ADDRESSES_R128 Addresses;
-            INITIALIZE_PHYSICAL_ADDRESSES(&Addresses, 0, PHYSICAL_ADDRESSES_MAXIMUM_COUNT(sizeof(Addresses)));
-
-            ESTATUS Status = MmAllocateAndMapPagesGather(&Addresses.Addresses, KERNEL_STACK_SIZE_DEFAULT, 
-                ARCH_X64_PXE_WRITABLE, PadInUse, VadInUse);
-            
-            if (!E_IS_SUCCESS(Status))
-            {
-                FATAL("Failed to allocate/map kernel stack");
-            }
-
-            BGXTRACE("Starting processor (APIC_ID %hhu) ...\n", Apic->ApicId);
-
-            HalStartProcessor(
-                Apic->ApicId, 
-                (U32)(__readcr3() & ~PAGE_MASK), 
-                HalApplicationProcessorStart, 
-                Addresses.Addresses.StartingVirtualAddress, 
-                KERNEL_STACK_SIZE_DEFAULT);
-
-            BGXTRACE(" -> OK\n");
-        }
-
-        Apic = HalAcpiGetNextProcessor(Madt, Apic);
-    }
-
-}
 
 VOID
 KERNELAPI
@@ -203,6 +107,8 @@ KERNELAPI
 HalInitialize(
     VOID)
 {
+    HalInitializeProcessor();
+    
     HalStartProcessors();
 }
 

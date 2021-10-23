@@ -138,10 +138,58 @@
 #define LAPIC_ICR_HIGH_DESTINATION_FIELD(_v)    ((_v) << (56-32))
 
 
+
+
+VOID
+KERNELAPI
+HalApicEnable(
+    VOID);
+
+PHYSICAL_ADDRESS
+KERNELAPI
+HalApicGetBase(
+    VOID);
+
+VOID
+KERNELAPI
+HalApicSetBase(
+    IN PHYSICAL_ADDRESS PhysicalApicBase);
+
 U8
 KERNELAPI
 HalApicGetId(
     IN PTR ApicBase);
+
+VOID
+KERNELAPI
+HalApicSetDefaultState(
+    IN PTR ApicBase);
+
+VOID
+KERNELAPI
+HalApicSetSpuriousVector(
+    IN PTR ApicBase, 
+    IN BOOLEAN Enable, 
+    IN U8 Vector);
+
+VOID
+KERNELAPI
+HalApicSetErrorVector(
+    IN PTR ApicBase, 
+    IN BOOLEAN Enable, 
+    IN U8 Vector);
+
+VOID
+KERNELAPI
+HalApicSetTimerVector(
+    IN PTR ApicBase, 
+	IN U32 PeriodicCount, 
+	IN U8 Vector);
+
+VOID
+KERNELAPI
+HalApicSendEoi(
+	IN PTR ApicBase);
 
 BOOLEAN
 KERNELAPI

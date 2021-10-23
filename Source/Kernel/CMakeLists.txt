@@ -52,10 +52,14 @@ set(SRC_LIST
     core/ke/irql.h
     core/ke/interrupt.h
     core/ke/keinit.h
+    core/ke/kprocessor.h
+    core/ke/inthandler.h
     core/ke/lock.c
     core/ke/irql.c
     core/ke/interrupt.c
     core/ke/keinit.c
+    core/ke/kprocessor.c
+    core/ke/inthandler.c
     # hal
     core/hal/8259pic.h
     core/hal/8254pit.h
@@ -64,6 +68,7 @@ set(SRC_LIST
     core/hal/acpi.h
     core/hal/halinit.h
     core/hal/apstub16.h
+    core/hal/processor.h
     core/hal/8259pic.c
     core/hal/8254pit.c
     core/hal/ioapic.c
@@ -71,6 +76,7 @@ set(SRC_LIST
     core/hal/acpi.c
     core/hal/halinit.c
     core/hal/apstub16.c
+    core/hal/processor.c
     # misc
     core/misc/common.h
     core/misc/list.h

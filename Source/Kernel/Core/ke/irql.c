@@ -15,6 +15,11 @@
 #include <init/bootgfx.h>
 
 
+/**
+ * @brief Returns current IRQL.
+ * 
+ * @return Current IRQL.
+ */
 KIRQL
 KERNELAPI
 KeGetCurrentIrql(
@@ -24,6 +29,13 @@ KeGetCurrentIrql(
     return (KIRQL)(__readcr8() & 0x0f);
 }
 
+/**
+ * @brief Sets the current IRQL to given IRQL.\n
+ * 
+ * @param [in] TargetIrql   Desired IRQL (<= CurrentIrql).
+ * 
+ * @return Previous IRQL.
+ */
 KIRQL
 KERNELAPI
 KeLowerIrql(
@@ -42,6 +54,13 @@ KeLowerIrql(
     return CurrentIrql;
 }
 
+/**
+ * @brief Sets the current IRQL to given IRQL.\n
+ * 
+ * @param [in] TargetIrql   Desired IRQL (>= CurrentIrql).
+ * 
+ * @return Previous IRQL.
+ */
 KIRQL
 KERNELAPI
 KeRaiseIrql(

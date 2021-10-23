@@ -37,6 +37,14 @@
 #define IRQL_COUNT                          (IRQL_HIGHEST - IRQL_LOWEST + 1)
 
 
+//
+// Reserved vector numbers.
+//
+
+#define VECTOR_SPURIOUS                     (IRQL_TO_VECTOR_START(IRQL_RESERVED_SPURIOUS) + 0)
+#define VECTOR_LVT_TIMER                    (IRQL_TO_VECTOR_START(IRQL_CONTEXT_SWITCH) + 0)
+#define VECTOR_LVT_ERROR                    (IRQL_TO_VECTOR_START(IRQL_CONTEXT_SWITCH) + 1)
+
 
 typedef enum _KINTERRUPT_RESULT
 {
@@ -91,7 +99,6 @@ typedef struct _KIRQ_GROUP
     KIRQ Irq[IRQS_PER_IRQ_GROUP];
 } KIRQ_GROUP;
 
-extern KIRQ_GROUP KiIrqGroup[IRQ_GROUPS_MAX];
 
 
 
@@ -152,4 +159,9 @@ VOID
 KERNELAPI
 KiCallInterruptChain(
     IN U8 Vector);
+
+VOID
+KERNELAPI
+KiInitializeIrqGroups(
+    VOID);
 

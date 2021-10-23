@@ -173,6 +173,8 @@ typedef struct _BOOT_GFX_SCREEN {
 	U32 TextBackgroundColor;
 	U32 TextWidth;
 	U32 TextHeight;
+
+    U32 Lock;
 } BOOT_GFX_SCREEN, *PBOOT_GFX_SCREEN;
 
 

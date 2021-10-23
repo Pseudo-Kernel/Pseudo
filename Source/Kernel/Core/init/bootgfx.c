@@ -23,6 +23,41 @@ typedef struct _BOOT_GFX {
 
 BOOT_GFX PiBootGfx;
 
+VOID
+KERNELAPI
+BootGfxAcquireLock(
+    IN BOOT_GFX_SCREEN *Screen,
+    OUT BOOLEAN *PrevStae)
+{
+    for (;;)
+    {
+        BOOLEAN InterruptState = !!(__readeflags() & RFLAG_IF);
+        _disable();
+
+        if (!_InterlockedExchange(&Screen->Lock, 1))
+        {
+            *PrevStae = InterruptState;
+            break;
+        }
+
+        _mm_pause();
+
+        if (InterruptState)
+            _enable();
+    }
+}
+
+VOID
+KERNELAPI
+BootGfxReleaseLock(
+    IN BOOT_GFX_SCREEN *Screen,
+    IN BOOLEAN PrevStae)
+{
+    _InterlockedExchange(&Screen->Lock, 0);
+
+    if (PrevStae)
+        _enable();
+}
 
 BOOLEAN
 KERNELAPI
@@ -130,12 +165,16 @@ BootFonPrintTextN(
 		u.Pointer = (UPTR)(FontFile + 1);
 	}
 
+    // Acquire lock.
+    BOOLEAN PrevState = FALSE;
+    BootGfxAcquireLock(Screen, &PrevState);
+
 	//
 	// Glyph Entry Table:
 	// [Entry for FirstChar] [Entry for FirstChar+1] ... [Entry for LastChar] [Entry for BLANK]
 	//
 
-	for(i = 0; i < TextLength; )
+	for (i = 0; i < TextLength; )
 	{
 		U8 Char = Text[i];
 		U16 Index;
@@ -232,6 +271,9 @@ BootFonPrintTextN(
 	}
 
     BootGfxUpdateScreen(Screen);
+
+    // Release lock.
+    BootGfxReleaseLock(Screen, PrevState);
 
 	*PrintLength = i;
 
@@ -740,6 +782,8 @@ BootGfxInitialize(
 	PiBootGfx.Screen.TextHeight = BootFont->PixHeight;
 	PiBootGfx.Screen.TextColor = 0xcccccc;
 	PiBootGfx.Screen.TextBackgroundColor = 0x000000;
+
+    PiBootGfx.Screen.Lock = 0;
 
 	DbgTraceF(TraceLevelEvent, "Boot graphics initialized\n");
 
