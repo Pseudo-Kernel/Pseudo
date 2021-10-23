@@ -177,9 +177,9 @@ typedef struct _BOOT_GFX_SCREEN {
 
 
 #define FATAL(...) {    \
-    CHAR8 __msg[256];   \
-    SIZE_T __cnt = ClStrFormatU8(__msg, 256, __VA_ARGS__);  \
-    ClStrTerminateU8(__msg, 256, __cnt);    \
+    CHAR8 __msg[1024];   \
+    SIZE_T __cnt = ClStrFormatU8(__msg, COUNTOF(__msg), __VA_ARGS__);  \
+    ClStrTerminateU8(__msg, COUNTOF(__msg), __cnt);    \
     BootGfxFatalStop(                       \
         "%s: file %s, line %d\r\n%s",       \
         __FUNCTION__, __FILE__, __LINE__,   \

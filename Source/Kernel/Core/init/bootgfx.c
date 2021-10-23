@@ -585,7 +585,7 @@ BootGfxFatalStop(
 	IN CHAR8 *Format,
 	...)
 {
-	CHAR8 Buffer[512];
+	CHAR8 Buffer[1024];
 	SIZE_T BufferLength;
 	SIZE_T PrintLength;
 	va_list args;

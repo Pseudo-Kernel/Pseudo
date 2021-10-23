@@ -218,6 +218,11 @@ typedef struct _KPROCESSOR
 
 typedef struct _KSTACK_FRAME_INTERRUPT
 {
+    U64 Gs;
+    U64 Fs;
+    U64 Es;
+    U64 Ds;
+
     U64 R15;
     U64 R14;
     U64 R13;
@@ -233,9 +238,8 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     U64 Rdx;
     U64 Rcx;
     U64 Rax;
-    U64 Gs;
-    U64 Fs;
-    U8 Redzone[128];
+
+    U8 Reserved[128+8];
 
     U64 ErrorCode;
     U64 Rip;
@@ -249,14 +253,12 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     KiInterruptHandler_Vector ##_vector
 
 #define DECLARE_INTERRUPT_HANDLER(_vector)  \
-    __attribute__((naked)) VOID     \
+    VOID __attribute__((naked))    \
     INTERRUPT_HANDLER_NAME(_vector) (VOID)
 
 /* todo: make sure that rsp is 16-byte aligned after interrupt frame is pushed */
 #define ASM_INTERRUPT_FRAME_PUSH_ERRCODE    \
     "push 0\n\t" /* error code placeholder */   \
-    "push fs\n\t"   \
-    "push gs\n\t"   \
     "push rax\n\t"  \
     "push rcx\n\t"  \
     "push rdx\n\t"  \
@@ -272,10 +274,22 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "push r13\n\t"  \
     "push r14\n\t"  \
     "push r15\n\t"  \
+    "mov eax, ds\n\t"\
+    "push rax\n\t"   \
+    "mov eax, es\n\t"\
+    "push rax\n\t"   \
+    "push fs\n\t"   \
+    "push gs\n\t"   \
     "sub rsp, 0x88\n\t" /* red zone size + 8 byte */
 
 #define ASM_INTERRUPT_FRAME_POP_ERRCODE    \
     "add rsp, 0x88\n\t"  /* red zone size + 8 byte */  \
+    "pop gs\n\t"    \
+    "pop fs\n\t"    \
+    "pop rax\n\t"    \
+    "mov es, eax\n\t"\
+    "pop rax\n\t"    \
+    "mov ds, eax\n\t"\
     "pop r15\n\t"   \
     "pop r14\n\t"   \
     "pop r13\n\t"   \
@@ -291,14 +305,10 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "pop rdx\n\t"   \
     "pop rcx\n\t"   \
     "pop rax\n\t"   \
-    "pop gs\n\t"    \
-    "pop fs\n\t"    \
     "add rsp, 0x08\n\t" /* pop error code */
 
 #define ASM_INTERRUPT_FRAME_PUSH    \
     "sub rsp, 0x88\n\t" /* red zone size + 8 byte */ \
-    "push fs\n\t"   \
-    "push gs\n\t"   \
     "push rax\n\t"  \
     "push rcx\n\t"  \
     "push rdx\n\t"  \
@@ -313,9 +323,21 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "push r12\n\t"  \
     "push r13\n\t"  \
     "push r14\n\t"  \
-    "push r15\n\t" /* todo: make sure that rsp is 16-byte aligned after r15 push */
+    "push r15\n\t"  \
+    "mov eax, ds\n\t"\
+    "push rax\n\t"   \
+    "mov eax, es\n\t"\
+    "push rax\n\t"   \
+    "push fs\n\t"   \
+    "push gs\n\t" /* todo: make sure that rsp is 16-byte aligned after push */
 
 #define ASM_INTERRUPT_FRAME_POP    \
+    "pop gs\n\t"    \
+    "pop fs\n\t"    \
+    "pop rax\n\t"    \
+    "mov es, eax\n\t"\
+    "pop rax\n\t"    \
+    "mov ds, eax\n\t"\
     "pop r15\n\t"   \
     "pop r14\n\t"   \
     "pop r13\n\t"   \
@@ -331,8 +353,6 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "pop rdx\n\t"   \
     "pop rcx\n\t"   \
     "pop rax\n\t"   \
-    "pop gs\n\t"    \
-    "pop fs\n\t"    \
     "add rsp, 0x88\n\t"  /* red zone size + 8 byte */
 
 
@@ -353,7 +373,7 @@ typedef struct _KSTACK_FRAME_INTERRUPT
 */
 
 #define INTERRUPT_HANDLER(_vector)  \
-    __attribute__((naked)) VOID     \
+    VOID __attribute__((naked))     \
     INTERRUPT_HANDLER_NAME(_vector) (VOID) {\
     __asm__ __volatile__ (  \
         ASM_INTERRUPT_FRAME_PUSH_ERRCODE    \
@@ -369,6 +389,80 @@ typedef struct _KSTACK_FRAME_INTERRUPT
 }
 
 
+#define DECLARE_EXCEPTION_HANDLER(_name)    \
+    VOID __attribute((naked)) _name(VOID)
+
+#define EXCEPTION_HANDLER(_name, _id)       \
+    DECLARE_EXCEPTION_HANDLER(_name) {      \
+        __asm__ __volatile__ (              \
+            "cli\n\t"                       \
+            ASM_INTERRUPT_FRAME_PUSH        \
+            "mov rdi, %0\n\t"               \
+            "mov rsi, rsp\n\t"              \
+            "call KiDispatchException\n\t"  \
+            ASM_INTERRUPT_FRAME_POP         \
+            "iretq\n\t"                     \
+            :                               \
+            : "i"(_id)                      \
+            : "memory"                      \
+        );                                  \
+    }
+
+#define EXCEPTION_HANDLER_PUSH_ERRCODE(_name, _id)  \
+    DECLARE_EXCEPTION_HANDLER(_name) {      \
+        __asm__ __volatile__ (              \
+            "cli\n\t"                       \
+            ASM_INTERRUPT_FRAME_PUSH_ERRCODE\
+            "mov rdi, %0\n\t"               \
+            "mov rsi, rsp\n\t"              \
+            "call KiDispatchException\n\t"  \
+            ASM_INTERRUPT_FRAME_POP_ERRCODE \
+            "iretq\n\t"                     \
+            :                               \
+            : "i"(_id)                      \
+            : "memory"                      \
+        );                                  \
+    }
+
+
+
+//
+// Exception/Interrupt handlers.
+//
+
+DECLARE_EXCEPTION_HANDLER(KiDivideFault);
+DECLARE_EXCEPTION_HANDLER(KiDebugTrap);
+DECLARE_EXCEPTION_HANDLER(KiNMIInterrupt);
+DECLARE_EXCEPTION_HANDLER(KiBreakpointTrap);
+DECLARE_EXCEPTION_HANDLER(KiOverflowTrap);
+DECLARE_EXCEPTION_HANDLER(KiBoundFault);
+DECLARE_EXCEPTION_HANDLER(KiInvalidOpcode);
+DECLARE_EXCEPTION_HANDLER(KiCoprocessorNotAvailable);
+DECLARE_EXCEPTION_HANDLER(KiDoubleFault);
+DECLARE_EXCEPTION_HANDLER(KiCoprocessorSegmentOverrun);
+DECLARE_EXCEPTION_HANDLER(KiInvalidTss);
+DECLARE_EXCEPTION_HANDLER(KiSegmentNotPresent);
+DECLARE_EXCEPTION_HANDLER(KiStackSegmentFault);
+DECLARE_EXCEPTION_HANDLER(KiGeneralProtectionFault);
+DECLARE_EXCEPTION_HANDLER(KiPageFault);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException15); //Reserved by intel
+DECLARE_EXCEPTION_HANDLER(KiX87FloatingPointFault);
+DECLARE_EXCEPTION_HANDLER(KiAlignmentFault);
+DECLARE_EXCEPTION_HANDLER(KiMachineCheck);
+DECLARE_EXCEPTION_HANDLER(KiSIMDFloatingPointFault);
+DECLARE_EXCEPTION_HANDLER(KiVirtualizationFault);
+DECLARE_EXCEPTION_HANDLER(KiControlProtectionFault);
+
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException22);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException23);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException24);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException25);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException26);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException27);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException28);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException29);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException30);
+DECLARE_EXCEPTION_HANDLER(KiUnexpectedException31);
 
 DECLARE_INTERRUPT_HANDLER(32);
 DECLARE_INTERRUPT_HANDLER(33);
@@ -594,12 +688,6 @@ DECLARE_INTERRUPT_HANDLER(252);
 DECLARE_INTERRUPT_HANDLER(253);
 DECLARE_INTERRUPT_HANDLER(254);
 DECLARE_INTERRUPT_HANDLER(255);
-
-
-__attribute__((naked))
-VOID
-KiInterruptNop(
-    VOID);
 
 
 VOID

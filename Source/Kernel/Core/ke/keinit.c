@@ -19,41 +19,44 @@
 #include <mm/pool.h>
 #include <init/bootgfx.h>
 #include <hal/acpi.h>
+#include <hal/apic.h>
 
 PTR KiInterruptHandlers[0x100] =
 {
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
-    (PTR)&KiInterruptNop,
+    (PTR)&KiDivideFault,
+    (PTR)&KiDebugTrap,
+    (PTR)&KiNMIInterrupt,
+    (PTR)&KiBreakpointTrap,
+    (PTR)&KiOverflowTrap,
+    (PTR)&KiBoundFault,
+    (PTR)&KiInvalidOpcode,
+    (PTR)&KiCoprocessorNotAvailable,
+    (PTR)&KiDoubleFault,
+    (PTR)&KiCoprocessorSegmentOverrun,
+    (PTR)&KiInvalidTss,
+    (PTR)&KiSegmentNotPresent,
+    (PTR)&KiStackSegmentFault,
+    (PTR)&KiGeneralProtectionFault,
+    (PTR)&KiPageFault,
+    (PTR)&KiUnexpectedException15,
+    (PTR)&KiX87FloatingPointFault,
+    (PTR)&KiAlignmentFault,
+    (PTR)&KiMachineCheck,
+    (PTR)&KiSIMDFloatingPointFault,
+    (PTR)&KiVirtualizationFault,
+    (PTR)&KiControlProtectionFault,
+
+    (PTR)&KiUnexpectedException22,
+    (PTR)&KiUnexpectedException23,
+    (PTR)&KiUnexpectedException24,
+    (PTR)&KiUnexpectedException25,
+    (PTR)&KiUnexpectedException26,
+    (PTR)&KiUnexpectedException27,
+    (PTR)&KiUnexpectedException28,
+    (PTR)&KiUnexpectedException29,
+    (PTR)&KiUnexpectedException30,
+    (PTR)&KiUnexpectedException31,
+
     (PTR)&INTERRUPT_HANDLER_NAME(32),
     (PTR)&INTERRUPT_HANDLER_NAME(33),
     (PTR)&INTERRUPT_HANDLER_NAME(34),
@@ -280,40 +283,40 @@ PTR KiInterruptHandlers[0x100] =
     (PTR)&INTERRUPT_HANDLER_NAME(255),
 };
 
-__attribute__((naked))
-VOID
-KiInterruptNop(
-    VOID)
-{
-    /*
-        6.14 EXCEPTION AND INTERRUPT HANDLING IN 64-BIT MODE
 
-        In 64-bit mode, interrupt and exception handling is similar to what has been described for non-64-bit modes. The
-        following are the exceptions:
-        - All interrupt handlers pointed by the IDT are in 64-bit code (this does not apply to the SMI handler).
-        - The size of interrupt-stack pushes is fixed at 64 bits; and the processor uses 8-byte, zero extended stores.
-        - The stack pointer (SS:RSP) is pushed unconditionally on interrupts. In legacy modes, this push is conditional
-        and based on a change in current privilege level (CPL).
-        - The new SS is set to NULL if there is a change in CPL.
-        - IRET behavior changes.
-        - There is a new interrupt stack-switch mechanism and a new interrupt shadow stack-switch mechanism.
-        - The alignment of interrupt stack frame is different.    
-    */
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiDivideFault, 0)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiDebugTrap, 1)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiNMIInterrupt, 2)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiBreakpointTrap, 3)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiOverflowTrap, 4)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiBoundFault, 5)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiInvalidOpcode, 6)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiCoprocessorNotAvailable, 7)
+EXCEPTION_HANDLER(KiDoubleFault, 8)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiCoprocessorSegmentOverrun, 9)
+EXCEPTION_HANDLER(KiInvalidTss, 10)
+EXCEPTION_HANDLER(KiSegmentNotPresent, 11)
+EXCEPTION_HANDLER(KiStackSegmentFault, 12)
+EXCEPTION_HANDLER(KiGeneralProtectionFault, 13)
+EXCEPTION_HANDLER(KiPageFault, 14)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiUnexpectedException15, 15) //Reserved by intel
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiX87FloatingPointFault, 16)
+EXCEPTION_HANDLER(KiAlignmentFault, 17)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiMachineCheck, 18)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiSIMDFloatingPointFault, 19)
+EXCEPTION_HANDLER_PUSH_ERRCODE(KiVirtualizationFault, 20)
+EXCEPTION_HANDLER(KiControlProtectionFault, 21)
 
-    __asm__ __volatile__ (
-        "cli\n\t"
-        "hlt\n\t"
-//        ASM_INTERRUPT_FRAME_PUSH
-//        "cli\n\t"
-//        "hlt\n\t" // Halts the system
-//        ASM_INTERRUPT_FRAME_POP
-        "iretq\n\t"
-        :
-        :
-        : "memory"
-    );
-}
-
+EXCEPTION_HANDLER(KiUnexpectedException22, 22) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException23, 23) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException24, 24) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException25, 25) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException26, 26) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException27, 27) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException28, 28) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException29, 29) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException30, 30) //Reserved by intel
+EXCEPTION_HANDLER(KiUnexpectedException31, 31) //Reserved by intel
 
 
 INTERRUPT_HANDLER(32)
@@ -540,6 +543,40 @@ INTERRUPT_HANDLER(252)
 INTERRUPT_HANDLER(253)
 INTERRUPT_HANDLER(254)
 INTERRUPT_HANDLER(255)
+
+
+
+VOID
+KERNELAPI
+KiDispatchException(
+    IN U32 ExceptionId,
+    IN KSTACK_FRAME_INTERRUPT *Frame)
+{
+    FATAL(
+        " ********** Exception (ID %d, Frame 0x%016llx) **********\n"
+        "RAX = 0x%016llx, RBX = 0x%016llx, RCX = 0x%016llx, RDX = 0x%016llx, \n"
+        "RSI = 0x%016llx, RDI = 0x%016llx, RBP = 0x%016llx, R8  = 0x%016llx, \n"
+        "R9  = 0x%016llx, R10 = 0x%016llx, R11 = 0x%016llx, R12 = 0x%016llx, \n"
+        "R13 = 0x%016llx, R14 = 0x%016llx, R15 = 0x%016llx, \n"
+        "CS:RIP = 0x%04hx:0x%016llx, SS:RSP = 0x%04hx:0x%016llx, RFLAGS = 0x%016llx, \n"
+        "DS = 0x%04hx, ES = 0x%04hx, FS = 0x%04hx, GS = 0x%04hx, \n"
+        "CR0 = 0x%016llx, CR2 = 0x%016llx, CR3 = 0x%016llx, CR4 = 0x%016llx, \n"
+        "CR8 = 0x%016llx, ErrorCode = 0x%016llx\n",
+        ExceptionId, Frame,
+        Frame->Rax, Frame->Rbx, Frame->Rcx, Frame->Rdx, 
+        Frame->Rsi, Frame->Rdi, Frame->Rbp, Frame->R8,
+        Frame->R9, Frame->R10, Frame->R11, Frame->R12,
+        Frame->R13, Frame->R14, Frame->R15,
+        Frame->Cs, Frame->Rip, Frame->Ss, Frame->Rsp, Frame->Rflags,
+        Frame->Ds, Frame->Es, Frame->Fs, Frame->Gs,
+        __readcr0(), __readcr2(), __readcr3(), __readcr4(),
+        __readcr8(), Frame->ErrorCode
+    );
+
+    _disable();
+    __halt();
+}
+
 
 
 
@@ -853,12 +890,6 @@ KiInitialize(
             DListInitializeHead(&Irq->InterruptListHead);
         }
     }
-
-    //
-    // Start processors.
-    //
-
-//    PiAcpiPreInitializ
 
 }
 
