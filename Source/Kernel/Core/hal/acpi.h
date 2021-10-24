@@ -344,6 +344,20 @@ extern ACPI_XSDT *HalAcpiXsdt;
 extern ACPI_MADT *HalAcpiMadt;
 
 
+
+
+BOOLEAN
+KERNELAPI
+HalLegacyIrqToGSI(
+    IN U8 IsaIrq,
+    OUT U8 *GSI);
+
+BOOLEAN
+KERNELAPI
+HalGSIToLegacyIrq(
+    IN U8 GSI,
+    OUT U8 *IsaIrq);
+
 VOID
 KERNELAPI
 HalAcpiPreInitialize(

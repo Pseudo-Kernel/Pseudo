@@ -18,13 +18,13 @@
 #include <hal/8259pic.h>
 #include <hal/8254pit.h>
 
-typedef struct _BID_8254_PIT_CONTEXT
+typedef struct _HAL_8254_PIT_CONTEXT
 {
     PKINTERRUPT Interrupt;
     ULONG Vector;
-} BID_8254_PIT_CONTEXT;
+} HAL_8254_PIT_CONTEXT;
 
-BID_8254_PIT_CONTEXT Bid_8254Context;
+HAL_8254_PIT_CONTEXT Bid_8254Context;
 
 volatile U64 Bid_8254TickCount;
 U32 Bid_8254TimerFrequency;

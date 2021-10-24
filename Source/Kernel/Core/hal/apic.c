@@ -160,6 +160,20 @@ HalApicSetTimerVector(
 
 VOID
 KERNELAPI
+HalApicReadTimerCounter(
+    IN PTR ApicBase,
+    OUT U32 *InitialCounter,
+    OUT U32 *CurrentCounter)
+{
+    U32 volatile *InitialCount = (U32 volatile *)LAPIC_REG(ApicBase, LAPIC_INITIAL_COUNT);
+    U32 volatile *CurrentCount = (U32 volatile *)LAPIC_REG(ApicBase, LAPIC_CURRENT_COUNT);
+
+    *CurrentCounter = *CurrentCount;
+    *InitialCounter = *InitialCount;
+}
+
+VOID
+KERNELAPI
 HalApicSendEoi(
 	IN PTR ApicBase)
 {
@@ -212,7 +226,7 @@ HalApicStartProcessor(
         LAPIC_ICR_DEST_SHORTHAND(LAPIC_ICR_DEST_NO_SHORTHAND);
 
     // Use rdtsc to wait delay (not accurate).
-    U64 ReferenceTscPerMilliseconds = 50000000; // Assume 5GHz/s.
+    U64 ReferenceTscPerMilliseconds = 5000000; // Assume 5GHz/s.
     volatile U64 TscExpire = 0;
 
     U64 RFlags = __readeflags();

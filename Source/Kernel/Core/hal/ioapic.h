@@ -123,7 +123,6 @@ typedef struct _IOAPIC
 #define IOAPIC_RED_DELIVER_NMI              4
 #define IOAPIC_RED_DELIVER_INIT             5
 #define IOAPIC_RED_DELIVER_EXTINT           7
-#define IOAPIC_RED_DELIVERY_MODE_MASK       IOAPIC_RED_DELIVERY_MODE(7)
 
 //
 // Destination mode (REDTBL[11])
@@ -131,7 +130,6 @@ typedef struct _IOAPIC
 
 #define IOAPIC_RED_DEST_MODE_LOGICAL        (1 << 11)
 #define IOAPIC_RED_DEST_MODE_PHYSICAL       0
-#define IOAPIC_RED_DEST_MODE_MASK           IOAPIC_RED_DEST_MODE_LOGICAL
 
 //
 // Delivery status (Read only, REDTBL[12])
@@ -145,7 +143,6 @@ typedef struct _IOAPIC
 
 #define IOAPIC_RED_POLARITY_LOW_ACTIVE      (1 << 13)
 #define IOAPIC_RED_POLARITY_HIGH_ACTIVE     0
-#define IOAPIC_RED_POLARITY_MASK            IOAPIC_RED_POLARITY_LOW_ACTIVE
 
 //
 // Remote IRR (Read only, REDTBL[14])
@@ -161,7 +158,6 @@ typedef struct _IOAPIC
 
 #define IOAPIC_RED_TRIGGERED_LEVEL          (1 << 15)
 #define IOAPIC_RED_TRIGGERED_EDGE           0
-#define IOAPIC_RED_TRIGGERED_MASK           IOAPIC_RED_TRIGGERED_LEVEL
 
 //
 // Interrupt mask (REDTBL[16])
@@ -175,14 +171,21 @@ typedef struct _IOAPIC
 // - REDTBL[59:56] when physical mode
 //
 
-#define IOAPIC_RED_HIGH_DESTINATION_FIELD(_v)   ((_v) << (56-32))
+#define IOAPIC_RED_HIGH32_DESTINATION_FIELD(_v) ((_v) << (56-32))
+#define IOAPIC_RED_DESTINATION_FIELD(_v)        ((U64)(_v) << 56)
 
 //
 // REDirection.
 //
 
-#define IOAPIC_RED_SETBIT_VECTOR            0xff
-#define IOAPIC_RED_SETBIT_MASK_INT          IOAPIC_RED_INTERRUPT_MASKED
+#define IOAPIC_RED_SETBIT_VECTOR                0xff
+#define IOAPIC_RED_SETBIT_MASK_INT              IOAPIC_RED_INTERRUPT_MASKED
+#define IOAPIC_RED_SETBIT_DESTINATION           IOAPIC_RED_DESTINATION_FIELD(0xff)
+
+#define IOAPIC_RED_SETBIT_DELIVERY_MODE         IOAPIC_RED_DELIVERY_MODE(7)
+#define IOAPIC_RED_SETBIT_DESTINATION_MODE      IOAPIC_RED_DEST_MODE_LOGICAL
+#define IOAPIC_RED_SETBIT_POLARITY              IOAPIC_RED_POLARITY_LOW_ACTIVE
+#define IOAPIC_RED_SETBIT_TRIGGERED             IOAPIC_RED_TRIGGERED_LEVEL
 
 
 

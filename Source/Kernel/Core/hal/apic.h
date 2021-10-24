@@ -188,6 +188,13 @@ HalApicSetTimerVector(
 
 VOID
 KERNELAPI
+HalApicReadTimerCounter(
+    IN PTR ApicBase,
+    OUT U32 *InitialCounter,
+    OUT U32 *CurrentCounter);
+
+VOID
+KERNELAPI
 HalApicSendEoi(
 	IN PTR ApicBase);
 

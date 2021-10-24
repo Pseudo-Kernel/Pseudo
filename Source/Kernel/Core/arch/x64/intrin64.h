@@ -1003,4 +1003,24 @@ void _writefsbase_u64 (unsigned long long);
 void _writegsbase_u64 (unsigned long long);
 */
 
+
+_DEFINE_INTRINSIC(void)
+__cpuidex(int cpuinfo[4], int function_id, int subfunction_id)
+{
+	__asm__ __volatile__ (
+		"cpuid\n\t"
+		: "=a"(cpuinfo[0]), "=b"(cpuinfo[1]), "=c"(cpuinfo[2]), "=d"(cpuinfo[3])
+		: "a"(function_id), "c"(subfunction_id)
+		:
+	);
+}
+
+_DEFINE_INTRINSIC(void)
+__cpuid(int cpuinfo[4], int function_id)
+{
+	__cpuidex(cpuinfo, function_id, 0);
+}
+
+
 #endif
+

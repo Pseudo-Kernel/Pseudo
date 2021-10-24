@@ -281,11 +281,11 @@ HalAcpiPreInitialize(
                         IOAPIC_RED_DEST_MODE_PHYSICAL |
                         IOAPIC_RED_INTERRUPT_MASKED;
                     U64 Mask = 
-                        IOAPIC_RED_DELIVERY_MODE_MASK | 
-                        IOAPIC_RED_POLARITY_MASK | 
-                        IOAPIC_RED_TRIGGERED_MASK | 
-                        IOAPIC_RED_DEST_MODE_MASK |
-                        IOAPIC_RED_INTERRUPT_MASKED;
+                        IOAPIC_RED_SETBIT_DELIVERY_MODE | 
+                        IOAPIC_RED_SETBIT_POLARITY | 
+                        IOAPIC_RED_SETBIT_TRIGGERED | 
+                        IOAPIC_RED_SETBIT_DESTINATION_MODE |
+                        IOAPIC_RED_SETBIT_MASK_INT;
 
                     if (TriggerMode & (1 << i))
                     {
@@ -334,7 +334,7 @@ HalAcpiPreInitialize(
                 U16 TriggerMode = HalPicReadTriggerModeRegister();
 
                 U64 RedirectionEntry = 0;
-                U64 Mask = IOAPIC_RED_POLARITY_MASK | IOAPIC_RED_TRIGGERED_MASK;
+                U64 Mask = IOAPIC_RED_SETBIT_POLARITY | IOAPIC_RED_SETBIT_TRIGGERED;
 
                 switch (Override->Flags.Polarity)
                 {

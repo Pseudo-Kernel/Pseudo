@@ -24,9 +24,31 @@
 
 VOID
 KERNELAPI
+KiTestProcessorFeature(
+    VOID)
+{
+    int Info[4];
+
+    __cpuid(Info, 0x80000001);
+    if (!(Info[3] & (1 << 27)))
+    {
+        FATAL("Processor does not support RDTSCP");
+    }
+
+    __cpuid(Info, 0x80000007);
+    if (!(Info[3] & (1 << 8)))
+    {
+        FATAL("Processor does not support invariant TSC");
+    }
+}
+
+VOID
+KERNELAPI
 KiInitialize(
     VOID)
 {
+//    KiTestProcessorFeature();
+
     for (ULONG i = 0; i < 0x100; i++)
     {
         KiApicIdToProcessorId[i] = PROCESSOR_INVALID_MAPPING;

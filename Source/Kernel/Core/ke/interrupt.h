@@ -38,12 +38,34 @@
 
 
 //
+// Legacy ISA IRQs.
+//
+
+#define ISA_IRQ_TIMER                       0
+#define ISA_IRQ_PS2_KBD                     1
+#define ISA_IRQ_SERIAL4                     3 // shared
+#define ISA_IRQ_SERIAL2                     3 // shared
+#define ISA_IRQ_SERIAL1                     4 // shared
+#define ISA_IRQ_SERIAL3                     4 // shared
+#define ISA_IRQ_PARALLEL3                   5 // shared
+#define ISA_IRQ_SOUND                       5 // shared
+#define ISA_IRQ_FLOPPY                      6 // shared
+#define ISA_IRQ_PARALLEL2                   7 // shared
+#define ISA_IRQ_PARALLEL1                   7 // shared
+#define ISA_IRQ_RTC                         8
+#define ISA_IRQ_PS2_MOUSE                   12
+#define ISA_IRQ_ATA_PRIMARY                 14
+#define ISA_IRQ_ATA_SECONDARY               15
+
+
+//
 // Reserved vector numbers.
 //
 
 #define VECTOR_SPURIOUS                     (IRQL_TO_VECTOR_START(IRQL_RESERVED_SPURIOUS) + 0)
 #define VECTOR_LVT_TIMER                    (IRQL_TO_VECTOR_START(IRQL_CONTEXT_SWITCH) + 0)
 #define VECTOR_LVT_ERROR                    (IRQL_TO_VECTOR_START(IRQL_CONTEXT_SWITCH) + 1)
+#define VECTOR_PLATFORM_TIMER               (IRQL_TO_VECTOR_START(IRQL_DEVICE_1) + 0)
 
 
 typedef enum _KINTERRUPT_RESULT

@@ -22,6 +22,7 @@
 #include <hal/apic.h>
 #include <hal/halinit.h>
 #include <hal/processor.h>
+#include <hal/ptimer.h>
 
 
 VIRTUAL_ADDRESS HalLowArea1MSpace;
@@ -108,6 +109,14 @@ HalInitialize(
     VOID)
 {
     HalInitializeProcessor();
+    
+    ESTATUS Status = HalInitializePlatformTimer();
+    if (!E_IS_SUCCESS(Status))
+    {
+        FATAL("Failed to initialize system timer");
+    }
+
+    _enable();
     
     HalStartProcessors();
 }
