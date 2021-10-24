@@ -34,7 +34,7 @@ BootGfxAcquireLock(
         BOOLEAN InterruptState = !!(__readeflags() & RFLAG_IF);
         _disable();
 
-        if (!_InterlockedExchange(&Screen->Lock, 1))
+        if (!_InterlockedExchange((volatile long *)&Screen->Lock, 1))
         {
             *PrevStae = InterruptState;
             break;
@@ -53,7 +53,7 @@ BootGfxReleaseLock(
     IN BOOT_GFX_SCREEN *Screen,
     IN BOOLEAN PrevStae)
 {
-    _InterlockedExchange(&Screen->Lock, 0);
+    _InterlockedExchange((volatile long *)&Screen->Lock, 0);
 
     if (PrevStae)
         _enable();

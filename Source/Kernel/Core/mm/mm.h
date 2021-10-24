@@ -10,6 +10,8 @@
 typedef struct _XAD_CONTEXT
 {
     BOOLEAN UsePreInitPool;
+    BOOLEAN DebugPrintScreen;
+    BOOLEAN DebugPrintPort;
 } XAD_CONTEXT;
 
 extern MMXAD_TREE MiPadTree; //!< Physical address tree.

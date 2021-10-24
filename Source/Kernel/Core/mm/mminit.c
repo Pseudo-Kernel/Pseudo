@@ -32,29 +32,8 @@ typedef struct _POOL_ADDRESS
 } POOL_ADDRESS;
 
 POOL_ADDRESS MiPoolAddresses[PoolTypeMaximum];
-
 SIZE_T MiAvailableSystemMemory;
 
-/*
-UPTR MiLoaderSpaceStart;
-UPTR MiLoaderSpaceEnd;
-UPTR MiPadListStart;
-UPTR MiPadListEnd;
-UPTR MiVadListStart;
-UPTR MiVadListEnd;
-UPTR MiPxeAreaStart;
-UPTR MiPxeAreaEnd;
-*/
-
-
-
-BOOLEAN
-KERNELAPI
-MiDiscardFirmwareMemory(
-    VOID)
-{
-    return FALSE;
-}
 
 U64
 KERNELAPI
@@ -176,7 +155,6 @@ MiPreInitialize(
 
 
 
-
     //
     // Initialize the PAD/VAD tree.
     //
@@ -184,6 +162,8 @@ MiPreInitialize(
     BGXTRACE("Initializing XADs...\n");
 
     MiXadContext.UsePreInitPool = TRUE;
+    MiXadContext.DebugPrintPort = TRUE;
+    MiXadContext.DebugPrintScreen = TRUE;
 
     if (!MmXadInitializeTree(&MiPadTree, &MiXadContext) || 
         !MmXadInitializeTree(&MiVadTree, &MiXadContext))
@@ -257,62 +237,76 @@ MiPreInitialize(
         SIZE_T Size = PAGES_TO_SIZE(Descriptor->NumberOfPages);
         U32 Type = Descriptor->Type;
 
-        Status = MmAllocatePhysicalMemory2(&PhysicalAddress, Size, PadInitialReserved, Type);
-        if (!E_IS_SUCCESS(Status))
+        if (PhysicalAddress < 0x100000)
         {
-            return Status;
-        }
+            // 
+            // Low 1M area is reserved for kernel use.
+            // (AP initialization code must be relocated to low 1M area)
+            // 
 
-        if (Type == EfiLoaderCode ||
-            Type == EfiLoaderData ||
-            Type == EfiBootServicesCode ||
-            Type == EfiBootServicesData ||
-            Type == EfiConventionalMemory ||
-            Type == EfiPersistentMemory)
-        {
-            AvailableMemory += PAGES_TO_SIZE(Descriptor->NumberOfPages);
+            DbgTraceF(TraceLevelDebug, 
+                "Ignoring physical address 0x%08llx - 0x%08llx (low 1M area)\n",
+                PhysicalAddress, PhysicalAddress + Size -1);
         }
-
-        if (Type == EfiLoaderData)
+        else
         {
-            for (U32 j = 0; j < OS_PRESERVE_RANGE_MAX_COUNT; j++)
+            Status = MmAllocatePhysicalMemory2(&PhysicalAddress, Size, PadInitialReserved, Type);
+            if (!E_IS_SUCCESS(Status))
             {
-                OS_PRESERVE_MEMORY_RANGE *PreserveRange = &LoaderBlock->LoaderData.PreserveRanges[j];
+                return Status;
+            }
 
-                BOOLEAN InRange = IS_IN_ADDRESS_RANGE(
-                    PreserveRange->PhysicalStart,
-                    PreserveRange->Size,
-                    Descriptor->PhysicalStart,
-                    Size);
+            if (Type == EfiLoaderCode ||
+                Type == EfiLoaderData ||
+                Type == EfiBootServicesCode ||
+                Type == EfiBootServicesData ||
+                Type == EfiConventionalMemory ||
+                Type == EfiPersistentMemory)
+            {
+                AvailableMemory += PAGES_TO_SIZE(Descriptor->NumberOfPages);
+            }
 
-                if (InRange && (RangesBitmap & (1ULL << j)))
+            if (Type == EfiLoaderData)
+            {
+                for (U32 j = 0; j < OS_PRESERVE_RANGE_MAX_COUNT; j++)
                 {
-                    if (OsSpecificMemTypeStart <= PreserveRange->Type &&
-                        PreserveRange->Type < OsSpecificMemTypeEnd)
+                    OS_PRESERVE_MEMORY_RANGE *PreserveRange = &LoaderBlock->LoaderData.PreserveRanges[j];
+
+                    BOOLEAN InRange = IS_IN_ADDRESS_RANGE(
+                        PreserveRange->PhysicalStart,
+                        PreserveRange->Size,
+                        Descriptor->PhysicalStart,
+                        Size);
+
+                    if (InRange && (RangesBitmap & (1ULL << j)))
                     {
-                        // Reallocate memory blocks for specific range.
-                        PTR PhysicalAddress = PreserveRange->PhysicalStart;
-                        PTR VirtualAddress = PreserveRange->VirtualStart;
-
-                        Status = MmReallocatePhysicalMemory(&PhysicalAddress, PreserveRange->Size, 
-                            Type, PreserveRange->Type);
-                        if (!E_IS_SUCCESS(Status))
+                        if (OsSpecificMemTypeStart <= PreserveRange->Type &&
+                            PreserveRange->Type < OsSpecificMemTypeEnd)
                         {
-                            return Status;
-                        }
+                            // Reallocate memory blocks for specific range.
+                            PTR PhysicalAddress = PreserveRange->PhysicalStart;
+                            PTR VirtualAddress = PreserveRange->VirtualStart;
 
-                        Status = MmAllocateVirtualMemory(NULL, &VirtualAddress, PreserveRange->Size, 
-                            PreserveRange->Type);
-                        if (!E_IS_SUCCESS(Status))
-                        {
-                            return Status;
-                        }
+                            Status = MmReallocatePhysicalMemory(&PhysicalAddress, PreserveRange->Size, 
+                                Type, PreserveRange->Type);
+                            if (!E_IS_SUCCESS(Status))
+                            {
+                                return Status;
+                            }
 
-                        RangesBitmap &= ~(1ULL << j);
+                            Status = MmAllocateVirtualMemory(NULL, &VirtualAddress, PreserveRange->Size, 
+                                PreserveRange->Type);
+                            if (!E_IS_SUCCESS(Status))
+                            {
+                                return Status;
+                            }
+
+                            RangesBitmap &= ~(1ULL << j);
+                        }
                     }
                 }
             }
-        }        
+        }
 
         // Move to the next descriptor.
         Descriptor = (EFI_MEMORY_DESCRIPTOR *)((PTR)Descriptor + DescriptorSize);
@@ -334,12 +328,15 @@ MiPreDumpXad(
 {
     BGXTRACE("\n");
 
-//    BGXTRACE("Listing PAD tree...\n");
-//    RsBtTraverse(&MiPadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
-//    BGXTRACE("\n");
+    DbgTraceF(TraceLevelDebug, "Listing PAD tree...\n");
+    MiXadContext.DebugPrintScreen = FALSE;
+    RsBtTraverse(&MiPadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
 
     BGXTRACE("Listing VAD tree...\n");
+    DbgTraceF(TraceLevelDebug, "Listing VAD tree...\n");
+    MiXadContext.DebugPrintScreen = TRUE;
     RsBtTraverse(&MiVadTree.Tree, NULL, (PRS_BINARY_TREE_TRAVERSE)MmXadDebugTraverse);
+    
     BGXTRACE("\n");
 }
 

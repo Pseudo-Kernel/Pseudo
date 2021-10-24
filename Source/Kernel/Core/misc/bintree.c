@@ -34,7 +34,7 @@ RsBtTrace(
 	Length = ClStrFormatU8V(Buffer, COUNTOF(Buffer), Format, List);
 	va_end(List);
 
-    DbgTraceN(TraceLevelDebug, Buffer, Length);
+//    DbgTraceN(TraceLevelDebug, Buffer, Length);
 }
 
 /**

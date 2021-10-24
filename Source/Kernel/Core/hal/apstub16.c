@@ -207,9 +207,15 @@ HalpApplicationProcessorInitStub(
         "mov rax, cr4\n\t"
         "or rax, 0x600\n\t"     // CR4_OSFXSR | CR4_OSXMMEXCPT
         "mov cr4, rax\n\t"
+        
 
-        "mov rsp, qword ptr [edx+0x18]\n\t"
-        "sub rsp, 0x80\n\t"
+        //
+        // Set our new stack pointer.
+        //
+
+        "mov rsp, qword ptr [edx+0x18]\n\t" // StackAddress
+        "mov eax, dword ptr [edx+0x14]\n\t" // StackSize
+        "lea rsp, qword ptr [rsp+rax-0x80]\n\t" // 0x80 for reserved (originally, it was reserved for red zone)
         "call qword ptr [edx+0x20]\n\t"
 
         "cli\n\t"

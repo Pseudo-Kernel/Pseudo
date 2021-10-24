@@ -296,8 +296,8 @@ MiXadUpdateSizeLinks(
 /**
  * @brief Traverse function for debugging.
  * 
- * @param CallerContext         Caller context.
- * @param Xad                   XAD.
+ * @param [in] CallerContext        Caller context.
+ * @param [in] Xad                  XAD.
  * 
  * @return TRUE always.
  */
@@ -307,10 +307,23 @@ MmXadDebugTraverse(
     IN PVOID CallerContext,
     IN MMXAD *Xad)
 {
-    BootGfxPrintTextFormat(
-        "Xad 0x%016llx | 0x%016llx - 0x%016llx | 0x%08x\n", 
-        Xad, Xad->Address.Range.Start, Xad->Address.Range.End - 1, 
-        Xad->Address.Type);
+    XAD_CONTEXT *Context = (XAD_CONTEXT *)CallerContext;
+
+    if (Context->DebugPrintScreen)
+    {
+        BootGfxPrintTextFormat(
+            "Xad 0x%016llx | 0x%016llx - 0x%016llx | 0x%08x\n", 
+            Xad, Xad->Address.Range.Start, Xad->Address.Range.End - 1, 
+            Xad->Address.Type);
+    }
+
+    if (Context->DebugPrintPort)
+    {
+        DbgTraceF(TraceLevelDebug,
+            "Xad 0x%016llx | 0x%016llx - 0x%016llx | 0x%08x\n", 
+            Xad, Xad->Address.Range.Start, Xad->Address.Range.End - 1, 
+            Xad->Address.Type);
+    }
 
     return TRUE;
 }
