@@ -91,7 +91,7 @@ HalStartProcessor(
 
     do
     {
-        BGXTRACE("\rWaiting AP (%hhd)", HalAPInitPacket->Status);
+        BGXTRACE_DBG("\rWaiting AP (%hhd)", HalAPInitPacket->Status);
         _mm_pause();
     }
     while (HalAPInitPacket->Status < 4);

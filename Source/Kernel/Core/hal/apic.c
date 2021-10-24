@@ -219,49 +219,49 @@ HalApicStartProcessor(
     _disable();
 
 	// Wait for deliver pending
-    BGXTRACE("Wait for delivery pending before send INIT IPI\n");
+    BGXTRACE_DBG("Wait for delivery pending before send INIT IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Send INIT IPI.
 	/* No Shorthand, Edge Triggered, INIT, Physical, Assert */
-    BGXTRACE("Send INIT IPI\n");
+    BGXTRACE_DBG("Send INIT IPI\n");
 	*ICR1 = High;
 	*ICR0 = Low_IIPI;
-    BGXTRACE("Wait for delivery pending after send INIT IPI\n");
+    BGXTRACE_DBG("Wait for delivery pending after send INIT IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Wait 10ms.
-    BGXTRACE("Wait for 10ms delay\n");
+    BGXTRACE_DBG("Wait for 10ms delay\n");
     TscExpire = __rdtsc() + ReferenceTscPerMilliseconds * 10; // 10ms
     SPIN_WAIT(__rdtsc() < TscExpire);
 
 	// Send startup IPI.
 	/* No Shorthand, Edge Triggered, All, Physical, Assert */
-    BGXTRACE("Send STARTUP IPI\n");
+    BGXTRACE_DBG("Send STARTUP IPI\n");
 	*ICR1 = High;
 	*ICR0 = Low_SIPI;
-    BGXTRACE("Wait for delivery pending after send STARTUP IPI\n");
+    BGXTRACE_DBG("Wait for delivery pending after send STARTUP IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Wait 200us.
-    BGXTRACE("Wait for 200us delay\n");
+    BGXTRACE_DBG("Wait for 200us delay\n");
     TscExpire = __rdtsc() + ReferenceTscPerMilliseconds / 5; // 200us
     SPIN_WAIT(__rdtsc() < TscExpire);
 
 	// Send startup IPI.
 	/* No Shorthand, Edge Triggered, All, Physical, Assert */
-    BGXTRACE("Send STARTUP IPI\n");
+    BGXTRACE_DBG("Send STARTUP IPI\n");
 	*ICR1 = High;
 	*ICR0 = Low_SIPI;
-    BGXTRACE("Wait for delivery pending after send STARTUP IPI\n");
+    BGXTRACE_DBG("Wait for delivery pending after send STARTUP IPI\n");
 	SPIN_WAIT(*ICR0 & LAPIC_ICR_DELIVER_PENDING);
 
     // Wait 200us.
-    BGXTRACE("Wait for 200us delay\n");
+    BGXTRACE_DBG("Wait for 200us delay\n");
     TscExpire = __rdtsc() + ReferenceTscPerMilliseconds / 5; // 200us
     SPIN_WAIT(__rdtsc() < TscExpire);
 
-    BGXTRACE("IIPI-SIPI-SIPI done\n");
+    BGXTRACE_DBG("IIPI-SIPI-SIPI done\n");
 
     if (RFlags & RFLAG_IF)
         _enable();

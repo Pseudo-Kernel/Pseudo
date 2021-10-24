@@ -190,6 +190,12 @@ typedef struct _BOOT_GFX_SCREEN {
 
 #define BGXTRACE                    BootGfxPrintTextFormat
 
+#if DEBUG_TRACE
+#define BGXTRACE_DBG                BootGfxPrintTextFormat
+#else
+#define BGXTRACE_DBG(...)
+#endif
+
 #define BGXTRACE_C(_color, ...) {   \
     U32 __prev_color = BootGfxSetTextColor(_color); \
     BootGfxPrintTextFormat(__VA_ARGS__);    \
