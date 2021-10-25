@@ -228,6 +228,16 @@ extern U8 KiProcessorCount;
 
 
 
+U64
+KERNELAPI
+KeGetProcessorMask(
+    VOID);
+
+U8
+KERNELAPI
+KeGetProcessorCount(
+    VOID);
+
 VOID
 KERNELAPI
 KiInitializeProcessor(

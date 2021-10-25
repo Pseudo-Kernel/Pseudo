@@ -21,7 +21,8 @@ typedef struct _HAL_PRIVATE_DATA
 
         KINTERRUPT PlatformTimer;
     } InterruptObjects;
-    
+
+    U64 ApicTickCount;
 } HAL_PRIVATE_DATA;
 
 

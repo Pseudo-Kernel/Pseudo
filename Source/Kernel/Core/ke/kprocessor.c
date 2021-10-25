@@ -30,6 +30,21 @@ KPROCESSOR *KiProcessorBlocks[0x100];
 U64 KiProcessorMask;
 U8 KiProcessorCount;
 
+U64
+KERNELAPI
+KeGetProcessorMask(
+    VOID)
+{
+    return KiProcessorMask;
+}
+
+U8
+KERNELAPI
+KeGetProcessorCount(
+    VOID)
+{
+    return KiProcessorCount;
+}
 
 BOOLEAN
 KERNELAPI

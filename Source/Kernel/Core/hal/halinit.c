@@ -109,15 +109,7 @@ HalInitialize(
     VOID)
 {
     HalInitializeProcessor();
-    
-    ESTATUS Status = HalInitializePlatformTimer();
-    if (!E_IS_SUCCESS(Status))
-    {
-        FATAL("Failed to initialize system timer");
-    }
 
-    _enable();
-    
     HalStartProcessors();
 }
 

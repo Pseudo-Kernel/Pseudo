@@ -22,11 +22,11 @@
 #include <hal/ioapic.h>
 #include <hal/apic.h>
 #include <hal/halinit.h>
+#include <hal/ptimer.h>
 #include <hal/processor.h>
 
 
-extern U8 HalLegacyIrqToGSIMappings[16];
-extern U8 HalGSIToLegacyIrqMappings[256];
+U32 HalMeasuredApicCounter;
 
 
 VOID
@@ -63,6 +63,7 @@ HalApicIsrTimer(
     IN PKINTERRUPT Interrupt,
     IN PVOID InterruptContext)
 {
+    HalGetPrivateData()->ApicTickCount++;
     HalApicSendEoi(HalApicBase);
     return InterruptAccepted;
 }
@@ -171,6 +172,9 @@ HalInitializePrivateData(
         FATAL("Failed to allocate memory for HAL");
     }
 
+    memset(PrivateData, 0, sizeof(*PrivateData));
+    PrivateData->ApicTickCount = 0;
+
     Processor->HalPrivateData = PrivateData;
 }
 
@@ -245,6 +249,59 @@ HalRegisterApicInterrupt(
 //        NULL, VECTOR_LVT_ERROR);
 }
 
+
+U32
+KERNELAPI
+HalMeasureApicCounter(
+    IN U32 MeasureUnit)
+{
+    DASSERT(HalIsBootstrapProcessor());
+    const ULONG MeasureCount = 10;
+
+    volatile U64 Tick = 0;
+
+    U32 InitialCounter = 0;
+    U32 AverageCounterDelta = 0;
+
+    // Stop timer.
+    HalApicSetTimerVector(HalApicBase, 0, VECTOR_LVT_TIMER);
+
+    DbgTraceF(TraceLevelDebug, "Measuring APIC counter (unit = %dms)\n", MeasureUnit);
+
+    for (ULONG i = 0; i < MeasureCount; i++)
+    {
+        // Start timer
+        HalApicSetTimerVector(HalApicBase, 0xffffffff, VECTOR_LVT_TIMER);
+
+        Tick = HalGetTickCount() + MeasureUnit;
+
+        U32 CurrentCounterStart = 0;
+        HalApicReadTimerCounter(HalApicBase, &InitialCounter, &CurrentCounterStart);
+
+        // Wait for tick count to be changed
+        while (HalGetTickCount() < Tick)
+            _mm_pause();
+
+        U32 CurrentCounterEnd = 0;
+        HalApicReadTimerCounter(HalApicBase, &InitialCounter, &CurrentCounterEnd);
+
+        HalApicSetTimerVector(HalApicBase, 0, VECTOR_LVT_TIMER);
+
+        U32 CounterDelta = CurrentCounterStart - CurrentCounterEnd;
+
+        DbgTraceF(TraceLevelDebug, "Measured APIC counter #%d = %d\n", i, CounterDelta);
+
+        AverageCounterDelta += CounterDelta;
+    }
+
+    AverageCounterDelta /= MeasureCount;
+
+    DbgTraceF(TraceLevelDebug, "Measured APIC counter (average) = %d\n", AverageCounterDelta);
+
+    return AverageCounterDelta;
+}
+
+
 VOID
 KERNELAPI
 HalInitializeProcessor(
@@ -257,4 +314,38 @@ HalInitializeProcessor(
     HalApicSetSpuriousVector(HalApicBase, TRUE, VECTOR_SPURIOUS);
     HalApicSetTimerVector(HalApicBase, 0, VECTOR_LVT_TIMER);
     //HalApicSetErrorVector(HalApicBase, TRUE, VECTOR_LVT_ERROR);
+
+    if (HalIsBootstrapProcessor())
+    {
+        //
+        // Do additional initializations for BSP.
+        //
+
+        ESTATUS Status = HalInitializePlatformTimer();
+        if (!E_IS_SUCCESS(Status))
+        {
+            FATAL("Failed to initialize system timer");
+        }
+
+        _enable();
+
+        //
+        // Measure APIC counter before setup.
+        //
+
+        HalMeasuredApicCounter = HalMeasureApicCounter(100) / 10 * 2; /* 1 context switch per 20ms */
+        if (!HalMeasuredApicCounter)
+        {
+            FATAL("Strange APIC counter");
+        }
+    }
+
+    //
+    // Finally, setup APIC timer.
+    //
+
+    _enable();
+
+    HalApicSetTimerVector(HalApicBase, HalMeasureApicCounter, VECTOR_LVT_TIMER);
 }
+

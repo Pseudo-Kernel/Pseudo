@@ -17,8 +17,6 @@
  *                   (Recent gdb doesn't working with vscode/QEMU)
  * 
  * @todo There are many works to do:\n
- *       - Interrupt registration and dispatch
- *       - Processor initialization (IOAPIC, LAPIC, per-processor data and tables)
  *       - Thread scheduling and load balancing
  *       - Synchronization primitives
  * 
@@ -32,22 +30,23 @@
  *         Resolved by using recent version of gcc (10.3.0)
  *       - AP initialization is not working when starting 3rd processor. (1st=BSP, 2nd=AP) [RESOLVED]\n
  *         Resolved. Turned out to be a simple bug in 16-bit AP stub.
- *       - BSP hangs in real machine while sending INIT-SIPI-SIPI to first AP.\n
+ *       - BSP hangs in real machine while sending INIT-SIPI-SIPI to first AP. [RESOLVED]\n
  *         Looks like BSP hangs when writing ICR high/ICR low (first SIPI command).
  *       - Kernel crashes during AP initialization (Getting triple fault). [RESOLVED]\n
- *         Resolved. It was also a AP stub bug (sets rsp to invalid address).
+ *         Resolved. It was also a AP stub bug (sets rsp to invalid address). Same as BSP hang issue.
  */
 
 #include <base/base.h>
 #include <init/preinit.h>
 #include <init/bootgfx.h>
 #include <ke/ke.h>
+#include <ke/kprocessor.h>
 #include <mm/mminit.h>
 #include <mm/pool.h>
 
 #include <hal/halinit.h>
+#include <hal/processor.h>
 #include <hal/ptimer.h>
-#include <hal/8259pic.h>
 
 
 /**
@@ -113,14 +112,21 @@ KiKernelStart(
 
     HalInitialize();
 
-    // Interrupt Test
+    //
+    // Test!
+    //
 
-    _enable();
-
-    for (U32 i = 0; ; i++)
+    for (;;)
     {
         __halt();
-        BGXTRACE("Tick = %lld\r", HalGetTickCount());
+
+        for (U32 i = 0; i < KeGetProcessorCount(); i++)
+        {
+            HAL_PRIVATE_DATA *PrivateData = (HAL_PRIVATE_DATA *)KiProcessorBlocks[i]->HalPrivateData;
+            BGXTRACE("Processor%d: %10d | ", i, PrivateData->ApicTickCount);
+        }
+
+        BGXTRACE("SystemTimerTick: %10lld\r", HalGetTickCount());
     }
     
 	return 0;
