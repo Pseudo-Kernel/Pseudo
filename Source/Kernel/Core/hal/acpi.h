@@ -380,3 +380,21 @@ HalAcpiGetNextProcessor(
     IN ACPI_MADT *Madt,
     IN ACPI_LOCAL_APIC *ProcessorRecord);
 
+ACPI_MADT_RECORD_HEADER *
+KERNELAPI
+HalAcpiGetFirstMadtRecord(
+    IN ACPI_MADT *Madt,
+    IN U8 RecordType);
+
+ACPI_MADT_RECORD_HEADER *
+KERNELAPI
+HalAcpiGetNextMadtRecord(
+    IN ACPI_MADT *Madt,
+    IN ACPI_MADT_RECORD_HEADER *Record);
+
+ACPI_LOCAL_APIC *
+KERNELAPI
+HalAcpiLookupProcessor(
+    IN ACPI_MADT *Madt,
+    IN U8 ApicId);
+

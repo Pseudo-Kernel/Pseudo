@@ -160,6 +160,29 @@ HalApicSetTimerVector(
 
 VOID
 KERNELAPI
+HalApicSetLINTxVector(
+    IN PTR ApicBase, 
+    IN U8 LINTx,
+	IN BOOLEAN ActiveLow,
+    IN BOOLEAN LevelSensitive,
+    IN U32 DeliveryMode,
+	IN U8 Vector)
+{
+    U32 volatile *LINT = NULL;
+    if (LINTx == 0)
+        LINT = (U32 volatile *)LAPIC_REG(ApicBase, LAPIC_LINT0);
+    else if (LINTx == 1)
+        LINT = (U32 volatile *)LAPIC_REG(ApicBase, LAPIC_LINT0);
+    else
+        DASSERT(FALSE);
+
+    /* Not masked, Active level, Polarity, Delivery mode, Vector */
+    *LINT = ((!!LevelSensitive) << 16) | ((!!ActiveLow) << 13) | 
+        ((DeliveryMode & 0x07) << 8) | (Vector & 0xff);
+}
+
+VOID
+KERNELAPI
 HalApicReadTimerCounter(
     IN PTR ApicBase,
     OUT U32 *InitialCounter,

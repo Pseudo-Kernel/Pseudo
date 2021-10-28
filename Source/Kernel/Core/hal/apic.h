@@ -188,6 +188,16 @@ HalApicSetTimerVector(
 
 VOID
 KERNELAPI
+HalApicSetLINTxVector(
+    IN PTR ApicBase, 
+    IN U8 LINTx,
+	IN BOOLEAN ActiveLow,
+    IN BOOLEAN LevelSensitive,
+    IN U32 DeliveryMode,
+	IN U8 Vector);
+
+VOID
+KERNELAPI
 HalApicReadTimerCounter(
     IN PTR ApicBase,
     OUT U32 *InitialCounter,

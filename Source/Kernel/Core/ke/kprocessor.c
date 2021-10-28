@@ -192,6 +192,24 @@ KiInitializeProcessor(
     __writecr4(Value);
 
 
+    //
+    // Initialize the PAT.
+    //
+
+    U64 OldPAT = __readmsr(IA32_PAT);
+    U64 NewPAT = 
+        PAT_MSR_ENTRY(PAT_INDEX_WRITE_BACK, PAT_MSR_MEMORY_TYPE_WRITE_BACK) |
+        PAT_MSR_ENTRY(PAT_INDEX_WRITE_THROUGH, PAT_MSR_MEMORY_TYPE_WRITE_THROUGH) |
+        PAT_MSR_ENTRY(PAT_INDEX_UNCACHED, PAT_MSR_MEMORY_TYPE_UNCACHED) |
+        PAT_MSR_ENTRY(PAT_INDEX_UNCACHABLE, PAT_MSR_MEMORY_TYPE_UNCACHABLE) |
+        PAT_MSR_ENTRY(PAT_INDEX_WRITE_PROTECTED, PAT_MSR_MEMORY_TYPE_WRITE_PROTECTED) |
+        PAT_MSR_ENTRY(PAT_INDEX_WRITE_COMBINING, PAT_MSR_MEMORY_TYPE_WRITE_COMBINING);
+
+    DbgTraceF(TraceLevelDebug, "Setting PAT 0x%016llx to 0x%016llx\n", OldPAT, NewPAT);
+    __writemsr(IA32_PAT, NewPAT);
+
+
+
     KPROCESSOR *Processor = MmAllocatePool(PoolTypeNonPaged, sizeof(*Processor), 0x10, 0);
     if (!Processor)
     {

@@ -8,7 +8,6 @@
  * 
  * @copyright Copyright (c) 2021
  * 
- * @todo Initialize local APIC and start processor.
  */
 
 #include <base/base.h>
@@ -30,7 +29,11 @@ AP_INIT_PACKET volatile *HalAPInitPacket;
 
 VIRTUAL_ADDRESS HalApicBase;
 
-
+/**
+ * @brief Relocates AP initialization packet (including 16-bit stub) to low 1M area.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalPrepareAPStart(
@@ -94,6 +97,13 @@ HalPrepareAPStart(
     HalApicBase = ApicVirtualBase;
 }
 
+/**
+ * @brief Do the pre-initialization for HAL.
+ * 
+ * @param [in] Rsdp     Address of RSDP.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalPreInitialize(
@@ -103,6 +113,11 @@ HalPreInitialize(
     HalPrepareAPStart();
 }
 
+/**
+ * @brief Initializes the HAL.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalInitialize(

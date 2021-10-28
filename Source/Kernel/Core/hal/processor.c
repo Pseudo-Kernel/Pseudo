@@ -26,9 +26,13 @@
 #include <hal/processor.h>
 
 
-U32 HalMeasuredApicCounter;
+U32 HalMeasuredApicInitialCounter;
 
-
+/**
+ * @brief 64-bit entry of AP start code.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalApplicationProcessorStart(
@@ -47,6 +51,14 @@ HalApplicationProcessorStart(
     }
 }
 
+/**
+ * @brief ISR for spurious interrupt.
+ * 
+ * @param [in] Interrupt            Interruot object.
+ * @param [in] InterruptContext     Interrupt context.
+ * 
+ * @return Always InterruptAccepted.
+ */
 KINTERRUPT_RESULT
 KERNELAPI
 HalIsrSpurious(
@@ -57,6 +69,14 @@ HalIsrSpurious(
     return InterruptAccepted;
 }
 
+/**
+ * @brief ISR for local APIC timer interrupt.
+ * 
+ * @param [in] Interrupt            Interruot object.
+ * @param [in] InterruptContext     Interrupt context.
+ * 
+ * @return Always InterruptAccepted.
+ */
 KINTERRUPT_RESULT
 KERNELAPI
 HalApicIsrTimer(
@@ -68,6 +88,18 @@ HalApicIsrTimer(
     return InterruptAccepted;
 }
 
+/**
+ * @brief Starts the processor.\n
+ *        This function sets fields in AP packet, requests IPI and waits for initialization.
+ * 
+ * @param [in] ApicId               APIC ID to target processor.
+ * @param [in] PML4TPhysicalBase    Physical address of PML4T.
+ * @param [in] StartRoutine         Processor start routine.
+ * @param [in] StackBase            Initial stack.
+ * @param [in] StackSize            Initial stack size.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalStartProcessor(
@@ -98,6 +130,11 @@ HalStartProcessor(
     while (HalAPInitPacket->Status < 4);
 }
 
+/**
+ * @brief Starts all processors reported by ACPI.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalStartProcessors(
@@ -151,6 +188,11 @@ HalStartProcessors(
 
 }
 
+/**
+ * @brief Returns private data pointer.
+ * 
+ * @return HAL_PRIVATE_DATA* 
+ */
 HAL_PRIVATE_DATA *
 KERNELAPI
 HalGetPrivateData(
@@ -159,6 +201,11 @@ HalGetPrivateData(
     return (HAL_PRIVATE_DATA *)KeGetCurrentProcessor()->HalPrivateData;
 }
 
+/**
+ * @brief Initializes the private data for HAL.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalInitializePrivateData(
@@ -178,6 +225,16 @@ HalInitializePrivateData(
     Processor->HalPrivateData = PrivateData;
 }
 
+/**
+ * @brief Registers interrupt with given vector.
+ * 
+ * @param [in,out] Interrupt        Interrupt object to be initialized.
+ * @param [in] InterruptRoutine     ISR for given interrupt.
+ * @param [in] InterruptContext     Interrupt context for given interrupt.
+ * @param [in] Vector               Vector.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 KERNELAPI
 HalRegisterInterrupt(
@@ -214,6 +271,11 @@ HalRegisterInterrupt(
     return Status;
 }
 
+/**
+ * @brief Registers interrupt for local APIC.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalRegisterApicInterrupt(
@@ -249,7 +311,13 @@ HalRegisterApicInterrupt(
 //        NULL, VECTOR_LVT_ERROR);
 }
 
-
+/**
+ * @brief Measures local APIC counter for given MeasureUnit (in ms).\n
+ * 
+ * @param [in] MeasureUnit      Measure unit in miliseconds.
+ * 
+ * @return Returns APIC counter
+ */
 U32
 KERNELAPI
 HalMeasureApicCounter(
@@ -301,19 +369,61 @@ HalMeasureApicCounter(
     return AverageCounterDelta;
 }
 
+/**
+ * @brief Initializes the local APIC NMI vector.
+ * 
+ * @return None.
+ */
+VOID
+KERNELAPI
+HalSetApicNMIVector(
+    VOID)
+{
+    U8 ApicId = HalApicGetId(HalApicBase);
+    ACPI_LOCAL_APIC *Apic = HalAcpiLookupProcessor(HalAcpiMadt, ApicId);
+    DASSERT(Apic);
 
+    ACPI_MADT_RECORD_HEADER *Record = HalAcpiGetFirstMadtRecord(HalAcpiMadt, ACPI_MADT_RECORD_APIC_NMI);
+
+    while (Record)
+    {
+        DASSERT(Record->EntryType == ACPI_MADT_RECORD_APIC_NMI);
+
+        ACPI_LOCAL_APIC_NMI *NMI = (ACPI_LOCAL_APIC_NMI *)Record;
+        if (NMI->AcpiProcessorId == Apic->AcpiProcessorId || 
+            /* A value of 0xFF signifies that this applies to all processors in the machine. */
+            NMI->AcpiProcessorId == 0xff)
+        {
+            BOOLEAN ActiveLow = (NMI->Flags.Polarity == ACPI_INT_OVERRIDE_POLARITY_ACTIVE_LOW);
+            BOOLEAN LevelSensitive = (NMI->Flags.TriggerMode == ACPI_INT_OVERRIDE_TRIG_LEVEL);
+
+            HalApicSetLINTxVector(HalApicBase, NMI->LocalApicLINTn, 
+                ActiveLow, LevelSensitive, 4 /*delivery mode = NMI*/, 0);
+        }
+
+        Record = HalAcpiGetNextMadtRecord(HalAcpiMadt, Record);
+    }
+}
+
+/**
+ * @brief Initializes the processor.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 HalInitializeProcessor(
     VOID)
 {
     HalInitializePrivateData();
+
     HalRegisterApicInterrupt();
     HalApicSetDefaultState(HalApicBase);
     HalApicEnable();
     HalApicSetSpuriousVector(HalApicBase, TRUE, VECTOR_SPURIOUS);
     HalApicSetTimerVector(HalApicBase, 0, VECTOR_LVT_TIMER);
     //HalApicSetErrorVector(HalApicBase, TRUE, VECTOR_LVT_ERROR);
+    HalSetApicNMIVector();
 
     if (HalIsBootstrapProcessor())
     {
@@ -333,8 +443,8 @@ HalInitializeProcessor(
         // Measure APIC counter before setup.
         //
 
-        HalMeasuredApicCounter = HalMeasureApicCounter(100) / 10 * 2; /* 1 context switch per 20ms */
-        if (!HalMeasuredApicCounter)
+        HalMeasuredApicInitialCounter = HalMeasureApicCounter(100) / 10 * 2; /* 1 context switch per 20ms */
+        if (!HalMeasuredApicInitialCounter)
         {
             FATAL("Strange APIC counter");
         }
@@ -346,6 +456,6 @@ HalInitializeProcessor(
 
     _enable();
 
-    HalApicSetTimerVector(HalApicBase, HalMeasureApicCounter, VECTOR_LVT_TIMER);
+    HalApicSetTimerVector(HalApicBase, HalMeasuredApicInitialCounter, VECTOR_LVT_TIMER);
 }
 

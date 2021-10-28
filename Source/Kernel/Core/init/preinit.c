@@ -17,13 +17,21 @@
 #include <ke/ke.h>
 #include <mm/pool.h>
 #include <mm/mminit.h>
+#include <mm/paging.h>
 #include <hal/halinit.h>
 
 
 OS_LOADER_BLOCK PiLoaderBlockTemporary;
 ZIP_CONTEXT PiBootImageContext; // Boot image context
 
-
+/**
+ * @brief Do the pre-initialization.
+ * 
+ * @param [in] LoaderBlock          Loader block.
+ * @param [in] LoaderBlockSize      Size of loader block.
+ * 
+ * @return None. 
+ */
 VOID
 KERNELAPI
 PiPreInitialize(
@@ -88,6 +96,17 @@ PiPreInitialize(
     {
         FATAL("Failed to initialize memory (0x%08x)", Status);
     }
+
+    //
+    // Set framebuffer attributes to WC.
+    // This greatly improves copy speed (compared to UC).
+    //
+
+    MiArchX64SetPageAttribute(MiPML4TBase, MiRPML4TBase, 
+        LoaderBlockTemp->LoaderData.VideoFramebufferBase, 
+        LoaderBlockTemp->LoaderData.VideoFramebufferSize, 
+        ARCH_X64_PAT_WRITE_COMBINING);
+
 
     //
     // Dump XADs.

@@ -22,15 +22,6 @@ U64 *MiRPML4TBase; //!< Reverse PML4 table base.
 
 OBJECT_POOL MiPreInitPxePool; //!< Pre-init PXE pool
 
-/*
-U64 *
-KERNELAPI
-MiAllocatePxe(
-    VOID)
-{
-    return 0;
-}
-*/
 
 /**
  * @brief Allocates the 512 entries of PXE.
@@ -425,24 +416,25 @@ MiArchX64SetPageMapping(
     return TRUE;
 }
 
-#if 0
 /**
- * @brief Clears virtual-to-physical page mapping.\n
+ * @brief Sets the attribute of page.\n
  * 
- * @param [in] PML4TBase        Base address of PML4T.
- * @param [in] RPML4TBase       Base address of RPML4T.
- * @param [in] VirtualAddress   Virtual address.
- * @param [in] Size             Map size.
+ * @param [in] PML4TBase                Base address of PML4T.
+ * @param [in] RPML4TBase               Base address of RPML4T.
+ * @param [in] VirtualAddress           Virtual address.
+ * @param [in] Size                     Map size.
+ * @param [in] PatFlags                 Page attribute flags. See ARCH_X64_PAT_Xxx.
  * 
  * @return TRUE if succeeds, FALSE otherwise.
  */
 BOOLEAN
 KERNELAPI
-MiArchX64SetPageMappingNotPresent(
+MiArchX64SetPageAttribute(
     IN U64 *PML4TBase, 
     IN U64 *RPML4TBase, 
     IN VIRTUAL_ADDRESS VirtualAddress, 
-    IN SIZE_T Size)
+    IN SIZE_T Size, 
+    IN U64 PatFlags)
 {
     U64 PageCount = SIZE_TO_PAGES(Size);
     U64 VfnStart = PAGE_TO_PAGE_NUMBER_4K(VirtualAddress);
@@ -450,44 +442,55 @@ MiArchX64SetPageMappingNotPresent(
 
     for (U64 i = 0; i < PageCount; )
     {
+        //
+        // Set address mapping.
+        //
+
         U64 PML4TEi = ARCH_X64_PAGE_NUMBER_TO_PML4EI(SourcePageNumber);
         U64 PDPTEi = ARCH_X64_PAGE_NUMBER_TO_PDPTEI(SourcePageNumber);
         U64 PDEi = ARCH_X64_PAGE_NUMBER_TO_PDEI(SourcePageNumber);
         U64 PTEi = ARCH_X64_PAGE_NUMBER_TO_PTEI(SourcePageNumber);
 
         U64 PML4TE = PML4TBase[PML4TEi];
-        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
-        {
-            return FALSE;
-        }
+        DASSERT(PML4TE & ARCH_X64_PXE_PRESENT);
 
         // PML4T -> PDPT
         U64 *PDPTBase = NULL;
         DASSERT(MiTranslatePhysicalToVirtual(RPML4TBase, (PML4TE & ARCH_X64_PXE_4K_BASE_MASK), (U64 *)&PDPTBase));
+        
         U64 PDPTE = PDPTBase[PDPTEi];
-        if (!(PDPTE & ARCH_X64_PXE_PRESENT))
-        {
-            return FALSE;
-        }
+        DASSERT(PDPTE & ARCH_X64_PXE_PRESENT);
 
         // PDPT -> PD
         U64 *PDBase = NULL;
         DASSERT(MiTranslatePhysicalToVirtual(RPML4TBase, (PDPTE & ARCH_X64_PXE_4K_BASE_MASK), (U64 *)&PDBase));
+        
         U64 PDE = PDBase[PDEi];
-        if (!(PDE & ARCH_X64_PXE_PRESENT))
-        {
-            return FALSE;
-        }
+        DASSERT(PDE & ARCH_X64_PXE_PRESENT);
+
+        // Currently not supports large pages
+        DASSERT(!(PDE & ARCH_X64_PXE_LARGE_SIZE));
 
         // PD -> PT
         U64 *PTBase = NULL;
         DASSERT(MiTranslatePhysicalToVirtual(RPML4TBase, (PDE & ARCH_X64_PXE_4K_BASE_MASK), (U64 *)&PTBase));
-        U64 PTE = PTBase[PTEi];
 
-        // Clear present bit
-        PTE &= ~ARCH_X64_PXE_PRESENT;
+        BOOLEAN Present = FALSE;
+        if (PTBase[PTEi] & ARCH_X64_PXE_PRESENT)
+        {
+            Present = TRUE;
+        }
 
-        PTBase[PTEi] = PTE;
+        // Set PTE flags with present bit clear.
+        PTBase[PTEi] = (PTBase[PTEi] & ~(ARCH_X64_PAT_MASK_ALL_SET | ARCH_X64_PXE_PRESENT)) | 
+            (PatFlags & ARCH_X64_PAT_MASK_ALL_SET);
+
+        MiArchX64InvalidateSinglePage(SourcePageNumber << PAGE_SHIFT);
+
+        if (Present)
+        {
+            PTBase[PTEi] |= ARCH_X64_PXE_PRESENT;
+        }
 
         i++;
         SourcePageNumber++;
@@ -495,102 +498,4 @@ MiArchX64SetPageMappingNotPresent(
 
     return TRUE;
 }
-
-
-/**
- * @brief Checks whether the virtual-to-physical is exists.\n
- * 
- * @param [in] PML4TBase        Base address of PML4T.
- * @param [in] RPML4TBase       Base address of RPML4T.
- * @param [in] VirtualAddress   Virtual address.
- * @param [in] Size             Map size.
- * 
- * @return TRUE if succeeds, FALSE otherwise.
- */
-BOOLEAN
-KERNELAPI
-MiArchX64IsPageMappingExists(
-    IN U64 *PML4TBase, 
-    IN U64 *RPML4TBase, 
-    IN EFI_VIRTUAL_ADDRESS VirtualAddress, 
-    IN SIZE_T Size)
-{
-    U64 PageCount = SIZE_TO_PAGES(Size);
-    U64 VfnStart = PAGE_TO_PAGE_NUMBER_4K(VirtualAddress);
-
-    U64 SourcePageNumber = VfnStart;
-
-    U64 PageCount2M = SIZE_TO_PAGES(PAGE_SIZE_2M);
-
-    for (U64 i = 0; i < PageCount; )
-    {
-        U64 PML4TEi = ARCH_X64_PAGE_NUMBER_TO_PML4EI(SourcePageNumber);
-        U64 PDPTEi = ARCH_X64_PAGE_NUMBER_TO_PDPTEI(SourcePageNumber);
-        U64 PDEi = ARCH_X64_PAGE_NUMBER_TO_PDEI(SourcePageNumber);
-        U64 PTEi = ARCH_X64_PAGE_NUMBER_TO_PTEI(SourcePageNumber);
-
-        U64 PML4TE = PML4TBase[PML4TEi];
-        if (!(PML4TE & ARCH_X64_PXE_PRESENT))
-        {
-            return FALSE;
-        }
-
-        // PML4T -> PDPT
-        U64 *PDPTBase = NULL;
-        if (!MiTranslatePhysicalToVirtual(RPML4TBase, 
-            (PML4TE & ARCH_X64_PXE_4K_BASE_MASK), (VIRTUAL_ADDRESS *)&PDPTBase))
-        {
-            return FALSE;
-        }
-
-        U64 PDPTE = PDPTBase[PDPTEi];
-        if (!(PDPTE & ARCH_X64_PXE_PRESENT))
-        {
-            return FALSE;
-        }
-
-        // PDPT -> PD
-        U64 *PDBase = NULL;
-        if (!MiTranslatePhysicalToVirtual(RPML4TBase, 
-            (PDPTE & ARCH_X64_PXE_4K_BASE_MASK), (U64 *)&PDBase))
-        {
-            return FALSE;
-        }
-
-        U64 PDE = PDBase[PDEi];
-        if (!(PDE & ARCH_X64_PXE_PRESENT))
-        {
-            return FALSE;
-        }
-
-        if (PDE & ARCH_X64_PXE_LARGE_SIZE)
-        {
-            i += PageCount2M;
-            SourcePageNumber += PageCount2M;
-        }
-        else
-        {
-            // PD -> PT
-            U64 *PTBase = NULL;
-            if (!MiTranslatePhysicalToVirtual(RPML4TBase, 
-                (PDE & ARCH_X64_PXE_4K_BASE_MASK), (U64 *)&PTBase))
-            {
-                return FALSE;
-            }
-
-            U64 PTE = PTBase[PTEi];
-
-            if (!(PTE & ARCH_X64_PXE_PRESENT))
-            {
-                return FALSE;
-            }
-
-            i++;
-            SourcePageNumber++;
-        }
-    }
-
-    return TRUE;
-}
-#endif
 

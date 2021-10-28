@@ -422,6 +422,7 @@ OslResetPxePool(
  * @param [in] ReverseMapping   Sets virtual-to-physical mapping to PML4T if FALSE.\n
  *                              Otherwise, sets physical-to-virtual mapping.\n
  *                              PML4T will be treated as reverse mapping table of PML4T.
+ * @param [in] AllowLargePage   If TRUE, uses 2M page to reduce number of PTEs (if possible).
  * 
  * @return TRUE if succeeds, FALSE otherwise.
  */
@@ -433,7 +434,8 @@ OslArchX64SetPageMapping(
     IN EFI_PHYSICAL_ADDRESS PhysicalAddress, 
     IN UINT64 Size, 
     IN UINT64 PteFlags,
-    IN BOOLEAN ReverseMapping)
+    IN BOOLEAN ReverseMapping,
+    IN BOOLEAN AllowLargePage)
 {
     UINT64 PageCount = EFI_SIZE_TO_PAGES(Size);
 
@@ -462,7 +464,7 @@ OslArchX64SetPageMapping(
 
         if (!(SourcePageNumber & (PageCount2M - 1)) && 
             !(DestinationPageNumber & (PageCount2M - 1)) && 
-            i + PageCount2M <= PageCount)
+            i + PageCount2M <= PageCount && AllowLargePage)
         {
             // Both source and destination are 2M-size aligned.
             UseMapping2M = TRUE;
@@ -1004,7 +1006,7 @@ OslSetupPaging(
 
                 // 1:1 Virtual-to-physical mapping.
                 if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 
-                    PreserveRange->Size, PxeFlag, FALSE))
+                    PreserveRange->Size, PxeFlag, FALSE, TRUE))
                 {
                     TRACEF(L"Failed to set mapping, PXE pool %lld / %lld\r\n", 
                         LoaderBlock->LoaderData.PxeInitPoolSizeUsed,
@@ -1015,7 +1017,7 @@ OslSetupPaging(
 
                 // 1:1 Reverse mapping (physical-to-virtual).
                 if (!OslArchX64SetPageMapping((UINT64 *)RPML4TBase, VirtualAddress, PhysicalAddress, 
-                    PreserveRange->Size, 0, TRUE))
+                    PreserveRange->Size, 0, TRUE, TRUE))
                 {
                     return FALSE;
                 }
@@ -1028,7 +1030,7 @@ OslSetupPaging(
         {
             // Virtual-to-physical mapping (identity mapping).
             if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, VirtualAddress, PhysicalAddress, 
-                Size, PxeFlag, FALSE))
+                Size, PxeFlag, FALSE, TRUE))
             {
                 return FALSE;
             }
@@ -1047,7 +1049,7 @@ OslSetupPaging(
     {
         // Set framebuffer mapping (identity mapping).
         if (!OslArchX64SetPageMapping((UINT64 *)PML4TBase, FramebufferBase, FramebufferBase, 
-            FramebufferSize, ARCH_X64_PXE_WRITABLE | ARCH_X64_PXE_CACHE_DISABLED, FALSE))
+            FramebufferSize, ARCH_X64_PXE_WRITABLE | ARCH_X64_PXE_CACHE_DISABLED, FALSE, FALSE))
         {
             return FALSE;
         }

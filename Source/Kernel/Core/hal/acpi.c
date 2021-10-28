@@ -10,6 +10,8 @@
  * 
  * @note This code assumes that ACPI tables are identity mapped.
  * 
+ * @todo Reserve GSI for given NMI.
+ *       
  */
 
 
@@ -426,20 +428,7 @@ KERNELAPI
 HalAcpiGetFirstProcessor(
     IN ACPI_MADT *Madt)
 {
-    ACPI_MADT_RECORD_HEADER *Record = (ACPI_MADT_RECORD_HEADER *)(Madt + 1);
-    PTR MadtEnd = (PTR)Madt + Madt->Header.Length;
-
-    while ((PTR)Record < MadtEnd)
-    {
-        if (Record->EntryType == ACPI_MADT_RECORD_LOCAL_APIC)
-        {
-            return (ACPI_LOCAL_APIC *)Record;
-        }
-
-        Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
-    }
-
-    return NULL;
+    return (ACPI_LOCAL_APIC *)HalAcpiGetFirstMadtRecord(Madt, ACPI_MADT_RECORD_LOCAL_APIC);
 }
 
 /**
@@ -457,16 +446,32 @@ HalAcpiGetNextProcessor(
     IN ACPI_MADT *Madt,
     IN ACPI_LOCAL_APIC *ProcessorRecord)
 {
-    ACPI_MADT_RECORD_HEADER *Record = &ProcessorRecord->Header;
-    PTR MadtEnd = (PTR)Madt + Madt->Header.Length;
+    return (ACPI_LOCAL_APIC *)HalAcpiGetNextMadtRecord(Madt, &ProcessorRecord->Header);
+}
 
-    Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
+/**
+ * @brief Returns first MADT record structure.
+ * 
+ * @param [in] Madt             Pointer to ACPI_MADT.
+ * @param [in] RecordType       Type of MADT record.
+ * 
+ * @return Returns pointer to ACPI_MADT_RECORD_HEADER if succeeds.\n
+ *         This function returns NULL if it fails.
+ */
+ACPI_MADT_RECORD_HEADER *
+KERNELAPI
+HalAcpiGetFirstMadtRecord(
+    IN ACPI_MADT *Madt,
+    IN U8 RecordType)
+{
+    ACPI_MADT_RECORD_HEADER *Record = (ACPI_MADT_RECORD_HEADER *)(Madt + 1);
+    PTR MadtEnd = (PTR)Madt + Madt->Header.Length;
 
     while ((PTR)Record < MadtEnd)
     {
-        if (Record->EntryType == ACPI_MADT_RECORD_LOCAL_APIC)
+        if (Record->EntryType == RecordType)
         {
-            return (ACPI_LOCAL_APIC *)Record;
+            return Record;
         }
 
         Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
@@ -475,3 +480,65 @@ HalAcpiGetNextProcessor(
     return NULL;
 }
 
+/**
+ * @brief Returns next MADT record structure.
+ * 
+ * @param [in] Madt             Pointer to ACPI_MADT.
+ * @param [in] Record           Pointer to ACPI_MADT_RECORD_HEADER from previous call.
+ * 
+ * @return Returns pointer to ACPI_MADT_RECORD_HEADER if succeeds.\n
+ *         This function returns NULL if there are no more apic structures to return.
+ */
+ACPI_MADT_RECORD_HEADER *
+KERNELAPI
+HalAcpiGetNextMadtRecord(
+    IN ACPI_MADT *Madt,
+    IN ACPI_MADT_RECORD_HEADER *Record)
+{
+    U8 RecordType = Record->EntryType;
+    PTR MadtEnd = (PTR)Madt + Madt->Header.Length;
+
+    Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
+
+    while ((PTR)Record < MadtEnd)
+    {
+        if (Record->EntryType == RecordType)
+        {
+            return Record;
+        }
+
+        Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Finds local apic structure by APIC ID.
+ * 
+ * @param [in] Madt             Pointer to ACPI_MADT.
+ * @param [in] ApicId           APIC ID to find.
+ * 
+ * @return Returns pointer to ACPI_LOCAL_APIC if succeeds.\n
+ *         This function returns NULL if no apic structure is found.
+ */
+ACPI_LOCAL_APIC *
+KERNELAPI
+HalAcpiLookupProcessor(
+    IN ACPI_MADT *Madt,
+    IN U8 ApicId)
+{
+    ACPI_LOCAL_APIC *Record = HalAcpiGetFirstProcessor(Madt);
+
+    while (Record)
+    {
+        if (Record->ApicId == ApicId)
+        {
+            return Record;
+        }
+
+        Record = HalAcpiGetNextProcessor(Madt, Record);
+    }
+
+    return NULL;
+}

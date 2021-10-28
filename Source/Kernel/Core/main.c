@@ -104,12 +104,9 @@ KiKernelStart(
 
     BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Test done.\n");
 
-    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Initializing table registers...\n");
+    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Initializing BSP...\n");
 
     KiInitialize();
-
-    BGXTRACE_C(BGX_COLOR_LIGHT_YELLOW, "Done.\n\n");
-
     HalInitialize();
 
     //
@@ -123,12 +120,12 @@ KiKernelStart(
         for (U32 i = 0; i < KeGetProcessorCount(); i++)
         {
             HAL_PRIVATE_DATA *PrivateData = (HAL_PRIVATE_DATA *)KiProcessorBlocks[i]->HalPrivateData;
-            BGXTRACE("Processor%d: %10d | ", i, PrivateData->ApicTickCount);
+            BGXTRACE("P%d: %10d | ", i, PrivateData->ApicTickCount);
         }
 
         BGXTRACE("SystemTimerTick: %10lld\r", HalGetTickCount());
     }
-    
+
 	return 0;
 }
 
