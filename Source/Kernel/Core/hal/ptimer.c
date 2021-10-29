@@ -28,7 +28,14 @@
 
 volatile U64 HalTickCount;
 
-
+/**
+ * @brief ISR for platform timer.
+ * 
+ * @param [in] Interrupt        Interrupt object.
+ * @param [in] InteruptContext  Interrupt context.
+ * 
+ * @return Always InterruptAccepted.
+ */
 KINTERRUPT_RESULT
 KERNELAPI
 HalIsrPlatformTimer(
@@ -40,6 +47,11 @@ HalIsrPlatformTimer(
     return InterruptAccepted;
 }
 
+/**
+ * @brief Returns tick count.
+ * 
+ * @return 64-bit tick count.
+ */
 U64
 KERNELAPI
 HalGetTickCount(
@@ -48,6 +60,13 @@ HalGetTickCount(
     return HalTickCount;
 }
 
+/**
+ * @brief Initializes the system timer.\n
+ * 
+ * @return ESTATUS code.
+ * 
+ * @todo If exists, use HPET instead.
+ */
 ESTATUS
 KERNELAPI
 HalInitializePlatformTimer(

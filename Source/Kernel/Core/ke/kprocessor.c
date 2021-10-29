@@ -30,6 +30,13 @@ KPROCESSOR *KiProcessorBlocks[0x100];
 U64 KiProcessorMask;
 U8 KiProcessorCount;
 
+/**
+ * @brief Returns 64-bit processor mask.
+ *        Each bit represents existance of processor.\n
+ *        For example, 0xf (01111b) means processor 0, 1, 2, 3 is existing.\n
+ * 
+ * @return 64-bit processor mask.
+ */
 U64
 KERNELAPI
 KeGetProcessorMask(
@@ -38,6 +45,11 @@ KeGetProcessorMask(
     return KiProcessorMask;
 }
 
+/**
+ * @brief Returns number of processors.
+ * 
+ * @return Number of processors.
+ */
 U8
 KERNELAPI
 KeGetProcessorCount(
@@ -46,6 +58,17 @@ KeGetProcessorCount(
     return KiProcessorCount;
 }
 
+/**
+ * @brief Sets the interrupt vector.
+ * 
+ * @param [in] Idt          Address of IDT.
+ * @param [in] Vector       Vector number.
+ * @param [in] BaseOffset   Address of interrupt handler (RIP).
+ * @param [in] Selector     Selector (CS).
+ * @param [in] Attributes   Attributes of vector.
+ * 
+ * @return TRUE if succeeds, FALS otherwise.
+ */
 BOOLEAN
 KERNELAPI
 KiSetInterruptVector(
@@ -72,6 +95,15 @@ KiSetInterruptVector(
     return TRUE;
 }
 
+/**
+ * @brief Sets segment descriptor for given selector.
+ * 
+ * @param [in] Gdt          Address of GDT.
+ * @param [in] Selector     Selector.
+ * @param [in] Descriptor   New descriptor.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 KiSetSegmentDescriptor(
@@ -82,6 +114,14 @@ KiSetSegmentDescriptor(
     Gdt[SELECTOR_TO_INDEX(Selector)] = Descriptor;
 }
 
+/**
+ * @brief Initializes GDT and IDT.
+ * 
+ * @param [in] Gdt      Address of GDT.
+ * @param [in] Idt      Address of IDT.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 KiInitializeGdtIdt(
@@ -127,6 +167,16 @@ KiInitializeGdtIdt(
     }
 }
 
+/**
+ * @brief Loads GDT and IDT.
+ * 
+ * @param [in] Gdt          Address of GDT.
+ * @param [in] GdtLimit     (Size of GDT) - 1.
+ * @param [in] Idt          Address of IDT.
+ * @param [in] IdtLimit     (Size of IDT) - 1.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 KiLoadGdtIdt(
@@ -142,8 +192,12 @@ KiLoadGdtIdt(
     __lidt(&Idtr);
 }
 
-__attribute__((naked, noinline))
+/**
+ * @brief Reloads all segment registers.\n
+ *        CS, DS, ES, FS, GS, SS.
+ */
 VOID
+__attribute__((naked, noinline))
 KiReloadSegments(
     VOID)
 {
@@ -174,6 +228,11 @@ KiReloadSegments(
     );
 }
 
+/**
+ * @brief Initializes the processor.
+ * 
+ * @return None.
+ */
 VOID
 KERNELAPI
 KiInitializeProcessor(
