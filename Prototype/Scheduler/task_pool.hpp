@@ -52,6 +52,19 @@ namespace prototype
             return result;
         }
 
+        void traverse(std::function<bool(ktask&)> f)
+        {
+            acquire_lock(&lock_);
+
+            for (auto& it : task_map_)
+            {
+                if (!f(it.second))
+                    break;
+            }
+
+            release_lock(&lock_);
+        }
+
     private:
         std::map<int, ktask> task_map_;
         std::atomic_int task_id_next_;

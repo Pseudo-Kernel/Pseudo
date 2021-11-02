@@ -12,5 +12,20 @@
 #include "types.h"
 #include "list.h"
 
+#pragma comment(lib, "winmm.lib")
+
 #define DASSERT(_x)             if (!(_x)) { __debugbreak(); }
+
+namespace prototype
+{
+    void init()
+    {
+        timeBeginPeriod(1);
+    }
+
+    void shutdown()
+    {
+        timeEndPeriod(1);
+    }
+}
 

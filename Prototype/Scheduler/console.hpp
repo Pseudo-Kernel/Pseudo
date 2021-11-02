@@ -59,12 +59,38 @@ namespace prototype
             print(buffer);
         }
 
+        void printf_xy(short x, short y, const char *format, ...)
+        {
+            char buffer[512];
+
+            va_list args;
+            va_start(args, format);
+            vsprintf_s(buffer, format, args);
+            va_end(args);
+
+            print_xy(x, y, buffer);
+        }
+
         void print(char *text)
         {
             DWORD size = static_cast<DWORD>(strlen(text));
             DWORD dummy = 0;
 
             std::lock_guard<decltype(mutex_)> lock(mutex_);
+            WriteConsoleA(conout_, text, size, &dummy, nullptr);
+
+            CONSOLE_SCREEN_BUFFER_INFO sbi{};
+            GetConsoleScreenBufferInfo(conout_, &sbi);
+            x_ = sbi.dwCursorPosition.X, y_ = sbi.dwCursorPosition.Y;
+        }
+
+        void print_xy(short x, short y, char *text)
+        {
+            DWORD size = static_cast<DWORD>(strlen(text));
+            DWORD dummy = 0;
+
+            std::lock_guard<decltype(mutex_)> lock(mutex_);
+            set_xy(x, y);
             WriteConsoleA(conout_, text, size, &dummy, nullptr);
 
             CONSOLE_SCREEN_BUFFER_INFO sbi{};

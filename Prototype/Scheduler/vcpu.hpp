@@ -13,6 +13,8 @@ namespace prototype
     class vcpu
     {
     public:
+        const static int timer_tick_delay = 2;
+
         vcpu() :
             apic_id_(0),
             sched_(nullptr),
@@ -48,6 +50,21 @@ namespace prototype
         void register_task(ktask *task)
         {
             sched_->add_task(task);
+        }
+
+        void halt_control(bool resume)
+        {
+            auto handle = vcpu_context_runner_thread_.native_handle();
+            if (resume)
+            {
+                ResumeThread(handle);
+                set_interruptable(true);
+            }
+            else
+            {
+                set_interruptable(false);
+                SuspendThread(handle);
+            }
         }
 
         static void task_start_entry(void *p)
@@ -94,7 +111,9 @@ namespace prototype
                 //
 
                 context_switch(prev_task, task);
-                con.printf("swap task %d -> %d\n", prev_task->id, task->id);
+
+                if ((GetTickCount() % 4) == 0)
+                    con.printf_xy(0, 1, "swap task %d -> %d  ", prev_task->id, task->id);
             }
 
             return true;
@@ -116,15 +135,6 @@ namespace prototype
             DASSERT(ResumeThread(handle) != DWORD(-1));
         }
 
-        void control_context_thread(bool resume)
-        {
-            auto handle = vcpu_context_runner_thread_.native_handle();
-            if (resume)
-                ResumeThread(handle);
-            else
-                SuspendThread(handle);
-        }
-
         void init()
         {
             apic_id_ = next_apic_id_++;
@@ -140,7 +150,7 @@ namespace prototype
         {
             while (true)
             {
-                Sleep(10);
+                Sleep(timer_tick_delay);
 
                 if (interruptable_)
                     remote_context_switch();
