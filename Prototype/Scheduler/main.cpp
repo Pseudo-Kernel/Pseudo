@@ -18,6 +18,8 @@
 #include "wall_clock.hpp"
 #include "spinlock.hpp"
 
+#include "global.hpp"
+
 #include "task.hpp"
 #include "task_pool.hpp"
 #include "scheduler.hpp"
@@ -35,9 +37,9 @@ int main()
     init();
     
     // allocate 100 tasks with priority
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < 14; i++)
     {
-        auto task = task_pool.allocate(i / 10);
+        auto task = task_pool.allocate(i);
         tasks.push_back(task);
 
         DASSERT(task_set_initial_context(task, &vcpu::task_start_entry, task, 0));
@@ -83,10 +85,10 @@ int main()
                 base_x + (printed_count % records_per_line) * record_width,
                 base_y + (printed_count / records_per_line),
             //  ddd.[pri.ddd]:.dddddddddd.
-                "%3d [pri %3d]: %10lld ",
+                "%3d [pri %3d]: %#.4g ",
                 it.first, 
                 task_get_real_priority(it.second), 
-                it.second->priv_data.counter);
+                (double)it.second->priv_data.counter);
 
             printed_count++;
         }

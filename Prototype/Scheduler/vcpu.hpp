@@ -13,8 +13,6 @@ namespace prototype
     class vcpu
     {
     public:
-        const static int timer_tick_delay = 2;
-
         vcpu() :
             apic_id_(0),
             sched_(nullptr),
@@ -49,7 +47,7 @@ namespace prototype
 
         void register_task(ktask *task)
         {
-            sched_->add_task(task);
+            sched_->queue_task(task);
         }
 
         void halt_control(bool resume)
@@ -88,7 +86,7 @@ namespace prototype
             if (GetCurrentThreadId() == GetThreadId(handle))
                 return false;
 
-            auto task = sched_->get_next_task();
+            auto task = sched_->peek_next_task();
 
             if (task)
             {
@@ -100,7 +98,7 @@ namespace prototype
                 if (prev_task)
                 {
                     // add to the scheduler
-                    DASSERT(sched_->add_task(prev_task));
+                    DASSERT(sched_->queue_task(prev_task));
                 }
 
                 current_task_ = task;
@@ -121,12 +119,27 @@ namespace prototype
 
         void context_switch(ktask *curr, ktask *next)
         {
+            auto handle = vcpu_context_runner_thread_.native_handle();
+
+            if (curr->is_busy)
+            {
+                // update timeslice
+                curr->recent_context_run_end = platform_wall_clock::read_counter();
+                curr->recent_cpu_time_delta = curr->recent_context_run_end - curr->recent_context_run_start;
+                curr->is_busy = false;
+
+                task_consume_timeslice(curr, global_timeslice_ms);
+            }
+
+            DASSERT(!next->is_busy);
+            next->is_busy = true;
+            next->recent_context_run_start = platform_wall_clock::read_counter();
+            next->recent_context_run_end = 0;
+
             //
             // 1. save current context to curr
             // 2. load context from next
             //
-
-            auto handle = vcpu_context_runner_thread_.native_handle();
 
             DASSERT(SuspendThread(handle) != DWORD(-1));
             curr->context.ContextFlags = CONTEXT_ALL;
@@ -150,7 +163,7 @@ namespace prototype
         {
             while (true)
             {
-                Sleep(timer_tick_delay);
+                Sleep(global_timeslice_ms);
 
                 if (interruptable_)
                     remote_context_switch();

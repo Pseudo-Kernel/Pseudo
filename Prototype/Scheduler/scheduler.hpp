@@ -4,6 +4,12 @@
 
 namespace prototype
 {
+    struct priority_range
+    {
+        uint32_t start;
+        uint32_t end;
+    };
+
     //
     // scheduler class.
     //
@@ -11,24 +17,64 @@ namespace prototype
     class scheduler
     {
     public:
-        virtual ktask *get_next_task() = 0;
-        virtual bool add_task(ktask *task) = 0;
+        virtual ktask *peek_next_task() = 0;
+        virtual bool queue_task(ktask *task) = 0;
         virtual bool remove_task(ktask *task) = 0;
+        virtual void get_priority_range(priority_range &range) = 0;
     };
 
     class scheduler_normal : public scheduler
     {
     public:
-        scheduler_normal(uint32_t levels) : levels_(levels), wait_head_(levels), ready_head_(levels)
+        scheduler_normal(uint32_t levels) : 
+            levels_(levels),
+            wait_head_(levels),
+            ready_head_(levels),
+            weight_(levels)
         {
+            DASSERT(levels > 0);
+
             for (uint32_t i = 0; i < levels; i++)
             {
                 DListInitializeHead(&wait_head_[i]);
                 DListInitializeHead(&ready_head_[i]);
             }
+
+            set_weight();
         }
 
-        virtual ktask *get_next_task()
+        void set_weight(std::function<uint32_t(uint32_t, uint32_t)> wf = nullptr)
+        {
+            auto weight_function = wf;
+            if (!weight_function)
+            {
+                weight_function = [](uint32_t p, uint32_t c) {
+                    return p + 1;
+                };
+            }
+
+            for (uint32_t i = 0; i < levels_; i++)
+            {
+                weight_[i] = weight_function(i, levels_);
+            }
+        }
+
+        uint32_t weight_to_level(uint32_t weight)
+        {
+            uint32_t level = 0;
+            uint32_t delta_min = weight_[0] - weight;
+
+            for (uint32_t i = 1; i < levels_; i++)
+            {
+                uint32_t delta = weight_[i] - weight;
+                if (delta < delta_min)
+                    level = i;
+            }
+
+            return level;
+        }
+
+        virtual ktask *peek_next_task()
         {
             ktask *task = nullptr;
 
@@ -64,7 +110,7 @@ namespace prototype
             return task;
         }
 
-        virtual bool add_task(ktask *task)
+        virtual bool queue_task(ktask *task)
         {
             if (task->scheduler_object)
                 return false;
@@ -73,10 +119,37 @@ namespace prototype
 
             acquire_lock_n(lock_pointers);
 
+            // update timeslice before insert
+            int32_t timeslice = task_update_timeslice(task, global_timeslice_ms);
+            uint32_t prev_real_priority_dyn = task_get_real_priority(task);
+
             task->scheduler_object = this;
             DListInitializeHead(&task->list);
-            uint32_t real_priority = task_get_real_priority(task);
-            DListInsertBefore(&wait_head_[real_priority], &task->list);
+
+            // set task->real_priority_dyn by timeslice.
+            int32_t prev_timeslice = task->last_timeslice;
+            int32_t next_timeslice = 0;
+
+            uint32_t next_real_priority_dyn = 0;
+
+            if (timeslice > 0)
+            {
+                // not expired yet, increase priority.
+                next_timeslice = prev_timeslice + timeslice;
+                next_real_priority_dyn = weight_to_level(next_timeslice);
+                DListInsertBefore(&ready_head_[next_real_priority_dyn], &task->list);
+            }
+            else
+            {
+                // expired. load base priority.
+                next_real_priority_dyn = task->priority;
+                next_timeslice = weight_[next_real_priority_dyn];
+                DListInsertBefore(&wait_head_[next_real_priority_dyn], &task->list);
+            }
+
+            task->remaining_timeslice = next_timeslice;
+            task->last_timeslice = next_timeslice;
+            task->real_priority_dyn = next_real_priority_dyn;
 
             release_lock_n(lock_pointers);
 
@@ -102,6 +175,12 @@ namespace prototype
             return true;
         }
 
+        virtual void get_priority_range(priority_range &range)
+        {
+            range.start = 0;
+            range.end = levels_ - 1;
+        }
+
     private:
         void acquire()
         {
@@ -118,6 +197,8 @@ namespace prototype
         {
             release_lock(&lock_);
         }
+
+        std::vector<uint32_t> weight_;
 
         std::vector<DLIST_ENTRY> ready_head_;
         std::vector<DLIST_ENTRY> wait_head_;

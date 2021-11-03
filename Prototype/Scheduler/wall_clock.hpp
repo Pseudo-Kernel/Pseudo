@@ -31,6 +31,13 @@ namespace prototype
             QueryPerformanceFrequency(&freq);
             return counter / (freq.QuadPart / 1000);
         }
+
+        static uint64_t sec_to_counter()
+        {
+            LARGE_INTEGER freq{};
+            QueryPerformanceFrequency(&freq);
+            return freq.QuadPart;
+        }
     };
 
 }

@@ -148,6 +148,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="console.hpp" />
+    <ClInclude Include="global.hpp" />
     <ClInclude Include="scheduler.hpp" />
     <ClInclude Include="spinlock.hpp" />
     <ClInclude Include="task.hpp" />

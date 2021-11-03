@@ -44,5 +44,8 @@
     <ClInclude Include="vcpu.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="global.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
