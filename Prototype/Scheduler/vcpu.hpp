@@ -10,6 +10,8 @@ namespace prototype
     // simulates context switching and timer.
     //
 
+    std::atomic_uint64_t global_test_counter = 1;
+
     class vcpu
     {
     public:
@@ -22,6 +24,8 @@ namespace prototype
             vcpu_context_runner_thread_(),
             vcpu_timer_thread_()
         {
+            init();
+
             // 
             // WARNING: Do not call wait functions inside context runner thread
             //          as it may cause undefined behavior!
@@ -29,7 +33,6 @@ namespace prototype
             // 
 
             vcpu_context_runner_thread_ = std::thread([this] {
-                init();
                 kernel_initial_task_start_entry();
             });
         }
@@ -67,14 +70,14 @@ namespace prototype
 
         static void task_start_entry(void *p)
         {
-            auto task = reinterpret_cast<prototype::ktask *>(p);
-            auto priv_data = &task->priv_data;
-
             while (true)
             {
                 //DASSERT(task == reinterpret_cast<decltype(task)>(p));
+                auto task = reinterpret_cast<prototype::ktask *>(p);
+                auto priv_data = &task->priv_data;
 
                 priv_data->counter++;
+                global_test_counter++;
             }
         }
 
@@ -90,6 +93,8 @@ namespace prototype
 
             if (task)
             {
+                DASSERT(task != current_task_);
+                
                 //
                 // swap thread
                 //
@@ -110,8 +115,14 @@ namespace prototype
 
                 context_switch(prev_task, task);
 
-                if ((GetTickCount() % 4) == 0)
-                    con.printf_xy(0, 1, "swap task %d -> %d  ", prev_task->id, task->id);
+#if DEBUG_DETAILED_LOG
+                con.printf("swap task %d -> %d  (cnt %11lld, cnt %11lld)\n",
+                    prev_task->id, task->id,
+                    prev_task->priv_data.counter, task->priv_data.counter);
+                con.printf("\n");
+#else
+                con.printf_xy(0, 1, "swap task %2d -> %2d  ", prev_task->id, task->id);
+#endif
             }
 
             return true;
@@ -123,12 +134,17 @@ namespace prototype
 
             if (curr->is_busy)
             {
+#if 1
+                curr->recent_context_run_start = 0;
+                curr->recent_context_run_end = 0;
+                curr->recent_cpu_time_delta = platform_wall_clock::sec_to_counter() / 1000;
+                curr->is_busy = false;
+#else
                 // update timeslice
                 curr->recent_context_run_end = platform_wall_clock::read_counter();
                 curr->recent_cpu_time_delta = curr->recent_context_run_end - curr->recent_context_run_start;
                 curr->is_busy = false;
-
-                task_consume_timeslice(curr, global_timeslice_ms);
+#endif
             }
 
             DASSERT(!next->is_busy);
@@ -144,6 +160,7 @@ namespace prototype
             DASSERT(SuspendThread(handle) != DWORD(-1));
             curr->context.ContextFlags = CONTEXT_ALL;
             DASSERT(GetThreadContext(handle, &curr->context));
+            next->context.ContextFlags = CONTEXT_ALL;
             DASSERT(SetThreadContext(handle, &next->context));
             DASSERT(ResumeThread(handle) != DWORD(-1));
         }
@@ -163,6 +180,11 @@ namespace prototype
         {
             while (true)
             {
+#if DEBUG_DETAILED_LOG
+                if (current_task_)
+                    con.printf("task %d runs\n", current_task_->id);
+#endif
+
                 Sleep(global_timeslice_ms);
 
                 if (interruptable_)

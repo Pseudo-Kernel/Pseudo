@@ -158,8 +158,8 @@ namespace prototype
             //cfi.dwFontSize.X = 0;
             //cfi.dwFontSize.Y = 16;
             //wcscpy_s(cfi.FaceName, L"Consolas");
-            cfi.dwFontSize.X = 8;
-            cfi.dwFontSize.Y = 12;
+            cfi.dwFontSize.X = 9;
+            cfi.dwFontSize.Y = 16;
             wcscpy_s(cfi.FaceName, L"Terminal");
             SetCurrentConsoleFontEx(conout_, FALSE, &cfi);
 
@@ -168,6 +168,8 @@ namespace prototype
             SetConsoleTextAttribute(conout_, color_);
 
             clear(true);
+
+            SetWindowPos(GetConsoleWindow(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
         }
 
         void _set_xy(COORD pos)

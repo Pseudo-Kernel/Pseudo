@@ -15,6 +15,7 @@
 #pragma comment(lib, "winmm.lib")
 
 #define DASSERT(_x)             if (!(_x)) { __debugbreak(); }
+#define DEBUG_DETAILED_LOG      0
 
 namespace prototype
 {

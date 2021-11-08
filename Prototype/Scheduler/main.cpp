@@ -37,7 +37,7 @@ int main()
     init();
     
     // allocate 100 tasks with priority
-    for (int i = 0; i < 14; i++)
+    for (int i = 0; i < 31; i++)
     {
         auto task = task_pool.allocate(i);
         tasks.push_back(task);
@@ -57,6 +57,10 @@ int main()
 
     for (;;)
     {
+#if DEBUG_DETAILED_LOG
+        continue;
+#endif
+
         vcpu0.halt_control(false);
 
         std::map<int, ktask *> task_map = {};
@@ -68,7 +72,7 @@ int main()
             return true;
         });
 
-        const int record_width = 27 + 1;
+        const int record_width = 29 + 1;
         int records_per_line = con.size_x() / record_width;
         const int base_x = 0;
         const int base_y = 4;
@@ -77,18 +81,16 @@ int main()
 
         for (auto& it : task_map)
         {
-            //con.set_xy(
-            //    base_x + (printed_count % records_per_line) * record_width,
-            //    base_y + (printed_count / records_per_line));
-
             con.printf_xy(
                 base_x + (printed_count % records_per_line) * record_width,
                 base_y + (printed_count / records_per_line),
             //  ddd.[pri.ddd]:.dddddddddd.
-                "%3d [pri %3d]: %#.4g ",
+               // ?? | p=xx | x.xxxxe+xx | xx.x
+                "%2d | p=%2d | %#.4g | %2.1lf ",
                 it.first, 
                 task_get_real_priority(it.second), 
-                (double)it.second->priv_data.counter);
+                (double)it.second->priv_data.counter,
+                (double)it.second->priv_data.counter * 100.0 / global_test_counter);
 
             printed_count++;
         }

@@ -13,6 +13,14 @@ namespace prototype
         uint64_t counter;
     };
 
+    enum queued_state : int
+    {
+        not_queued,
+        wait,
+        ready,
+        ready_not_expired,
+    };
+
     struct ktask
     {
         long lock;
@@ -21,23 +29,10 @@ namespace prototype
         DLIST_ENTRY list;
 
         bool is_busy; // true if context is running
-        uint64_t cpu_time_total;
+//        uint64_t cpu_time_total;
         uint64_t recent_cpu_time_delta;
         uint64_t recent_context_run_start;
         uint64_t recent_context_run_end;
-
-        // 
-        // ; update remaining timeslice
-        // if remaining_cpu_time >= cpu_time_per_timeslice
-        //   remaining_timeslice += remaining_cpu_time / cpu_time_per_timeslice;
-        //   remaining_cpu_time %= cpu_time_per_timeslice;
-        // fi
-        // 
-        // ; schedule if timeslice remains
-        // if remaining_timeslice > 0
-        //   schedule;
-        // fi
-        //   
 
         int32_t last_timeslice;
         int32_t remaining_timeslice;
@@ -45,6 +40,8 @@ namespace prototype
 
         uint32_t priority;
         uint32_t real_priority_dyn;
+        queued_state state;
+        queued_state prev_state;
 
         void *stack_base;
         uint32_t stack_size;
@@ -63,6 +60,9 @@ namespace prototype
 
         uint64_t remaining_cpu_time = task->remaining_cpu_time;
         int32_t remaining_timeslice = task->remaining_timeslice;
+
+        uint64_t temp_cpu_time = remaining_cpu_time;  // !!!!!!!!!!!!!!!
+        int32_t temp_timeslice = remaining_timeslice; // !!!!!!!!!!!!!!!
 
         if (remaining_cpu_time >= counter_per_timeslice)
         {
@@ -99,6 +99,11 @@ namespace prototype
 
         remaining_cpu_time -= consume_cpu_time_remainder;
 
+//        if (remaining_timeslice < -20)
+//            remaining_timeslice = -20;
+//        else if (remaining_timeslice > 20)
+//            remaining_timeslice = 20;
+
         task->remaining_timeslice = remaining_timeslice;
         task->remaining_cpu_time = remaining_cpu_time;
         //task->recent_cpu_time_delta = 0;
@@ -131,7 +136,7 @@ namespace prototype
         Xsp[1] = reinterpret_cast<intptr_t>(param); // push 1st param
 
         memset(&task->context, 0, sizeof(task->context));
-        task->context.ContextFlags = CONTEXT_ALL & ~CONTEXT_SEGMENTS;
+        task->context.ContextFlags = CONTEXT_ALL;// &~CONTEXT_SEGMENTS;
         task->context.Esp = reinterpret_cast<intptr_t>(Xsp);
         task->context.Eip = reinterpret_cast<intptr_t>(start_address);
 #elif (defined _AMD64_)

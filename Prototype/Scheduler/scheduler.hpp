@@ -30,6 +30,7 @@ namespace prototype
             levels_(levels),
             wait_head_(levels),
             ready_head_(levels),
+            next_ready_head_(levels),
             weight_(levels)
         {
             DASSERT(levels > 0);
@@ -38,6 +39,7 @@ namespace prototype
             {
                 DListInitializeHead(&wait_head_[i]);
                 DListInitializeHead(&ready_head_[i]);
+                DListInitializeHead(&next_ready_head_[i]);
             }
 
             set_weight();
@@ -68,7 +70,10 @@ namespace prototype
             {
                 uint32_t delta = weight_[i] - weight;
                 if (delta < delta_min)
+                {
                     level = i;
+                    delta_min = delta;
+                }
             }
 
             return level;
@@ -80,28 +85,47 @@ namespace prototype
 
             acquire_lock(&lock_);
 
+            std::pair<decltype(ready_head_)&, const char *> lists[] = {
+                { next_ready_head_, "next_ready_list" },
+                { wait_head_, "wait_list" },
+            };
+
             for (int i = static_cast<int>(levels_) - 1; i >= 0; i--)
             {
                 if (DListIsEmpty(&ready_head_[i]))
                     continue;
 
                 task = CONTAINING_RECORD(ready_head_[i].Next, ktask, list);
+#if DEBUG_DETAILED_LOG
+                con.printf("peek next task %d from ready list %d\n", task->id, i);
+#endif
                 break;
             }
 
             if (!task)
             {
-                // no more tasks to schedule.
-                // reload them from wait_head_.
-                for (int i = static_cast<int>(levels_) - 1; i >= 0; i--)
+                for (auto& it : lists)
                 {
-                    if (DListIsEmpty(&wait_head_[i]))
-                        continue;
+                    for (int i = static_cast<int>(levels_) - 1; i >= 0; i--)
+                    {
+                        if (DListIsEmpty(&it.first[i]))
+                            continue;
 
-                    if (!task)
-                        task = CONTAINING_RECORD(wait_head_[i].Next, ktask, list);
+                        if (!task)
+                            task = CONTAINING_RECORD(it.first[i].Next, ktask, list);
 
-                    DListMoveAfter(&ready_head_[i], &wait_head_[i]);
+                        if (&it.first)
+                        {
+                            DListMoveAfter(&ready_head_[i], &it.first[i]);
+                        }
+#if DEBUG_DETAILED_LOG
+                        con.printf("peek next task %d from %s %d\n", task->id, it.second, i);
+#endif
+//                        break;
+                    }
+
+                    if (task)
+                        break;
                 }
             }
 
@@ -120,36 +144,53 @@ namespace prototype
             acquire_lock_n(lock_pointers);
 
             // update timeslice before insert
-            int32_t timeslice = task_update_timeslice(task, global_timeslice_ms);
-            uint32_t prev_real_priority_dyn = task_get_real_priority(task);
+            task_consume_timeslice(task, global_timeslice_ms);
+            task_update_timeslice(task, global_timeslice_ms);
+
+            int32_t timeslice = task->remaining_timeslice;
 
             task->scheduler_object = this;
             DListInitializeHead(&task->list);
 
-            // set task->real_priority_dyn by timeslice.
-            int32_t prev_timeslice = task->last_timeslice;
-            int32_t next_timeslice = 0;
-
-            uint32_t next_real_priority_dyn = 0;
-
-            if (timeslice > 0)
+            switch (task->state)
             {
-                // not expired yet, increase priority.
-                next_timeslice = prev_timeslice + timeslice;
-                next_real_priority_dyn = weight_to_level(next_timeslice);
-                DListInsertBefore(&ready_head_[next_real_priority_dyn], &task->list);
+            case queued_state::not_queued:
+                // * -> wait
+                task->real_priority_dyn = task->priority;
+                DListInsertBefore(&wait_head_[task->real_priority_dyn], &task->list);
+                task->state = queued_state::wait;
+                break;
+            case queued_state::wait:
+                // wait -> ready
+                task->remaining_timeslice = weight_[task->real_priority_dyn];
+                DListInsertBefore(&ready_head_[task->real_priority_dyn], &task->list);
+                task->state = queued_state::ready;
+                break;
+            case queued_state::ready:
+                // ready -> next_ready OR ready -> wait
+                if (timeslice > 0)
+                {
+                    // not expired yet, increase priority.
+                    //task->real_priority_dyn = weight_to_level(timeslice);
+                    DListInsertBefore(&next_ready_head_[task->real_priority_dyn], &task->list);
+                    task->state = queued_state::ready_not_expired;
+                }
+                else
+                {
+                    // expired. load base priority.
+                    task->real_priority_dyn = task->priority;
+                    DListInsertBefore(&wait_head_[task->real_priority_dyn], &task->list);
+                    task->state = queued_state::wait;
+                }
+                break;
+            case queued_state::ready_not_expired:
+                // next_ready -> ...?
+                DListInsertBefore(&ready_head_[task->real_priority_dyn], &task->list);
+                task->state = queued_state::ready;
+                break;
+            default:
+                DASSERT(false);
             }
-            else
-            {
-                // expired. load base priority.
-                next_real_priority_dyn = task->priority;
-                next_timeslice = weight_[next_real_priority_dyn];
-                DListInsertBefore(&wait_head_[next_real_priority_dyn], &task->list);
-            }
-
-            task->remaining_timeslice = next_timeslice;
-            task->last_timeslice = next_timeslice;
-            task->real_priority_dyn = next_real_priority_dyn;
 
             release_lock_n(lock_pointers);
 
@@ -167,6 +208,7 @@ namespace prototype
             acquire_lock_n(lock_pointers);
 
             task->scheduler_object = nullptr;
+            //task->state = queued_state::not_queued;
             DListRemoveEntry(&task->list);
             DListInitializeHead(&task->list);
 
@@ -202,6 +244,7 @@ namespace prototype
 
         std::vector<DLIST_ENTRY> ready_head_;
         std::vector<DLIST_ENTRY> wait_head_;
+        std::vector<DLIST_ENTRY> next_ready_head_;
         uint32_t levels_;
         long lock_;
     };
