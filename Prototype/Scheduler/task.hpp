@@ -40,8 +40,8 @@ namespace prototype
 
         uint32_t priority;
         uint32_t real_priority_dyn;
+        uint64_t context_switch_count;
         queued_state state;
-        queued_state prev_state;
 
         void *stack_base;
         uint32_t stack_size;

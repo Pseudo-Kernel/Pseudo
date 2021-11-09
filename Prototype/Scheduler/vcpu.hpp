@@ -147,6 +147,9 @@ namespace prototype
 #endif
             }
 
+            curr->context_switch_count++;
+
+
             DASSERT(!next->is_busy);
             next->is_busy = true;
             next->recent_context_run_start = platform_wall_clock::read_counter();
@@ -169,7 +172,7 @@ namespace prototype
         {
             apic_id_ = next_apic_id_++;
 
-            sched_ = std::make_unique<scheduler_normal>(32);
+            sched_ = std::make_unique<scheduler_normal>(16);
 
             vcpu_timer_thread_ = std::thread([this] {
                 apic_timer_raise_irq_loop();

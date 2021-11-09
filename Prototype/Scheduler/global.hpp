@@ -8,5 +8,5 @@ namespace prototype
     // global variables.
     //
 
-    int global_timeslice_ms = 1;
+    int global_timeslice_ms = 10;
 }
