@@ -143,8 +143,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="list.cpp" />
+    <ClCompile Include="list.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="runner_q.c" />
+    <ClCompile Include="sched_base.c" />
+    <ClCompile Include="sched_normal.c" />
+    <ClCompile Include="test.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="console.hpp" />

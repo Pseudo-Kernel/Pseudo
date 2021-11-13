@@ -28,6 +28,8 @@
 
 using namespace prototype;
 
+
+#if 0
 int main()
 {
     vcpu vcpu0;
@@ -58,6 +60,7 @@ int main()
     for (;;)
     {
 #if DEBUG_DETAILED_LOG
+        Sleep(1000);
         continue;
 #endif
 
@@ -107,4 +110,6 @@ int main()
 
     return 0;
 }
+
+#endif
 

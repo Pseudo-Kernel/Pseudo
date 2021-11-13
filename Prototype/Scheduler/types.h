@@ -31,3 +31,8 @@ typedef __int64						PTR64, *PPTR64;
 typedef __int64						SPTR64, *PSPTR64;
 typedef unsigned __int64			UPTR64, *PUPTR64;
 
+
+#define KASSERT(_x)                 if (!(_x)) { __debugbreak(); }
+
+#include "gerror.h"
+
