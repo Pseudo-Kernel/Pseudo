@@ -4,12 +4,37 @@
 
 #include "sched_base.h"
 
-#define SCHED_NORMAL_CLASS_LEVELS           16
+#define KSCHED_NORMAL_CLASS_LEVELS          16
 
-typedef struct _KSCHED_CONTEXT_NORMAL
-{
-    KRUNNER_QUEUE WaitQueue;
-    KRUNNER_QUEUE ReadyQueue;
-    KRUNNER_QUEUE RunnerSwapQueue;
-} KSCHED_CONTEXT_NORMAL;
+
+BOOLEAN
+KiSchedNormalInsertThread(
+    IN KSCHED_CLASS *This,
+    IN KTHREAD *Thread,
+    IN PVOID SchedulerContext,
+    IN U32 Queue,
+    IN U32 Flags);
+
+BOOLEAN
+KiSchedNormalRemoveThread(
+    IN KSCHED_CLASS *This,
+    IN KTHREAD *Thread,
+    IN PVOID SchedulerContext);
+
+BOOLEAN
+KiSchedNormalPeekThread(
+    IN KSCHED_CLASS *This,
+    OUT KTHREAD **Thread,
+    IN PVOID SchedulerContext,
+    IN U32 Queue,
+    IN U32 Flags);
+
+BOOLEAN
+KiSchedNormalNextThread(
+    IN KSCHED_CLASS *This,
+    OUT KTHREAD **Thread,
+    IN PVOID SchedulerContext);
+
+
+
 

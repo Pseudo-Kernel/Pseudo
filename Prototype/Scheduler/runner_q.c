@@ -45,7 +45,7 @@ KiRqEnqueue(
         (Flags & RQ_FLAG_NO_LEVEL))
         return E_INVALID_PARAMETER;
 
-    if (Flags & RO_FLAG_INSERT_REMOVE_REVERSE_DIRECTION)
+    if (Flags & RQ_FLAG_INSERT_REMOVE_REVERSE_DIRECTION)
     {
         DListInsertAfter(&RunnerQueue->ListHead[Level], &Thread->RunnerLinks);
     }
@@ -103,6 +103,13 @@ KiRqDequeue(
             }
         }
     }
+    else
+    {
+        if (QueuedState & (1ULL << Level))
+        {
+            TargetLevel = Level;
+        }
+    }
 
     if (TargetLevel < 0)
     {
@@ -112,13 +119,15 @@ KiRqDequeue(
     DLIST_ENTRY *ListHead = &RunnerQueue->ListHead[TargetLevel];
     DLIST_ENTRY *Link = NULL;
 
-    if (Flags & RO_FLAG_INSERT_REMOVE_REVERSE_DIRECTION)
+    KASSERT(!DListIsEmpty(ListHead));
+
+    if (Flags & RQ_FLAG_INSERT_REMOVE_REVERSE_DIRECTION)
     {
-        Link = ListHead->Next;
+        Link = ListHead->Prev;
     }
     else
     {
-        Link = ListHead->Prev;
+        Link = ListHead->Next;
     }
 
     KTHREAD *TargetThread = CONTAINING_RECORD(Link, KTHREAD, RunnerLinks);
@@ -165,6 +174,13 @@ KiRqRemove(
     return E_SUCCESS;
 }
 
+BOOLEAN
+KiRqIsEmpty(
+    IN KRUNNER_QUEUE *RunnerQueue)
+{
+    return !RunnerQueue->QueuedState;
+}
+
 ESTATUS
 KiRqSwap(
     IN KRUNNER_QUEUE *RunnerQueue1,
@@ -182,7 +198,7 @@ KiRqSwap(
 
     if ((Flags & RQ_FLAG_SEARCH_ASCENDING_ORDER) ||
         (Flags & RQ_FLAG_NO_REMOVAL) ||
-        (Flags & RO_FLAG_INSERT_REMOVE_REVERSE_DIRECTION))
+        (Flags & RQ_FLAG_INSERT_REMOVE_REVERSE_DIRECTION))
         return E_INVALID_PARAMETER;
 
     U64 TempState = 0;

@@ -6,10 +6,11 @@ typedef struct _KRUNNER_QUEUE       KRUNNER_QUEUE;
 
 typedef enum _THREAD_STATE
 {
-    Wait,       // In sleep state (queued in WaitListHead)
-    Ready,      // Ready to run (queued in ReadyListHead)
-    Running,    // Running
-    Expired,    // Expired (remaining timeslices is zero)
+    ThreadStateInitialize,  // Thread is initialized
+    ThreadStateWait,        // In sleep state (queued in WaitListHead)
+    ThreadStateReady,       // Ready to run (queued in ReadyListHead)
+    ThreadStateRunning,     // Running
+    ThreadStateExpired,     // Expired (remaining timeslices is zero, queued in IdleListHead)
 } THREAD_STATE;
 
 typedef struct _KTHREAD
@@ -19,12 +20,13 @@ typedef struct _KTHREAD
     U32 BasePriority;               // Base priority
     U32 Priority;                   // Dynamic priority
 
-    U32 RemainingTimeslices;
+    S32 RemainingTimeslices;
     U32 ThreadQuantum;
     U64 ThreadId;
 
     KRUNNER_QUEUE *RunnerQueue;
     U32 RunnerLevel;
+    THREAD_STATE State;
 } KTHREAD;
 
 
@@ -50,7 +52,7 @@ KiRqInitialize(
     IN ULONG Levels);
 
 
-#define RO_FLAG_INSERT_REMOVE_REVERSE_DIRECTION     0x00000001 // [I/R] insert/remove at reverse direction (insert/remove: listhead.next)
+#define RQ_FLAG_INSERT_REMOVE_REVERSE_DIRECTION     0x00000001 // [I/R] insert/remove at reverse direction (insert/remove: listhead.next)
 #define RQ_FLAG_NO_REMOVAL                          0x00000002 // [RO ] peek only, no removal
 
 #define RQ_FLAG_NO_LEVEL                            0x00000100 // [RO ] ignores level and search all levels
@@ -74,6 +76,10 @@ KiRqDequeue(
 ESTATUS
 KiRqRemove(
     IN KTHREAD *Thread);
+
+BOOLEAN
+KiRqIsEmpty(
+    IN KRUNNER_QUEUE *RunnerQueue);
 
 ESTATUS
 KiRqSwap(
