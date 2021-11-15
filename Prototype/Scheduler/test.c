@@ -131,8 +131,9 @@ VOID ConInit()
 //
 
 #define THREAD_COUNT                    (THREADS_PER_PROCESSOR * PROCESSOR_COUNT)
-#define THREADS_PER_PROCESSOR           32
+#define THREADS_PER_PROCESSOR           16
 #define PROCESSOR_COUNT                 1
+#define TIMESLICE_TO_MS                 10
 
 KTHREAD g_Threads[THREAD_COUNT];
 KPROCESSOR g_Processor[PROCESSOR_COUNT];
@@ -157,7 +158,7 @@ VOID VcpuContextRunnerThread(PVOID p)
 
 VOID VcpuDump()
 {
-	const int record_width = 50 + 1;
+	const int record_width = 50 + 3;
 	int records_per_line = CON_MAX_X / record_width;
 	const int base_x = 0;
 	const int base_y = 4;
@@ -173,7 +174,7 @@ VOID VcpuDump()
 			base_y + (printed_count / records_per_line));
 
 		printf(
-			"%2d | p=%2d | %12lld | %5.02f%% | ctx_sw=%7lld  ",
+			"%2lld | p=%2d | %12lld | %5.02lf%% | ctx_sw=%7lld  ",
 			Thread->ThreadId,
 			Thread->Priority,
 			Thread->PrivateContext.Counter,
@@ -195,9 +196,9 @@ DWORD VcpuThread(KPROCESSOR *Processor)
 
     for (U64 i = 0;; i++)
     {
-        Sleep(10);
+        Sleep(TIMESLICE_TO_MS);
 
-		if (!(i % 10))
+		//if (!(i % 10))
 		{
 			SuspendThread(Handle);
 			VcpuDump();
@@ -211,12 +212,18 @@ DWORD VcpuThread(KPROCESSOR *Processor)
         if (Expired)
         {
             // Recalculate the timeslice and quantum by priority.
+            CurrentThread->Priority = CurrentThread->BasePriority;
             CurrentThread->ThreadQuantum = CurrentThread->Priority >= 2 ? CurrentThread->Priority / 2 : 1;
             CurrentThread->RemainingTimeslices += CurrentThread->Priority;
 			CurrentThread->ContextSwitchCount++;
 
+            KASSERT(KiSchedInsertThread(Processor->NormalClass, CurrentThread, KSCHED_IDLE_QUEUE));
+
             KTHREAD *NextThread = NULL;
-            if (KiSchedNextThread(Processor->NormalClass, &NextThread))
+
+            KASSERT(KiSchedNextThread(Processor->NormalClass, &NextThread));
+
+            if (1)
             {
 				Processor->CurrentThread = NextThread;
 
@@ -307,12 +314,14 @@ void rq_test()
 
 int main()
 {
+    timeBeginPeriod(1);
+
 	ConInit();
 
     for (int i = 0; i < THREAD_COUNT; i++)
     {
 		KTHREAD *Thread = &g_Threads[i];
-		KiInitializeThread(Thread, i / 10, i + 1);
+		KiInitializeThread(Thread, (i * KSCHED_NORMAL_CLASS_LEVELS) / THREAD_COUNT, i + 1);
         KASSERT(VcpuSetInitialContext(Thread, ThreadStartEntry, Thread, 0));
     }
 
