@@ -13,6 +13,11 @@ typedef enum _THREAD_STATE
     ThreadStateExpired,     // Expired (remaining timeslices is zero, queued in IdleListHead)
 } THREAD_STATE;
 
+typedef struct _PRIVATE_CONTEXT
+{
+	U64 Counter;
+} PRIVATE_CONTEXT;
+
 typedef struct _KTHREAD
 {
     DLIST_ENTRY RunnerLinks;
@@ -27,6 +32,9 @@ typedef struct _KTHREAD
     KRUNNER_QUEUE *RunnerQueue;
     U32 RunnerLevel;
     THREAD_STATE State;
+	U64 ContextSwitchCount;
+
+	PRIVATE_CONTEXT PrivateContext;
 } KTHREAD;
 
 

@@ -75,6 +75,56 @@ KiConsumeTimeslice(
     }
 }
 
+//
+// console
+//
+
+#define CON_MAX_X				120
+#define CON_MAX_Y				50
+
+VOID ConSetPos(SHORT x, SHORT y)
+{
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	COORD Pos = { x, y };
+	SetConsoleCursorPosition(hStdOut, Pos);
+}
+
+VOID ConClear()
+{
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	COORD pos = { 0, 0 };
+	DWORD dummy = 0;
+
+	FillConsoleOutputAttribute(hStdOut, 0x07, CON_MAX_X * CON_MAX_Y, pos, &dummy);
+	FillConsoleOutputCharacterA(hStdOut, ' ', CON_MAX_X * CON_MAX_Y, pos, &dummy);
+}
+
+VOID ConInit()
+{
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	CONSOLE_FONT_INFOEX cfi;
+	cfi.cbSize = sizeof(cfi);
+	cfi.nFont = 0;
+	cfi.FontFamily = FF_DONTCARE;
+	cfi.FontWeight = FW_NORMAL;
+	//cfi.dwFontSize.X = 0;
+	//cfi.dwFontSize.Y = 16;
+	//wcscpy_s(cfi.FaceName, L"Consolas");
+	cfi.dwFontSize.X = 9;
+	cfi.dwFontSize.Y = 16;
+	wcscpy(cfi.FaceName, L"Terminal");
+	SetCurrentConsoleFontEx(hStdOut, FALSE, &cfi);
+
+	COORD size = { CON_MAX_X, CON_MAX_Y };
+	SetConsoleScreenBufferSize(hStdOut, size);
+	SetConsoleTextAttribute(hStdOut, 0x07);
+
+	ConClear();
+
+	//   SetWindowPos(GetConsoleWindow(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
+}
 
 //
 // main
@@ -86,11 +136,14 @@ KiConsumeTimeslice(
 
 KTHREAD g_Threads[THREAD_COUNT];
 KPROCESSOR g_Processor[PROCESSOR_COUNT];
+U64 g_GlobalCounter;
 
-VOID ThreadStartEntry(PVOID p)
+VOID ThreadStartEntry(KTHREAD *CurrentThread)
 {
     for (;;)
     {
+		CurrentThread->PrivateContext.Counter++;
+		InterlockedIncrement64(&g_GlobalCounter);
     }
 }
 
@@ -102,6 +155,36 @@ VOID VcpuContextRunnerThread(PVOID p)
     }
 }
 
+VOID VcpuDump()
+{
+	const int record_width = 50 + 1;
+	int records_per_line = CON_MAX_X / record_width;
+	const int base_x = 0;
+	const int base_y = 4;
+
+	int printed_count = 0;
+
+	for (int i = 0; i < THREAD_COUNT; i++)
+	{
+		KTHREAD *Thread = &g_Threads[i];
+
+		ConSetPos(
+			base_x + (printed_count % records_per_line) * record_width,
+			base_y + (printed_count / records_per_line));
+
+		printf(
+			"%2d | p=%2d | %12lld | %5.02f%% | ctx_sw=%7lld  ",
+			Thread->ThreadId,
+			Thread->Priority,
+			Thread->PrivateContext.Counter,
+			(double)Thread->PrivateContext.Counter * 100.0 / g_GlobalCounter,
+			Thread->ContextSwitchCount);
+
+		printed_count++;
+	}
+
+}
+
 DWORD VcpuThread(KPROCESSOR *Processor)
 {
     HANDLE Handle = Processor->Win32CtxThreadHandle;
@@ -110,9 +193,16 @@ DWORD VcpuThread(KPROCESSOR *Processor)
     KiInitializeThread(&InitialThread, 0, -1);
     Processor->CurrentThread = &InitialThread;
 
-    for (;;)
+    for (U64 i = 0;; i++)
     {
         Sleep(10);
+
+		if (!(i % 10))
+		{
+			SuspendThread(Handle);
+			VcpuDump();
+			ResumeThread(Handle);
+		}
 
         BOOLEAN Expired = FALSE;
         KTHREAD *CurrentThread = Processor->CurrentThread;
@@ -123,10 +213,13 @@ DWORD VcpuThread(KPROCESSOR *Processor)
             // Recalculate the timeslice and quantum by priority.
             CurrentThread->ThreadQuantum = CurrentThread->Priority >= 2 ? CurrentThread->Priority / 2 : 1;
             CurrentThread->RemainingTimeslices += CurrentThread->Priority;
+			CurrentThread->ContextSwitchCount++;
 
             KTHREAD *NextThread = NULL;
             if (KiSchedNextThread(Processor->NormalClass, &NextThread))
             {
+				Processor->CurrentThread = NextThread;
+
                 //
                 // 1. save current context to curr
                 // 2. load context from next
@@ -214,10 +307,13 @@ void rq_test()
 
 int main()
 {
+	ConInit();
+
     for (int i = 0; i < THREAD_COUNT; i++)
     {
-        KiInitializeThread(&g_Threads[i], i / 10, i + 1);
-        KASSERT(VcpuSetInitialContext(&g_Threads[i], ThreadStartEntry, NULL, 0));
+		KTHREAD *Thread = &g_Threads[i];
+		KiInitializeThread(Thread, i / 10, i + 1);
+        KASSERT(VcpuSetInitialContext(Thread, ThreadStartEntry, Thread, 0));
     }
 
     for (int i = 0; i < PROCESSOR_COUNT; i++)
@@ -249,7 +345,9 @@ int main()
 
     for (int i = 0; i < PROCESSOR_COUNT; i++)
     {
-        ResumeThread(ThreadHandle[i]);
+		// Resume context runner first
+		ResumeThread(ThreadCtxHandle[i]);
+		ResumeThread(ThreadHandle[i]);
     }
 
     WaitForMultipleObjects(PROCESSOR_COUNT, ThreadHandle, TRUE, INFINITE);
