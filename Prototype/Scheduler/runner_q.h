@@ -25,6 +25,7 @@ typedef struct _KTHREAD
     U32 BasePriority;               // Base priority
     U32 Priority;                   // Dynamic priority
 
+	U32 CurrentTimeslices;
     S32 RemainingTimeslices;
     U32 ThreadQuantum;
     U64 ThreadId;
@@ -33,6 +34,7 @@ typedef struct _KTHREAD
     U32 RunnerLevel;
     THREAD_STATE State;
 	U64 ContextSwitchCount;
+	U64 TimeslicesSpent;
 
 	PRIVATE_CONTEXT PrivateContext;
 } KTHREAD;

@@ -79,7 +79,7 @@ KiConsumeTimeslice(
 // console
 //
 
-#define CON_MAX_X				120
+#define CON_MAX_X				80
 #define CON_MAX_Y				50
 
 VOID ConSetPos(SHORT x, SHORT y)
@@ -133,7 +133,7 @@ VOID ConInit()
 #define THREAD_COUNT                    (THREADS_PER_PROCESSOR * PROCESSOR_COUNT)
 #define THREADS_PER_PROCESSOR           16
 #define PROCESSOR_COUNT                 1
-#define TIMESLICE_TO_MS                 10
+#define TIMESLICE_TO_MS                 1
 
 KTHREAD g_Threads[THREAD_COUNT];
 KPROCESSOR g_Processor[PROCESSOR_COUNT];
@@ -174,12 +174,12 @@ VOID VcpuDump()
 			base_y + (printed_count / records_per_line));
 
 		printf(
-			"%2lld | p=%2d | %12lld | %5.02lf%% | ctx_sw=%7lld  ",
+			"%2lld | p=%2d | %12lld | %5.02lf%% | ts=%7lld  ",
 			Thread->ThreadId,
 			Thread->Priority,
 			Thread->PrivateContext.Counter,
 			(double)Thread->PrivateContext.Counter * 100.0 / g_GlobalCounter,
-			Thread->ContextSwitchCount);
+			Thread->TimeslicesSpent);
 
 		printed_count++;
 	}
@@ -212,9 +212,16 @@ DWORD VcpuThread(KPROCESSOR *Processor)
         if (Expired)
         {
             // Recalculate the timeslice and quantum by priority.
+			U32 LastPriority = CurrentThread->Priority;
+			U32 LastTimeslices = CurrentThread->CurrentTimeslices;
+
             CurrentThread->Priority = CurrentThread->BasePriority;
             CurrentThread->ThreadQuantum = CurrentThread->Priority >= 2 ? CurrentThread->Priority / 2 : 1;
-            CurrentThread->RemainingTimeslices += CurrentThread->Priority;
+
+			U32 CurrentTimeslices = (CurrentThread->Priority + 1) * 2; // PRIORITY_TO_TIMESLICES(LastPriority)
+            CurrentThread->RemainingTimeslices += CurrentTimeslices;
+			CurrentThread->TimeslicesSpent += LastTimeslices;
+			CurrentThread->CurrentTimeslices = CurrentTimeslices;
 			CurrentThread->ContextSwitchCount++;
 
             KASSERT(KiSchedInsertThread(Processor->NormalClass, CurrentThread, KSCHED_IDLE_QUEUE));
