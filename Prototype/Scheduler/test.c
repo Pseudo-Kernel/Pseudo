@@ -9,7 +9,7 @@
 #include "sched_base.h"
 #include "sched_normal.h"
 
-
+#include "wait.h"
 
 typedef struct _KPROCESSOR
 {
@@ -319,11 +319,134 @@ void rq_test()
     Sleep(-1);
 }
 
+
+#define TESTTHREADS             1024
+
+HANDLE g_Event;
+DWORD64 g_WaitEndTicks[TESTTHREADS];
+DWORD64 g_TicksPerSeconds;
+
+ULONG g_Counter;
+ULONG g_EndCounter;
+
+DWORD WINAPI DummyThread(ULONG i)
+{
+    InterlockedIncrement(&g_Counter);
+    DWORD res = WaitForSingleObject(g_Event, INFINITE);
+    QueryPerformanceCounter((LARGE_INTEGER *)&g_WaitEndTicks[i]);
+    //g_WaitEndTicks[i] = GetTickCount64();
+    KASSERT(res == WAIT_OBJECT_0);
+    InterlockedIncrement(&g_EndCounter);
+
+    while (g_EndCounter != TESTTHREADS)
+    {
+        _mm_pause();
+    }
+
+//    while (g_EndCounter != TESTTHREADS)
+//        Sleep(1);
+
+    return 0;
+}
+
+void test_windows_scheduler()
+{
+    //    SetProcessAffinityMask(GetCurrentProcess(), 4 | 16);
+
+    QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSeconds);
+
+    for (int i = 0; i < 100; i++)
+    {
+        Sleep(1);
+        printf("Tick = %llu\n", GetTickCount64());
+    }
+
+    Sleep(1000);
+
+    g_Event = CreateEvent(NULL, TRUE, FALSE, NULL);
+
+    HANDLE Threads[TESTTHREADS];
+
+    for (int i = 0; i < TESTTHREADS; i++)
+    {
+        Threads[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)DummyThread, (PVOID)i, CREATE_SUSPENDED, NULL);
+        SetThreadPriority(Threads[i], IDLE_PRIORITY_CLASS);
+        ResumeThread(Threads[i]);
+    }
+
+    while (g_Counter != TESTTHREADS)
+        Sleep(1);
+
+    SetEvent(g_Event);
+
+    while (g_EndCounter != TESTTHREADS)
+        Sleep(1);
+
+
+    DWORD64 TickMin = g_WaitEndTicks[0];
+    DWORD64 TickMax = g_WaitEndTicks[0];
+    for (int i = 1; i < TESTTHREADS; i++)
+    {
+        if (TickMin > g_WaitEndTicks[i])
+            TickMin = g_WaitEndTicks[i];
+        if (TickMax < g_WaitEndTicks[i])
+            TickMax = g_WaitEndTicks[i];
+    }
+
+    for (int i = 0; i < TESTTHREADS; i++)
+    {
+        printf("delta[%d] = %llu\n", i, g_WaitEndTicks[i] - TickMin);
+    }
+
+    printf("max-min = %llu\n", TickMax - TickMin);
+
+    printf("ticks_per_sec = %llu\n", g_TicksPerSeconds);
+}
+
+
+BOOLEAN
+TimerLookup(
+    IN KTIMER_TABLE_LEAF *Leaf,
+    IN U64 AbsoluteTime,
+    IN U8 Index,
+    IN PVOID LookupContext)
+{
+    printf("Leaf 0x%p, 0x%016llU\n", Leaf, AbsoluteTime);
+    return TRUE;
+}
+
+
 int main()
 {
     timeBeginPeriod(1);
 
 	ConInit();
+
+    KiW32FakeInitSystem();
+
+    KTIMER Timer[32];
+    for (int i = 0; i < 32; i++)
+    {
+        KiInitializeTimer(&Timer[i]);
+    }
+
+    for (int i = 0; i < 32; i++)
+    {
+        KiStartTimer(&Timer[i], TimerOneshot, i * 123 + 444);
+    }
+
+    extern KTIMER_LIST KiTimerList;
+
+    KiLookupTimer(&KiTimerList, TimerLookup, NULL, 0, -1);
+
+
+    Sleep(1);
+
+
+
+
+
+
 
     for (int i = 0; i < THREAD_COUNT; i++)
     {

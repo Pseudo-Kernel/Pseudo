@@ -149,6 +149,7 @@
     <ClCompile Include="sched_base.c" />
     <ClCompile Include="sched_normal.c" />
     <ClCompile Include="test.c" />
+    <ClCompile Include="wait.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="console.hpp" />
