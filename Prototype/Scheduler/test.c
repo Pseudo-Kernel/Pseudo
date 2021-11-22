@@ -404,18 +404,6 @@ void test_windows_scheduler()
 }
 
 
-BOOLEAN
-TimerLookup(
-    IN KTIMER_TABLE_LEAF *Leaf,
-    IN U64 AbsoluteTime,
-    IN U8 Index,
-    IN PVOID LookupContext)
-{
-    printf("Leaf 0x%p, 0x%016llU\n", Leaf, AbsoluteTime);
-    return TRUE;
-}
-
-
 int main()
 {
     timeBeginPeriod(1);
@@ -434,11 +422,6 @@ int main()
     {
         KiStartTimer(&Timer[i], TimerOneshot, i * 123 + 444);
     }
-
-    extern KTIMER_LIST KiTimerList;
-
-    KiLookupTimer(&KiTimerList, TimerLookup, NULL, 0, -1);
-
 
     Sleep(1);
 
