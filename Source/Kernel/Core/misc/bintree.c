@@ -708,11 +708,11 @@ RsBtLookup(
 
             return TRUE;
         }
-        else if (CompareResult < 0)
+        else if (CompareResult < 0) // Key < NodeKey
         {
             Index = 0;
         }
-        else if (CompareResult > 0)
+        else if (CompareResult > 0) // Key > NodeKey
         {
             Index = 1;
         }

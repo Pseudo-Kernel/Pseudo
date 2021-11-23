@@ -139,8 +139,8 @@ MiXadSetAddress(
  * @param [in] Address2         Key structure 2.
  *
  * @return 0 if Address1 overlaps Address2,
- *         -1 if Address1 > Address2,
- *         1 if Address1 < Address2.
+ *         -1 if Address1 < Address2,
+ *         1 if Address1 > Address2.
  */
 INT
 KERNELAPI
@@ -160,11 +160,11 @@ MiXadCompareAddress(
         // treat overlapping case as equal
         return 0;
     }
-    else if (Address1->Range.Start > Address2->Range.Start)
+    else if (Address1->Range.Start < Address2->Range.Start)
     {
         return -1;
     }
-    else if (Address1->Range.Start < Address2->Range.Start)
+    else if (Address1->Range.Start > Address2->Range.Start)
     {
         return 1;
     }
