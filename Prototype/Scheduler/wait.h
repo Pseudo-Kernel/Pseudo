@@ -107,6 +107,11 @@ KiInsertTimer(
     IN KTIMER_TYPE Type,
     IN U64 ExpirationTimeRelative);
 
+ESTATUS
+KiLookupFirstExpiredTimerNode(
+    IN KTIMER_LIST *TimerList,
+    IN U64 ExpirationTimeAbsolute,
+    OUT KTIMER_NODE **TimerNode);
 
 ESTATUS
 KiStartTimer(

@@ -728,6 +728,66 @@ RsBtLookup(
     return FALSE;
 }
 
+
+BOOLEAN
+KERNELAPI
+RsBtLookup2(
+    IN RS_BINARY_TREE *Tree,
+    IN PVOID Key,
+    IN U32 Lookup,
+    OUT RS_BINARY_TREE_LINK **LookupNode)
+{
+    INT Index = 0;
+    RS_BINARY_TREE_LINK *Node = Tree->Root;
+    PVOID CapturedContext = Tree->CallerContext;
+
+    U32 LookupMethod = Lookup & ~RS_BT_LOOKUP_FLAG_EQUAL;
+    U32 LookupFlags = Lookup & RS_BT_LOOKUP_FLAG_EQUAL;
+
+    RS_BINARY_TREE_LINK *NearestNode = Node;
+
+    while (Node)
+    {
+        INT CompareResult = Tree->Operations.CompareKey(
+            CapturedContext, Key, Tree->Operations.GetKey(CapturedContext, Node));
+
+        if (CompareResult == 0)
+        {
+            if (LookupMethod == RS_BT_LOOKUP_EQUAL || 
+                (LookupFlags & RS_BT_LOOKUP_FLAG_EQUAL))
+            {
+                NearestNode = Node;
+                break;
+            }
+        }
+        else if (CompareResult < 0)
+        {
+            if (LookupMethod == RS_BT_LOOKUP_NEAREST_BELOW)
+                NearestNode = Node;
+
+            Index = 0;
+        }
+        else if (CompareResult > 0)
+        {
+            if (LookupMethod == RS_BT_LOOKUP_NEAREST_ABOVE)
+                NearestNode = Node;
+
+            Index = 1;
+        }
+
+        // Move to next child
+        Node = RsBtGetChildNode(Node, Index);
+    }
+
+    if (!NearestNode)
+        return FALSE;
+
+    if (LookupNode)
+        *LookupNode = NearestNode;
+
+    return TRUE;
+}
+
 /**
  * @brief Allocates and inserts node by given key.
  * 

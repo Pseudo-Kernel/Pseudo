@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <Windows.h>
 #include "types.h"
 #include "list.h"
@@ -93,13 +94,13 @@ KiTimerNodeDelete(
     free(TimerNode);
 }
 
-U64
+U64 *
 KERNELAPI
 KiTimerNodeGetKey(
     IN PVOID CallerContext,
     IN KTIMER_NODE *TimerNode)
 {
-    return TimerNode->Key;
+    return &TimerNode->Key;
 }
 
 VOID
@@ -119,11 +120,11 @@ KiTimerNodeCompareKey(
     IN U64 *Key1,
     IN U64 *Key2)
 {
-    if (*Key1 > *Key2)
+    if (*Key1 < *Key2)
     {
         return -1;
     }
-    else if (*Key1 < *Key2)
+    else if (*Key1 > *Key2)
     {
         return 1;
     }
@@ -131,6 +132,16 @@ KiTimerNodeCompareKey(
     {
         return 0;
     }
+}
+
+SIZE_T
+KiTimerNodeToString(
+    IN PVOID CallerContext,
+    IN U64 *Key,
+    OUT CHAR *Buffer,
+    IN SIZE_T BufferLength)
+{
+    return sprintf(Buffer, "%llu", *Key);
 }
 
 VOID
@@ -144,7 +155,7 @@ KiInitializeTimerList(
         .GetKey = (PRS_BINARY_TREE_GET_NODE_KEY)&KiTimerNodeGetKey,
         .SetKey = (PRS_BINARY_TREE_SET_NODE_KEY)&KiTimerNodeSetKey,
         .CompareKey = (PRS_BINARY_TREE_COMPARE_KEY)&KiTimerNodeCompareKey,
-        .KeyToString = NULL,
+        .KeyToString = (PRS_BINARY_TREE_KEY_TO_STRING)&KiTimerNodeToString,
     };
 
     memset(TimerList, 0, sizeof(*TimerList));
@@ -247,22 +258,30 @@ Cleanup:
 }
 
 ESTATUS
-KiLookupTimerNode(
+KiLookupFirstExpiredTimerNode(
     IN KTIMER_LIST *TimerList,
-    IN U64 AbsoluteTimeStart)
+    IN U64 ExpirationTimeAbsolute,
+    OUT KTIMER_NODE **TimerNode)
 {
-    // [AbsoluteTimeStart, AbsoluteTimeEnd)
+    KTIMER_NODE *StartingNode = NULL;
+    U64 AbsoluteTime = 0;
 
-    KTIMER_NODE *TimerNode = (KTIMER_NODE *)TimerList->Tree.Root;
-
-    for (;;)
+    if (!RsBtLookup2(&TimerList->Tree, &AbsoluteTime, 
+        RS_BT_LOOKUP_NEAREST_ABOVE | RS_BT_LOOKUP_FLAG_EQUAL, 
+        (RS_BINARY_TREE_LINK **)&StartingNode))
     {
-        if (TimerNode->Key < AbsoluteTimeStart)
-        {
-
-        }
+        return E_NOT_FOUND;
     }
 
+    if (StartingNode->Key > ExpirationTimeAbsolute)
+    {
+        return E_NOT_FOUND;
+    }
+
+    if (TimerNode)
+    {
+        *TimerNode = StartingNode;
+    }
 
     return E_SUCCESS;
 }
