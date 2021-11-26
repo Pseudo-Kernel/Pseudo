@@ -11,17 +11,6 @@
 
 #include "wait.h"
 
-typedef struct _KPROCESSOR
-{
-    KSCHED_CLASS *NormalClass;
-    KTHREAD *CurrentThread;
-
-    // Win32 test only
-    HANDLE Win32CtxThreadHandle;
-} KPROCESSOR;
-
-
-
 
 //
 // Processor.
@@ -82,6 +71,8 @@ KiConsumeTimeslice(
 #define CON_MAX_X				80
 #define CON_MAX_Y				50
 
+HANDLE g_ConsoleLock;
+
 VOID ConSetPos(SHORT x, SHORT y)
 {
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -98,6 +89,16 @@ VOID ConClear()
 
 	FillConsoleOutputAttribute(hStdOut, 0x07, CON_MAX_X * CON_MAX_Y, pos, &dummy);
 	FillConsoleOutputCharacterA(hStdOut, ' ', CON_MAX_X * CON_MAX_Y, pos, &dummy);
+}
+
+VOID ConLock()
+{
+    KASSERT(WaitForSingleObject(g_ConsoleLock, INFINITE) == WAIT_OBJECT_0);
+}
+
+VOID ConUnlock()
+{
+    KASSERT(ReleaseMutex(g_ConsoleLock));
 }
 
 VOID ConInit()
@@ -123,6 +124,9 @@ VOID ConInit()
 
 	ConClear();
 
+    g_ConsoleLock = CreateMutex(NULL, FALSE, NULL);
+    KASSERT(g_ConsoleLock);
+
 	//   SetWindowPos(GetConsoleWindow(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW);
 }
 
@@ -131,8 +135,8 @@ VOID ConInit()
 //
 
 #define THREAD_COUNT                    (THREADS_PER_PROCESSOR * PROCESSOR_COUNT)
-#define THREADS_PER_PROCESSOR           16
-#define PROCESSOR_COUNT                 1
+#define THREADS_PER_PROCESSOR           8
+#define PROCESSOR_COUNT                 4
 #define TIMESLICE_TO_MS                 1
 
 KTHREAD g_Threads[THREAD_COUNT];
@@ -156,7 +160,42 @@ VOID VcpuContextRunnerThread(PVOID p)
     }
 }
 
-VOID VcpuDump()
+
+VOID VcpuFullDump()
+{
+    const int record_width = 50 + 3;
+    int records_per_line = CON_MAX_X / record_width;
+    const int base_x = 0;
+    const int base_y = 4;
+
+    int printed_count = 0;
+
+    for (int i = 0; i < THREAD_COUNT; i++)
+    {
+        KTHREAD *Thread = &g_Threads[i];
+
+        ConLock();
+
+        ConSetPos(
+            base_x + (Thread->ThreadId % records_per_line) * record_width,
+            base_y + (Thread->ThreadId / records_per_line));
+
+        printf(
+            "%2lld | p=%2d | %12lld | %5.02lf%% | ts=%7lld  ",
+            Thread->ThreadId,
+            Thread->Priority,
+            Thread->PrivateContext.Counter,
+            (double)Thread->PrivateContext.Counter * 100.0 / g_GlobalCounter,
+            Thread->TimeslicesSpent);
+
+        ConUnlock();
+
+        printed_count++;
+    }
+
+}
+
+VOID VcpuDump(KPROCESSOR *Processor)
 {
 	const int record_width = 50 + 3;
 	int records_per_line = CON_MAX_X / record_width;
@@ -169,9 +208,16 @@ VOID VcpuDump()
 	{
 		KTHREAD *Thread = &g_Threads[i];
 
+        if (Thread->PrivateContext.ProcessorId != Processor->ProcessorId)
+        {
+            continue;
+        }
+
+        ConLock();
+
 		ConSetPos(
-			base_x + (printed_count % records_per_line) * record_width,
-			base_y + (printed_count / records_per_line));
+			base_x + (Thread->ThreadId % records_per_line) * record_width,
+			base_y + (Thread->ThreadId / records_per_line));
 
 		printf(
 			"%2lld | p=%2d | %12lld | %5.02lf%% | ts=%7lld  ",
@@ -180,6 +226,8 @@ VOID VcpuDump()
 			Thread->PrivateContext.Counter,
 			(double)Thread->PrivateContext.Counter * 100.0 / g_GlobalCounter,
 			Thread->TimeslicesSpent);
+
+        ConUnlock();
 
 		printed_count++;
 	}
@@ -201,7 +249,7 @@ DWORD VcpuThread(KPROCESSOR *Processor)
 		//if (!(i % 10))
 		{
 			SuspendThread(Handle);
-			VcpuDump();
+			VcpuDump(Processor);
 			ResumeThread(Handle);
 		}
 
@@ -412,18 +460,36 @@ int main()
 
     KiW32FakeInitSystem();
 
-    KTIMER Timer[32];
+    
+    struct
+    {
+        KTIMER Timer;
+        U64 Interval;
+    } t[32];
+
     for (int i = 0; i < 32; i++)
     {
-        KiInitializeTimer(&Timer[i]);
+        KiInitializeTimer(&t[i].Timer);
+        t[i].Interval = i / 3;
     }
 
     for (int i = 0; i < 32; i++)
     {
-        KiStartTimer(&Timer[i], TimerOneshot, i * 123 + 444);
+        KeStartTimer(&t[i].Timer, TimerOneshot, t[i].Interval);
     }
 
-    Sleep(1);
+    extern KTIMER_LIST KiTimerList;
+
+    KTIMER_NODE *TimerNode = NULL;
+    KiLookupFirstExpiredTimerNode(&KiTimerList, KiGetFakeTickCount(), &TimerNode);
+
+    for (int i = 0; i < 32; i++)
+    {
+        KASSERT(E_IS_SUCCESS(KeRemoveTimer(&t[i].Timer)));
+    }
+
+
+    Sleep(-1);
 
 
 
@@ -442,9 +508,11 @@ int main()
     {
         KPROCESSOR *Processor = &g_Processor[i];
         KiInitializeProcessor(Processor);
+        Processor->ProcessorId = i;
         for (int j = 0; j < THREADS_PER_PROCESSOR; j++)
         {
-            KTHREAD *Thread = &g_Threads[j];
+            KTHREAD *Thread = &g_Threads[i * THREADS_PER_PROCESSOR + j];
+            Thread->PrivateContext.ProcessorId = i;
             KASSERT(KiSchedInsertThread(Processor->NormalClass, Thread, KSCHED_IDLE_QUEUE));
         }
     }

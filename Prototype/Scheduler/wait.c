@@ -24,7 +24,7 @@ KiInitializeWaitHeader(
 {
     Object->Lock = 0;
     Object->State = 0;
-    DListInitializeHead(&Object->WaitList);
+    DListInitializeHead(&Object->WaiterThreadList);
     Object->WaitContext = NULL;
 }
 
@@ -247,8 +247,66 @@ KiInsertTimer(
     // Add to timer listhead.
     Timer->ExpirationTimeAbsolute = ExpirationTimeAbsolute;
     Timer->Type = Type;
+    Timer->Inserted = TRUE;
     DListInsertAfter(&TimerNode->ListHead, &Timer->TimerList);
 
+
+Cleanup:
+    KiUnlockTimerList(TimerList);
+    KiUnlockWaitHeader(&Timer->WaitHeader);
+
+    return Status;
+}
+
+ESTATUS
+KiRemoveTimer(
+    IN KTIMER_LIST *TimerList,
+    IN KTIMER *Timer)
+{
+    do
+    {
+        if (!KiTryLockWaitHeader(&Timer->WaitHeader))
+            continue;
+
+        if (!KiTryLockTimerList(TimerList))
+        {
+            KiUnlockWaitHeader(&Timer->WaitHeader);
+            continue;
+        }
+
+        break;
+    } while (FALSE);
+
+    ESTATUS Status = E_SUCCESS;
+
+    if (!Timer->Inserted)
+    {
+        Status = E_INVALID_PARAMETER;
+        goto Cleanup;
+    }
+
+    U64 ExpirationTimeAbsolute = Timer->ExpirationTimeAbsolute;
+    RS_BINARY_TREE_LINK *BaseNode = NULL;
+
+    if (!RsBtLookup(&TimerList->Tree, &ExpirationTimeAbsolute, &BaseNode))
+    {
+        Status = E_LOOKUP_FAILED;
+        goto Cleanup;
+    }
+
+    KASSERT(BaseNode);
+
+    KTIMER_NODE *TimerNode = (KTIMER_NODE *)BaseNode;
+
+    // Remove from timer listhead.
+    DListRemoveEntry(&Timer->TimerList);
+    Timer->Inserted = FALSE;
+
+    if (DListIsEmpty(&TimerNode->ListHead))
+    {
+        // Timer node is empty. Remove it.
+        KASSERT(RsAvlDeleteByKey(&TimerList->Tree, &ExpirationTimeAbsolute));
+    }
 
 Cleanup:
     KiUnlockTimerList(TimerList);
@@ -287,13 +345,21 @@ KiLookupFirstExpiredTimerNode(
 }
 
 ESTATUS
-KiStartTimer(
+KeStartTimer(
     IN KTIMER *Timer,
     IN KTIMER_TYPE Type,
     IN U64 ExpirationTimeRelative)
 {
     return KiInsertTimer(&KiTimerList, Timer, Type, ExpirationTimeRelative);
 }
+
+ESTATUS
+KeRemoveTimer(
+    IN KTIMER *Timer)
+{
+    return KiRemoveTimer(&KiTimerList, Timer);
+}
+
 
 VOID
 KiW32FakeInitSystem(
@@ -302,19 +368,33 @@ KiW32FakeInitSystem(
     KiInitializeTimerList(&KiTimerList);
 }
 
-//ESTATUS
-//KiWaitObject(
-//    IN KWAIT_HEADER *WaitObjects[],
-//    IN U32 Count,
-//    IN U64 WaitTime)
-//{
-//    KTIMER Timer;
-//    KiInitializeTimer(&Timer);
-//
-//
-//    ESTATUS Status = KiStartTimer(&Timer, TimerOneshot, WaitTime);
-//    if (!E_IS_SUCCESS(Status))
-//    {
-//        //
-//    }
-//}
+#if 0
+ESTATUS
+KiWaitObject(
+    IN KPROCESSOR *Processor,
+    IN KWAIT_HEADER *WaitObject,
+    IN U64 Timeout)
+{
+    KTIMER Timer;
+    KiInitializeTimer(&Timer);
+
+    ESTATUS Status = KeStartTimer(&Timer, TimerOneshot, Timeout);
+    if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    // todo: 
+    // 1. scheduler lock
+    // 2. add KTHREAD::WaiterList to KWAIT_HEADER::WaiterThreadList
+
+    KTHREAD *CurrentThread = Processor->CurrentThread;
+
+//    KiLockWaitHeader(WaitObject);
+
+//    CurrentThread->
+//    WaitObject->WaiterThreadList;
+//    KiUnlockWaitHeader(WaitObject);
+}
+#endif
+

@@ -143,6 +143,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bintree.c" />
     <ClCompile Include="list.c" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="runner_q.c" />

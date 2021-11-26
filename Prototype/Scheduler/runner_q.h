@@ -16,10 +16,14 @@ typedef enum _THREAD_STATE
 typedef struct _PRIVATE_CONTEXT
 {
 	U64 Counter;
+    U32 ProcessorId;
 } PRIVATE_CONTEXT;
 
 typedef struct _KTHREAD
 {
+//    KWAIT_HEADER WaitHeader;
+    DLIST_ENTRY WaiterList;         // Used when waiting objects to be signaled
+
     DLIST_ENTRY RunnerLinks;
     CONTEXT ThreadContext;
     U32 BasePriority;               // Base priority

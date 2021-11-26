@@ -3,11 +3,25 @@
 
 #include "bintree.h"
 
+typedef struct _KPROCESSOR
+{
+    KSCHED_CLASS *NormalClass;
+    KTHREAD *CurrentThread;
+    U32 ProcessorId;
+
+    // Win32 test only
+    HANDLE Win32CtxThreadHandle;
+} KPROCESSOR;
+
+
+
+
+
 typedef struct _KWAIT_HEADER
 {
     U32 Lock;
     U32 State;
-    DLIST_ENTRY WaitList;
+    DLIST_ENTRY WaiterThreadList;
     PVOID WaitContext;
 } KWAIT_HEADER;
 
@@ -25,6 +39,7 @@ typedef struct _KTIMER
     KTIMER_TYPE Type;
     U64 ExpirationTimeAbsolute;
     U64 Interval;
+    BOOLEAN Inserted;
 } KTIMER;
 
 typedef struct _KTIMER_NODE
@@ -114,10 +129,14 @@ KiLookupFirstExpiredTimerNode(
     OUT KTIMER_NODE **TimerNode);
 
 ESTATUS
-KiStartTimer(
+KeStartTimer(
     IN KTIMER *Timer,
     IN KTIMER_TYPE Type,
     IN U64 ExpirationTimeRelative);
+
+ESTATUS
+KeRemoveTimer(
+    IN KTIMER *Timer);
 
 VOID
 KiW32FakeInitSystem(
