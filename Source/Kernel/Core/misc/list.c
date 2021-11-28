@@ -77,3 +77,22 @@ DListRemoveEntry(
 	Entry->Prev = Entry;
 }
 
+VOID
+KERNELAPI
+DListMoveAfter(
+    IN OUT PDLIST_ENTRY ListHeadDest,
+    IN OUT PDLIST_ENTRY ListHeadSource)
+{
+    PDLIST_ENTRY SourcePrev = ListHeadSource->Prev;
+    PDLIST_ENTRY SourceNext = ListHeadSource->Next;
+    PDLIST_ENTRY DestPrev = ListHeadDest->Prev;
+
+    DestPrev->Next = SourceNext;
+    SourceNext->Prev = DestPrev;
+
+    SourcePrev->Next = ListHeadDest;
+    ListHeadDest->Prev = SourcePrev;
+
+    ListHeadSource->Next = ListHeadSource;
+    ListHeadSource->Prev = ListHeadSource;
+}

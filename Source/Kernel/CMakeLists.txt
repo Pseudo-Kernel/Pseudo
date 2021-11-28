@@ -26,6 +26,7 @@ set(SRC_LIST
     core/arch/x64/intrin64.h
     core/arch/x64/types.h
     core/arch/x64/processor.h
+
     # base
     core/base/base.h
     core/base/compiler.h
@@ -35,9 +36,11 @@ set(SRC_LIST
     core/base/stdarg.h
     core/base/stddef.h
     core/base/stdio.h
+
     # dbg
     core/dbg/dbg.h
     core/dbg/dbg.c
+
     # init
     core/init/bootgfx.h
     core/init/preinit.h
@@ -45,6 +48,7 @@ set(SRC_LIST
     core/init/bootgfx.c
     core/init/preinit.c
     core/init/zipread.c
+
     # ke
     core/ke/ke.h
     core/ke/lock.h
@@ -53,12 +57,21 @@ set(SRC_LIST
     core/ke/keinit.h
     core/ke/kprocessor.h
     core/ke/inthandler.h
+    core/ke/thread.h
+    core/ke/runner_q.h
+    core/ke/sched_base.h
+    core/ke/sched_normal.h
     core/ke/lock.c
     core/ke/irql.c
     core/ke/interrupt.c
     core/ke/keinit.c
     core/ke/kprocessor.c
     core/ke/inthandler.c
+    core/ke/thread.c
+    core/ke/runner_q.c
+    core/ke/sched_base.c
+    core/ke/sched_normal.c
+
     # hal
     core/hal/8259pic.h
     core/hal/8254pit.h
@@ -78,6 +91,7 @@ set(SRC_LIST
     core/hal/apstub16.c
     core/hal/processor.c
     core/hal/ptimer.c
+
     # misc
     core/misc/common.h
     core/misc/list.h
@@ -88,6 +102,7 @@ set(SRC_LIST
     core/misc/list.c
     core/misc/bintree.c
     core/misc/objpool.c
+
     # mm
     core/mm/mminit.h
     core/mm/pool.h
@@ -99,6 +114,7 @@ set(SRC_LIST
     core/mm/xadtree.c
     core/mm/mm.c
     core/mm/paging.c
+
     # root
     core/main.c
     core/stdio.c
@@ -115,7 +131,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 # Compile options.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -O3 -mno-red-zone -save-temps -DDEBUG_TRACE=${DEBUG_TRACE} -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O0 -mno-red-zone -save-temps -DDEBUG_TRACE=${DEBUG_TRACE} -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 #    PRIVATE -O0 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.

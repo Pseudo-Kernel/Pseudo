@@ -36,3 +36,9 @@ KERNELAPI
 DListRemoveEntry(
 	IN PDLIST_ENTRY Entry);
 
+VOID
+KERNELAPI
+DListMoveAfter(
+    IN OUT PDLIST_ENTRY ListHeadDest,
+    IN OUT PDLIST_ENTRY ListHeadSource);
+
