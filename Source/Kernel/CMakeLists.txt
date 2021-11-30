@@ -61,6 +61,8 @@ set(SRC_LIST
     core/ke/runner_q.h
     core/ke/sched_base.h
     core/ke/sched_normal.h
+    core/ke/wait.h
+    core/ke/timer.h
     core/ke/lock.c
     core/ke/irql.c
     core/ke/interrupt.c
@@ -71,6 +73,8 @@ set(SRC_LIST
     core/ke/runner_q.c
     core/ke/sched_base.c
     core/ke/sched_normal.c
+    core/ke/wait.c
+    core/ke/timer.c
 
     # hal
     core/hal/8259pic.h

@@ -18,7 +18,7 @@
  * 
  * @todo There are many works to do:\n
  *       - Thread scheduling and load balancing
- *       - Synchronization primitives
+ *       - Waitable objects (timer, mutex, event, ...) and wait operation
  * 
  * @todo Current issues:\n
  *       - Kernel crashes randomly when interrupt is enabled [RESOLVED].\n
@@ -52,10 +52,10 @@
 /**
  * @brief Kernel main entry point.
  * 
- * @param LoadedBase            Kernel base.
- * @param LoaderBlock           Loader block provided by Osloader.
- * @param SizeOfLoaderBlock     Size of loader block.
- * @param Reserved              Reserved. Currently zero.
+ * @param [in] LoadedBase           Kernel base.
+ * @param [in] LoaderBlock          Loader block provided by Osloader.
+ * @param [in] SizeOfLoaderBlock    Size of loader block.
+ * @param [in] Reserved             Reserved. Currently zero.
  * 
  * @return This function never returns.
  */

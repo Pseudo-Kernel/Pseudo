@@ -88,3 +88,10 @@ KeReleaseSpinlockLowerIrql(
     IN KIRQL PrevIrql);
 
 
+#define KeTryAcquireSpinlockRaiseIrqlToContextSwitch(_lock, _prev_irql) \
+    KeTryAcquireSpinlockRaiseIrql((_lock), IRQL_CONTEXT_SWITCH, (_prev_irql))
+
+#define KeAcquireSpinlockRaiseIrqlToContextSwitch(_lock, _prev_irql)   \
+    KeAcquireSpinlockRaiseIrql((_lock), IRQL_CONTEXT_SWITCH, (_prev_irql))
+
+
