@@ -37,6 +37,7 @@ U32 Bid_8254TimerFrequency;
  * 
  * @param [in] Interrupt            Interrupt object.
  * @param [in] InterruptContext     Interrupt context.
+ * @param [in] InterruptStackFrame  Interrupt stack frame.
  * 
  * @return Always InterruptAccepted (which means successfully handled).
  */
@@ -44,7 +45,8 @@ KINTERRUPT_RESULT
 KERNELAPI
 Hal_8254Isr_PIC(
     IN PKINTERRUPT Interrupt,
-    IN PVOID InterruptContext)
+    IN PVOID InterruptContext,
+    IN PVOID InterruptStackFrame)
 {
     Bid_8254TickCount++;
     HalPicSendEoi(PIT_VECTOR);

@@ -85,7 +85,8 @@ typedef
 KINTERRUPT_RESULT
 (KERNELAPI *PKINTERRUPT_ROUTINE)(
     IN PKINTERRUPT Interrupt,
-    IN PVOID InterruptContext);
+    IN PVOID InterruptContext,
+    IN PVOID InterruptStackFrame);
 
 
 typedef struct _KINTERRUPT
@@ -180,7 +181,8 @@ KeInitializeInterrupt(
 VOID
 KERNELAPI
 KiCallInterruptChain(
-    IN U8 Vector);
+    IN U8 Vector,
+    OPTIONAL IN PVOID InterruptStackFrame);
 
 VOID
 KERNELAPI

@@ -175,7 +175,9 @@ typedef struct _KSTACK_FRAME_INTERRUPT
         "mov eax, %1\n\t"   \
         "mov gs, ax\n\t"    \
         "mov rdi, %2\n\t" /* sysvabi uses rdi for 1st argument */   \
+        "mov rsi, rsp\n\t" /* sysvabi uses rsi for 2nd argument */  \
         "mov rcx, %2\n\t" /* msabi uses rcx for 1st argument */     \
+        "mov rdx, rsp\n\t" /* msabi uses rdx for 2nd argument */    \
         "call KiCallInterruptChain\n\t"     \
         ASM_INTERRUPT_FRAME_POP_ERRCODE     \
         "iretq\n\t"         \

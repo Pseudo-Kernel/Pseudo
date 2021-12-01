@@ -18,10 +18,13 @@
 #include <ke/interrupt.h>
 #include <ke/kprocessor.h>
 #include <init/bootgfx.h>
+#include <hal/apic.h>
 
 #define VECTOR_TO_IRQ_GROUP_POINTER(_vector)                (&KeGetCurrentProcessor()->IrqGroups[VECTOR_TO_IRQL(_vector)])
 #define VECTOR_TO_IRQ_POINTER(_vector)          \
     (&VECTOR_TO_IRQ_GROUP_POINTER(Vector)->Irq[VECTOR_TO_GROUP_IRQ_INDEX(Vector)])
+
+extern VIRTUAL_ADDRESS HalApicBase;
 
 
 /**
@@ -573,14 +576,17 @@ KeInitializeInterrupt(
 /**
  * @brief Calls the interrupt chain by given vector.
  * 
- * @param [in] Vector   IDT vector number.
+ * @param [in] Vector                   IDT vector number.
+ * @param [in] InterruptStackFrame      Stack pointer which points interrupt stack frame.\n
+ *                                      This parameter is optional.
  * 
  * @return None.
  */
 VOID
 KERNELAPI
 KiCallInterruptChain(
-    IN U8 Vector)
+    IN U8 Vector,
+    OPTIONAL IN PVOID InterruptStackFrame)
 {
     ULONG Index = VECTOR_TO_GROUP_IRQ_INDEX(Vector);
     KIRQ_GROUP *IrqGroup = VECTOR_TO_IRQ_GROUP_POINTER(Vector);
@@ -598,16 +604,19 @@ KiCallInterruptChain(
         PKINTERRUPT Interrupt = CONTAINING_RECORD(Next, KINTERRUPT, InterruptList);
         DASSERT(Interrupt->Connected && Interrupt->InterruptVector == Vector);
 
-        KINTERRUPT_RESULT Result = Interrupt->InterruptRoutine(Interrupt, Interrupt->InterruptContext);
+        KINTERRUPT_RESULT Result = Interrupt->InterruptRoutine(
+            Interrupt, Interrupt->InterruptContext, InterruptStackFrame);
 
         if (Result == InterruptError || Result == InterruptAccepted)
         {
             if (Interrupt->AutoEoi)
             {
                 //
-                // @todo : Handle auto EOI.
-                //         Write zero to LAPIC EOI register.
+                // Handle auto EOI.
+                // Write zero to LAPIC EOI register.
                 //
+
+                HalApicSendEoi(HalApicBase);
             }
 
             Dispatched = TRUE;

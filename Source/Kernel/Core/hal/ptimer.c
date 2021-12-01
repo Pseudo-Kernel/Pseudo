@@ -31,8 +31,9 @@ volatile U64 HalTickCount;
 /**
  * @brief ISR for platform timer.
  * 
- * @param [in] Interrupt        Interrupt object.
- * @param [in] InteruptContext  Interrupt context.
+ * @param [in] Interrupt            Interrupt object.
+ * @param [in] InterruptContext     Interrupt context.
+ * @param [in] InterruptStackFrame  Interrupt stack frame.
  * 
  * @return Always InterruptAccepted.
  */
@@ -40,7 +41,8 @@ KINTERRUPT_RESULT
 KERNELAPI
 HalIsrPlatformTimer(
     IN PKINTERRUPT Interrupt,
-    IN PVOID InterruptContext)
+    IN PVOID InterruptContext,
+    IN PVOID InterruptStackFrame)
 {
     HalTickCount++;
     HalApicSendEoi(HalApicBase);

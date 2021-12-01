@@ -56,6 +56,7 @@ HalApplicationProcessorStart(
  * 
  * @param [in] Interrupt            Interruot object.
  * @param [in] InterruptContext     Interrupt context.
+ * @param [in] InterruptStackFrame  Interrupt stack frame.
  * 
  * @return Always InterruptAccepted.
  */
@@ -63,7 +64,8 @@ KINTERRUPT_RESULT
 KERNELAPI
 HalIsrSpurious(
     IN PKINTERRUPT Interrupt,
-    IN PVOID InterruptContext)
+    IN PVOID InterruptContext,
+    IN PVOID InterruptStackFrame)
 {
     // Spurious interrupt does not require EOI
     return InterruptAccepted;
@@ -74,6 +76,7 @@ HalIsrSpurious(
  * 
  * @param [in] Interrupt            Interruot object.
  * @param [in] InterruptContext     Interrupt context.
+ * @param [in] InterruptStackFrame  Interrupt stack frame.
  * 
  * @return Always InterruptAccepted.
  */
@@ -81,8 +84,10 @@ KINTERRUPT_RESULT
 KERNELAPI
 HalApicIsrTimer(
     IN PKINTERRUPT Interrupt,
-    IN PVOID InterruptContext)
+    IN PVOID InterruptContext,
+    IN PVOID InterruptStackFrame)
 {
+    // @todo: do context switch.
     HalGetPrivateData()->ApicTickCount++;
     HalApicSendEoi(HalApicBase);
     return InterruptAccepted;
