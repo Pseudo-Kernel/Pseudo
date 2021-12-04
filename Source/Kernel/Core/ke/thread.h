@@ -37,16 +37,52 @@ typedef union _V256
 
 typedef struct _KTHREAD_CONTEXT
 {
-    U8 Placeholders[512];
-    // RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP
-    // R8, R9, R10, R11, R12, R13, R14, R15
-    // RIP, RFLAGS
-//    U64 GPR[16]; // r0..r15
-//    U64 PSW;
-//    U64 IP;
-//    U32 SEGR[6]; // CS, DS, ES, SS, FS, GS
-//    V256 VR[16]; // ymm0..ymm16
+    // GPRs (R0 - R15)
+    U64 R15;
+    U64 R14;
+    U64 R13;
+    U64 R12;
+    U64 R11;
+    U64 R10;
+    U64 R9;
+    U64 R8;
+    U64 Rdi;
+    U64 Rsi;
+    U64 Rbp;
+    U64 Rsp;
+    U64 Rbx;
+    U64 Rdx;
+    U64 Rcx;
+    U64 Rax;
+
+    // SREGS
+    U64 Ss;
+    U64 Gs;
+    U64 Fs;
+    U64 Es;
+    U64 Ds;
+    U64 Cs;
+
+    // IP
+    U64 Rip;
+
+    // FLAGS
+    U64 Rflags;
+
+    // CRx (CR0, 2, 3, 4, 8)
+    U64 CR0;
+    U64 CR2;
+    U64 CR3;
+    U64 CR4;
+    U64 CR8;
 } KTHREAD_CONTEXT;
+
+#define THREAD_NAME_MAX_LENGTH      128
+
+typedef
+U64
+(KERNELAPI *PKTHREAD_ROUTINE)(
+    IN PVOID Argument);
 
 typedef struct _KTHREAD
 {
@@ -70,6 +106,33 @@ typedef struct _KTHREAD
 	U64 TimeslicesSpent;
 
     BOOLEAN InWaiting;              // Non-zero if thread is in wait state (waiting objects to be signaled)
+    CHAR Name[THREAD_NAME_MAX_LENGTH];
+
+    PKTHREAD_ROUTINE StartRoutine;
+    PVOID ThreadArgument;
 } KTHREAD;
 
+typedef struct _KSTACK_FRAME_INTERRUPT          KSTACK_FRAME_INTERRUPT;
+
+
+KTHREAD *
+KeGetCurrentThread(
+    VOID);
+
+VOID
+KiInitializeThread(
+    IN KTHREAD *Thread,
+    IN U32 BasePriority,
+    IN U64 ThreadId,
+    IN CHAR *ThreadName);
+
+VOID
+KiLoadContextToFrame(
+    IN KSTACK_FRAME_INTERRUPT *InterruptFrame,
+    IN KTHREAD_CONTEXT *Context);
+
+VOID
+KiLoadFrameToContext(
+    IN KSTACK_FRAME_INTERRUPT *InterruptFrame,
+    IN KTHREAD_CONTEXT *Context);
 

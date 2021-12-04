@@ -39,3 +39,9 @@ ClStrTerminateU8(
 	IN SIZE_T BufferLength,
 	IN SIZE_T Position);
 
+SIZE_T
+KERNELAPI
+ClStrCopyU8(
+    OUT CHAR8 *Buffer,
+    IN SIZE_T BufferLength,
+    IN CHAR8 *SourceBuffer);

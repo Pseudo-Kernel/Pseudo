@@ -61,6 +61,7 @@ set(SRC_LIST
     core/ke/runner_q.h
     core/ke/sched_base.h
     core/ke/sched_normal.h
+    core/ke/sched.h
     core/ke/wait.h
     core/ke/timer.h
     core/ke/lock.c
@@ -73,6 +74,7 @@ set(SRC_LIST
     core/ke/runner_q.c
     core/ke/sched_base.c
     core/ke/sched_normal.c
+    core/ke/sched.c
     core/ke/wait.c
     core/ke/timer.c
 

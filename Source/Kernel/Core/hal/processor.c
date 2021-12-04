@@ -14,6 +14,8 @@
 #include <ke/ke.h>
 #include <ke/kprocessor.h>
 #include <ke/interrupt.h>
+#include <ke/inthandler.h>
+#include <ke/thread.h>
 #include <mm/mm.h>
 #include <mm/pool.h>
 #include <init/bootgfx.h>
@@ -24,7 +26,7 @@
 #include <hal/halinit.h>
 #include <hal/ptimer.h>
 #include <hal/processor.h>
-
+#include <ke/sched.h>
 
 U32 HalMeasuredApicInitialCounter;
 
@@ -40,6 +42,7 @@ HalApplicationProcessorStart(
 {
     KiInitializeProcessor();
     KiInitializeIrqGroups();
+    KiProcessorSchedInitialize();
     HalInitializeProcessor();
 
     // Acknowledge to BSP that processor is successfully started
@@ -88,6 +91,13 @@ HalApicIsrTimer(
     IN PVOID InterruptStackFrame)
 {
     // @todo: do context switch.
+    //        (save/restore thread context)
+    //KSTACK_FRAME_INTERRUPT *Frame = (KSTACK_FRAME_INTERRUPT *)InterruptStackFrame;
+    //KTHREAD *Thread = KeGetCurrentProcessor();
+    //KTHREAD *NextThread = NULL;
+    //KiLoadFrameToContext(Frame, &Thread->ThreadContext);
+    //KiLoadContextToFrame(Frame, &NextThread->ThreadContext);
+
     HalGetPrivateData()->ApicTickCount++;
     HalApicSendEoi(HalApicBase);
     return InterruptAccepted;

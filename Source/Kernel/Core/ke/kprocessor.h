@@ -200,6 +200,9 @@ typedef struct _ARCH_X64_XDTR
 } ARCH_X64_XDTR;
 #pragma pack(pop)
 
+typedef struct _KTHREAD                     KTHREAD;
+typedef struct _KSCHED_CLASS                KSCHED_CLASS;
+
 typedef struct _KPROCESSOR
 {
     struct _KPROCESSOR *Self;
@@ -208,12 +211,11 @@ typedef struct _KPROCESSOR
     ARCH_X64_IDTENTRY *Idt;
     ARCH_X64_TSS *Tss;
 
-
-
     PVOID HalPrivateData;
     KIRQ_GROUP IrqGroups[IRQ_GROUPS_MAX];
 
-    //PVOID CurrentThread;
+    KTHREAD *CurrentThread;
+    KSCHED_CLASS *SchedNormalClass;
 } KPROCESSOR;
 
 

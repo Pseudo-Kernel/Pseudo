@@ -455,6 +455,18 @@ __writecr0(
 }
 
 _DEFINE_INTRINSIC(void)
+__writecr2(
+    unsigned __int64 Data)
+{
+    __asm__ __volatile__ (
+        "mov cr2, %0\n\t"
+        :
+        : "r"(Data)
+        :
+    );
+}
+
+_DEFINE_INTRINSIC(void)
 __writecr3(
     unsigned __int64 Data)
 {

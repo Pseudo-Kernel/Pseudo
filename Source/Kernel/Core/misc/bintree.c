@@ -60,13 +60,13 @@ RsBtTraverse(
     }
     else
     {
-        if (Next->RightChild)
-            RsBtTraverse(Tree, Next->RightChild, Traverse);
+        if (Next->LeftChild)
+            RsBtTraverse(Tree, Next->LeftChild, Traverse);
 
         Traverse(Tree->CallerContext, Next);
 
-        if (Next->LeftChild)
-            RsBtTraverse(Tree, Next->LeftChild, Traverse);
+        if (Next->RightChild)
+            RsBtTraverse(Tree, Next->RightChild, Traverse);
     }
 }
 
