@@ -1,8 +1,11 @@
 
 #pragma once
 
+#include <ke/lock.h>
+
 typedef struct _KSCHED_CLASS        KSCHED_CLASS;
 typedef struct _KRUNNER_QUEUE       KRUNNER_QUEUE;
+typedef struct _KPROCESS            KPROCESS;
 
 typedef enum _THREAD_STATE
 {
@@ -86,33 +89,75 @@ U64
 
 typedef struct _KTHREAD
 {
+    KSPIN_LOCK Lock;
+    DLIST_ENTRY ThreadList;
+    DLIST_ENTRY ProcessThreadList;
+
+    //
+    // Scheduler.
+    //
+
 //    KWAIT_HEADER WaitHeader;
     DLIST_ENTRY WaiterList;         // Used when thread is waiting objects
 
     DLIST_ENTRY RunnerLinks;
-    KTHREAD_CONTEXT ThreadContext;
     U32 BasePriority;               // Base priority
     U32 Priority;                   // Dynamic priority
 
 	U32 CurrentTimeslices;
     S32 RemainingTimeslices;
+	U64 TimeslicesSpent;
     U32 ThreadQuantum;
-    U64 ThreadId;
 
     KRUNNER_QUEUE *RunnerQueue;
     U32 RunnerLevel;
     THREAD_STATE State;
-	U64 ContextSwitchCount;
-	U64 TimeslicesSpent;
 
     BOOLEAN InWaiting;              // Non-zero if thread is in wait state (waiting objects to be signaled)
-    CHAR Name[THREAD_NAME_MAX_LENGTH];
 
+    //
+    // Statistics.
+    //
+
+	U64 ContextSwitchCount;
+
+    //
+    // Thread context.
+    //
+
+    KTHREAD_CONTEXT ThreadContext;
+
+    //
+    // Thread stack.
+    //
+
+    PVOID StackBase;    // Stack base. StackTop = (StackBase) + (StackSize) - sizeof(U64)
+    SIZE_T StackSize;
+
+    //
+    // Owner.
+    //
+
+    KPROCESS *OwnerProcess;
+
+    //
+    // Startup parameters.
+    //
+
+    U64 ThreadId;
+    CHAR Name[THREAD_NAME_MAX_LENGTH];
     PKTHREAD_ROUTINE StartRoutine;
     PVOID ThreadArgument;
 } KTHREAD;
 
 typedef struct _KSTACK_FRAME_INTERRUPT          KSTACK_FRAME_INTERRUPT;
+
+
+
+
+extern DLIST_ENTRY KiThreadListHead;
+extern KSPIN_LOCK KiThreadListLock;
+
 
 
 KTHREAD *
@@ -135,4 +180,26 @@ VOID
 KiLoadFrameToContext(
     IN KSTACK_FRAME_INTERRUPT *InterruptFrame,
     IN KTHREAD_CONTEXT *Context);
+
+KTHREAD *
+KiAllocateThread(
+    IN U32 BasePriority,
+    IN U64 ThreadId,
+    IN CHAR *ThreadName);
+
+ESTATUS
+KiInsertThread(
+    IN KPROCESS *Process,
+    IN KTHREAD *Thread);
+
+KTHREAD *
+KiCreateThread(
+    IN U32 BasePriority,
+    IN PKTHREAD_ROUTINE StartRoutine,
+    IN PVOID ThreadArgument,
+    IN CHAR *ThreadName);
+
+VOID
+KiDeleteThread(
+    IN KTHREAD *Thread);
 

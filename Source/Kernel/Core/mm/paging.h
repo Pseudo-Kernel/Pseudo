@@ -125,6 +125,7 @@ MmIsCanonicalAddress(
 
 
 
+extern U64 *MiPML4TPhysicalBase; //!< PML4 table physical base.
 extern U64 *MiPML4TBase; //!< PML4 table base.
 extern U64 *MiRPML4TBase; //!< Reverse PML4 table base.
 

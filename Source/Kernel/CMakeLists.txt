@@ -57,6 +57,7 @@ set(SRC_LIST
     core/ke/keinit.h
     core/ke/kprocessor.h
     core/ke/inthandler.h
+    core/ke/process.h
     core/ke/thread.h
     core/ke/runner_q.h
     core/ke/sched_base.h
@@ -70,6 +71,7 @@ set(SRC_LIST
     core/ke/keinit.c
     core/ke/kprocessor.c
     core/ke/inthandler.c
+    core/ke/process.c
     core/ke/thread.c
     core/ke/runner_q.c
     core/ke/sched_base.c

@@ -17,6 +17,7 @@
 #include <ke/interrupt.h>
 #include <ke/kprocessor.h>
 #include <ke/thread.h>
+#include <ke/process.h>
 #include <ke/sched.h>
 
 VOID
@@ -24,6 +25,10 @@ KiProcessorSchedInitialize(
     VOID)
 {
     KPROCESSOR *Processor = KeGetCurrentProcessor();
+
+    // 
+    // Create scheduler class object.
+    // 
 
     KSCHED_CLASS *NormalClass = (KSCHED_CLASS *)MmAllocatePool(PoolTypeNonPaged, sizeof(KSCHED_CLASS), 0x10, 0);
     if (!NormalClass)
@@ -35,13 +40,17 @@ KiProcessorSchedInitialize(
         &KiSchedNormalInsertThread, &KiSchedNormalRemoveThread, 
         &KiSchedNormalPeekThread, &KiSchedNormalNextThread, NULL, KSCHED_NORMAL_CLASS_LEVELS));
 
-    KTHREAD *IdleThread = (KTHREAD *)MmAllocatePool(PoolTypeNonPaged, sizeof(KTHREAD), 0x10, 0);
+    //
+    // Create idle thread.
+    //
+
+    KTHREAD *IdleThread = KiCreateThread(0, NULL, NULL, "Idle");
     if (!IdleThread)
     {
         FATAL("Failed to allocate thread object");
     }
 
-    KiInitializeThread(IdleThread, 0, 0, "Idle");
+    DASSERT(E_IS_SUCCESS(KiInsertThread(&KiIdleProcess, IdleThread)));
 
     Processor->CurrentThread = IdleThread;
     Processor->SchedNormalClass = NormalClass;

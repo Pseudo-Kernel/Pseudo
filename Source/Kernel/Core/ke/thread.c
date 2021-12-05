@@ -1,4 +1,15 @@
 
+/**
+ * @file thread.c
+ * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
+ * @brief Implements thread related routines.
+ * @version 0.1
+ * @date 2021-12-06
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
+
 #include <base/base.h>
 #include <misc/common.h>
 #include <ke/lock.h>
@@ -7,6 +18,11 @@
 #include <ke/inthandler.h>
 #include <ke/kprocessor.h>
 #include <ke/thread.h>
+#include <ke/process.h>
+
+U64 KiThreadIdSeed;
+DLIST_ENTRY KiThreadListHead;
+KSPIN_LOCK KiThreadListLock;
 
 KTHREAD *
 KeGetCurrentThread(
@@ -24,9 +40,13 @@ KiInitializeThread(
 {
     memset(Thread, 0, sizeof(*Thread));
 
-    DListInitializeHead(&Thread->WaiterList);
+    KeInitializeSpinlock(&Thread->Lock);
+    DListInitializeHead(&Thread->ThreadList);
+    DListInitializeHead(&Thread->ProcessThreadList);
 
+    DListInitializeHead(&Thread->WaiterList);
     DListInitializeHead(&Thread->RunnerLinks);
+
     Thread->BasePriority = BasePriority;
     Thread->Priority = BasePriority;
     Thread->ThreadId = ThreadId;
@@ -150,7 +170,7 @@ KiLoadFrameToContext(
 KTHREAD *
 KiAllocateThread(
     IN U32 BasePriority,
-    IN U32 ThreadId,
+    IN U64 ThreadId,
     IN CHAR *ThreadName)
 {
     KTHREAD *Thread = (KTHREAD *)MmAllocatePool(PoolTypeNonPaged, sizeof(KTHREAD), 0x10, 0);
@@ -165,12 +185,56 @@ KiAllocateThread(
     return Thread;
 }
 
-//KTHREAD *
-//KiCreateThread(
-//    IN U32 BasePriority,
-//    IN PKTHREAD_ROUTINE StartRoutine,
-//    IN PVOID ThreadArgument,
-//    IN CHAR *ThreadName)
-//{
-//}
+ESTATUS
+KiInsertThread(
+    IN KPROCESS *Process,
+    IN KTHREAD *Thread)
+{
+    KIRQL PrevIrql;
 
+    KSPIN_LOCK *Locks_ThreadList[] = { &KiThreadListLock, &Thread->Lock };
+
+    KeAcquireSpinlockMultipleRaiseIrql(Locks_ThreadList, COUNTOF(Locks_ThreadList), IRQL_CONTEXT_SWITCH, &PrevIrql);
+    DListInsertAfter(&KiThreadListHead, &Thread->ThreadList);
+    KeReleaseSpinlockMultipleLowerIrql(Locks_ThreadList, COUNTOF(Locks_ThreadList), PrevIrql);
+
+    KSPIN_LOCK *Locks_ProcessThread[] = { &Process->Lock, &Thread->Lock };
+
+    KeAcquireSpinlockMultipleRaiseIrql(Locks_ProcessThread, COUNTOF(Locks_ProcessThread), IRQL_CONTEXT_SWITCH, &PrevIrql);
+    DListInsertAfter(&Process->ThreadList, &Thread->ProcessThreadList);
+    Thread->OwnerProcess = Process;
+    KeReleaseSpinlockMultipleLowerIrql(Locks_ProcessThread, COUNTOF(Locks_ProcessThread), PrevIrql);
+
+    return E_SUCCESS;
+}
+
+KTHREAD *
+KiCreateThread(
+    IN U32 BasePriority,
+    IN PKTHREAD_ROUTINE StartRoutine,
+    IN PVOID ThreadArgument,
+    IN CHAR *ThreadName)
+{
+    U64 NextThreadId = _InterlockedIncrement64((long long *)&KiThreadIdSeed);
+
+    KTHREAD *Thread = KiAllocateThread(BasePriority, NextThreadId, ThreadName);
+
+    if (!Thread)
+    {
+        return NULL;
+    }
+
+    Thread->ThreadArgument = ThreadArgument;
+    Thread->StartRoutine = StartRoutine;
+
+    return Thread;
+}
+
+VOID
+KiDeleteThread(
+    IN KTHREAD *Thread)
+{
+    // @todo: Free members before process deletion
+    //        Not implemented
+    MmFreePool(Thread);
+}

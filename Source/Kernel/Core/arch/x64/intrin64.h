@@ -706,6 +706,48 @@ __outdwordstring(
 
 
 _DEFINE_INTRINSIC(long)
+_InterlockedIncrement(
+    long *p)
+{
+    return __atomic_fetch_add(p, 1, __ATOMIC_SEQ_CST);
+}
+
+_DEFINE_INTRINSIC(short)
+_InterlockedIncrement16(
+    short *p)
+{
+    return __atomic_fetch_add(p, 1, __ATOMIC_SEQ_CST);
+}
+
+_DEFINE_INTRINSIC(__int64)
+_InterlockedIncrement64(
+    __int64 *p)
+{
+    return __atomic_fetch_add(p, 1, __ATOMIC_SEQ_CST);
+}
+
+_DEFINE_INTRINSIC(long)
+_InterlockedDecrement(
+    long *p)
+{
+    return __atomic_fetch_sub(p, 1, __ATOMIC_SEQ_CST);
+}
+
+_DEFINE_INTRINSIC(short)
+_InterlockedDecrement16(
+    short *p)
+{
+    return __atomic_fetch_sub(p, 1, __ATOMIC_SEQ_CST);
+}
+
+_DEFINE_INTRINSIC(__int64)
+_InterlockedDecrement64(
+    __int64 *p)
+{
+    return __atomic_fetch_sub(p, 1, __ATOMIC_SEQ_CST);
+}
+
+_DEFINE_INTRINSIC(long)
 _InterlockedExchange(
     long volatile * Target,
     long Value)

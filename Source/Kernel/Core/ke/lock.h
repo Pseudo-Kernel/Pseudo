@@ -39,6 +39,24 @@ KERNELAPI
 KeIsSpinlockAcquired(
     IN PKSPIN_LOCK Lock);
 
+BOOLEAN
+KERNELAPI
+KeTryAcquireSpinlockMultiple(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count);
+
+VOID
+KERNELAPI
+KeAcquireSpinlockMultiple(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count);
+
+VOID
+KERNELAPI
+KeReleaseSpinlockMultiple(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count);
+
 
 //
 // Spinlock with interrupt flag.
@@ -60,6 +78,27 @@ VOID
 KERNELAPI
 KeReleaseSpinlockRestoreInterrupt(
     IN PKSPIN_LOCK Lock,
+    IN BOOLEAN PrevState);
+
+BOOLEAN
+KERNELAPI
+KeTryAcquireSpinlockMultipleDisableInterrupt(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count,
+    OUT BOOLEAN *PrevState);
+
+VOID
+KERNELAPI
+KeAcquireSpinlockMultipleDisableInterrupt(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count,
+    OUT BOOLEAN *PrevState);
+
+VOID
+KERNELAPI
+KeReleaseSpinlockMultipleDisableInterrupt(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count,
     IN BOOLEAN PrevState);
 
 
@@ -85,6 +124,29 @@ VOID
 KERNELAPI
 KeReleaseSpinlockLowerIrql(
     IN PKSPIN_LOCK Lock,
+    IN KIRQL PrevIrql);
+
+BOOLEAN
+KERNELAPI
+KeTryAcquireSpinlockMultipleRaiseIrql(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count,
+    IN KIRQL Irql,
+    OUT KIRQL *PrevIrql);
+
+VOID
+KERNELAPI
+KeAcquireSpinlockMultipleRaiseIrql(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count,
+    IN KIRQL Irql,
+    OUT KIRQL *PrevIrql);
+
+VOID
+KERNELAPI
+KeReleaseSpinlockMultipleLowerIrql(
+    IN PKSPIN_LOCK *LockList,
+    IN ULONG Count,
     IN KIRQL PrevIrql);
 
 

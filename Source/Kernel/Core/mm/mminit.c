@@ -100,6 +100,8 @@ MiPreInitialize(
     IN OS_LOADER_BLOCK *LoaderBlock)
 {
     U64 OffsetToVirtualBase = LoaderBlock->LoaderData.OffsetToVirtualBase;
+
+    MiPML4TPhysicalBase = (U64 *)LoaderBlock->LoaderData.PML4TBase;
     MiPML4TBase = (U64 *)((UPTR)LoaderBlock->LoaderData.PML4TBase + OffsetToVirtualBase);
     MiRPML4TBase = (U64 *)((UPTR)LoaderBlock->LoaderData.RPML4TBase + OffsetToVirtualBase);
 

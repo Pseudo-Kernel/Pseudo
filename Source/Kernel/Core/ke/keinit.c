@@ -15,6 +15,8 @@
 #include <ke/keinit.h>
 #include <ke/interrupt.h>
 #include <ke/kprocessor.h>
+#include <ke/thread.h>
+#include <ke/process.h>
 #include <ke/sched.h>
 #include <mm/mm.h>
 #include <mm/pool.h>
@@ -58,6 +60,7 @@ KiInitialize(
 
     KiInitializeProcessor();
     KiInitializeIrqGroups();
+    KiCreateInitialProcessThreads();
     KiProcessorSchedInitialize();
 }
 
