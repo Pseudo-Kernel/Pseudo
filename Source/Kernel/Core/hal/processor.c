@@ -90,13 +90,9 @@ HalApicIsrTimer(
     IN PVOID InterruptContext,
     IN PVOID InterruptStackFrame)
 {
-    // @todo: do context switch.
-    //        (save/restore thread context)
-    //KSTACK_FRAME_INTERRUPT *Frame = (KSTACK_FRAME_INTERRUPT *)InterruptStackFrame;
-    //KTHREAD *Thread = KeGetCurrentProcessor();
-    //KTHREAD *NextThread = NULL;
-    //KiLoadFrameToContext(Frame, &Thread->ThreadContext);
-    //KiLoadContextToFrame(Frame, &NextThread->ThreadContext);
+    // Select and switch to the next thread.
+    KSTACK_FRAME_INTERRUPT *InterruptFrame = (KSTACK_FRAME_INTERRUPT *)InterruptStackFrame;
+    KiScheduleSwitchContext(InterruptFrame);
 
     HalGetPrivateData()->ApicTickCount++;
     HalApicSendEoi(HalApicBase);

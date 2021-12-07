@@ -7,3 +7,8 @@
 VOID
 KiProcessorSchedInitialize(
     VOID);
+
+ESTATUS
+KiScheduleSwitchContext(
+    IN KSTACK_FRAME_INTERRUPT *InterruptFrame);
+

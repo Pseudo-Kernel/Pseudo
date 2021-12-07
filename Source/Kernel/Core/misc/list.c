@@ -50,7 +50,8 @@ KERNELAPI
 DListIsEmpty(
 	IN PDLIST_ENTRY Head)
 {
-	if (Head->Next == Head->Prev)
+	if (Head == Head->Next && 
+        Head == Head->Prev)
 	{
 		// ASSERT( Head == Head->Next );
 		return TRUE;

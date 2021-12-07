@@ -172,6 +172,14 @@ KiInitializeThread(
     IN CHAR *ThreadName);
 
 VOID
+KiSaveControlRegisters(
+    IN KTHREAD_CONTEXT *Context);
+
+VOID
+KiRestoreControlRegisters(
+    IN KTHREAD_CONTEXT *Context);
+
+VOID
 KiLoadContextToFrame(
     IN KSTACK_FRAME_INTERRUPT *InterruptFrame,
     IN KTHREAD_CONTEXT *Context);

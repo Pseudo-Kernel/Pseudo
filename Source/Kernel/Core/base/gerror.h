@@ -7,6 +7,7 @@ typedef enum _ESTATUS
 
 	E_FAILED = (int)0x80000000l,
     E_NOT_IMPLEMENTED,
+    E_NOT_PERFORMED,
 
     E_NOT_SUPPORTED,
     E_NOT_FOUND,

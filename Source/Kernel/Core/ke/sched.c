@@ -55,3 +55,72 @@ KiProcessorSchedInitialize(
     Processor->CurrentThread = IdleThread;
     Processor->SchedNormalClass = NormalClass;
 }
+
+VOID
+KiConsumeTimeslice(
+    IN KTHREAD *Thread,
+    IN U32 Timeslice,
+    OUT BOOLEAN *Expired)
+{
+    Thread->RemainingTimeslices -= Timeslice;
+    if (Thread->RemainingTimeslices <= 0)
+    {
+        //Thread->State = ThreadStateExpired;
+        if (Expired)
+            *Expired = TRUE;
+    }
+}
+
+ESTATUS
+KiScheduleSwitchContext(
+    IN KSTACK_FRAME_INTERRUPT *InterruptFrame)
+{
+    DASSERT(KeGetCurrentIrql() == IRQL_CONTEXT_SWITCH);
+
+    BOOLEAN Expired = FALSE;
+    KPROCESSOR *Processor = KeGetCurrentProcessor();
+    KTHREAD *CurrentThread = Processor->CurrentThread;
+
+    DASSERT(CurrentThread);
+    
+    KiConsumeTimeslice(CurrentThread, 1, &Expired);
+
+    if (!Expired)
+    {
+        return E_NOT_PERFORMED;
+    }
+
+    // Recalculate the timeslice and quantum by priority.
+    U32 LastTimeslices = CurrentThread->CurrentTimeslices;
+
+    CurrentThread->Priority = CurrentThread->BasePriority;
+    CurrentThread->ThreadQuantum = // PRIORITY_TO_THREAD_QUANTUM(LastPriority)
+        CurrentThread->Priority >= 2 ? CurrentThread->Priority / 2 : 1;
+
+    U32 CurrentTimeslices = (CurrentThread->Priority + 1) * 2; // PRIORITY_TO_TIMESLICES(LastPriority)
+    CurrentThread->RemainingTimeslices += CurrentTimeslices;
+    CurrentThread->TimeslicesSpent += LastTimeslices;
+    CurrentThread->CurrentTimeslices = CurrentTimeslices;
+    CurrentThread->ContextSwitchCount++;
+
+    KTHREAD *NextThread = NULL;
+
+    DASSERT(KiSchedInsertThread(Processor->SchedNormalClass, CurrentThread, KSCHED_IDLE_QUEUE));
+    DASSERT(KiSchedNextThread(Processor->SchedNormalClass, &NextThread));
+    DASSERT(NextThread);
+
+    Processor->CurrentThread = NextThread;
+
+    // Save current context and load next thread context.
+    KiLoadFrameToContext(InterruptFrame, &CurrentThread->ThreadContext);
+    KiSaveControlRegisters(&CurrentThread->ThreadContext);
+
+    // We don't need to load context from same thread. (especially CR3!)
+    if (CurrentThread != NextThread)
+    {
+        KiLoadContextToFrame(InterruptFrame, &NextThread->ThreadContext);
+        KiRestoreControlRegisters(&CurrentThread->ThreadContext);
+    }
+
+    return E_SUCCESS;
+}

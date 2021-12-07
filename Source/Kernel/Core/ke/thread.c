@@ -65,21 +65,6 @@ KiInitializeThread(
 }
 
 VOID
-KiConsumeTimeslice(
-    IN KTHREAD *Thread,
-    IN U32 Timeslice,
-    OUT BOOLEAN *Expired)
-{
-    Thread->RemainingTimeslices -= Timeslice;
-    if (Thread->RemainingTimeslices <= 0)
-    {
-        //Thread->State = ThreadStateExpired;
-        if (Expired)
-            *Expired = TRUE;
-    }
-}
-
-VOID
 KiSaveControlRegisters(
     IN KTHREAD_CONTEXT *Context)
 {
@@ -191,6 +176,12 @@ KiInsertThread(
     IN KTHREAD *Thread)
 {
     KIRQL PrevIrql;
+    
+    DbgTraceF(TraceLevelDebug, 
+        "Inserting thread 0x%016llx (id %d, name '%s') to"
+        " process 0x%016llx (id %d, name '%s')\n", 
+        Thread, Thread->ThreadId, Thread->Name, 
+        Process, Process->ProcessId, Process->Name);
 
     KSPIN_LOCK *Locks_ThreadList[] = { &KiThreadListLock, &Thread->Lock };
 

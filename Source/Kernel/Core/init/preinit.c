@@ -84,6 +84,11 @@ PiPreInitialize(
         FATAL("Failed to initialize graphics");
     }
 
+    BGXTRACE_C(
+        BGX_COLOR_LIGHT_GREEN,
+        "Pseudo kernel v%d.%d. (Last built: %s %s)\n\n",
+        0, 1, __DATE__, __TIME__);
+
     BGXTRACE("Pre-init graphics initialized\n");
 
     //
