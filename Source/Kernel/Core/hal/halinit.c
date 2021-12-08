@@ -68,10 +68,10 @@ HalPrepareAPStart(
     PHYSICAL_ADDRESSES PhysicalAddresses = 
     {
         .Mapped = FALSE,
-        .PhysicalAddressCount = 1,
-        .PhysicalAddresses[0].Range.Start = 0,
-        .PhysicalAddresses[0].Range.End = 0x100000 - 1,
-        .PhysicalAddressMaximumCount = 1,
+        .AddressCount = 1,
+        .Ranges[0].Range.Start = 0,
+        .Ranges[0].Range.End = 0x100000 - 1,
+        .AddressMaximumCount = 1,
     };
 
     Status = MmMapPages(&PhysicalAddresses, LowMemoryVirtual, ARCH_X64_PXE_WRITABLE, TRUE, 0);

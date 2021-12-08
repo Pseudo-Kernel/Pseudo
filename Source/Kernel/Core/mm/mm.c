@@ -500,7 +500,7 @@ MmAllocatePhysicalMemoryGather(
     SIZE_T SplitLastBlockSize = 0;
 
     PhysicalAddresses->Mapped = FALSE;
-    PhysicalAddresses->PhysicalAddressCount = 0;
+    PhysicalAddresses->AddressCount = 0;
     PhysicalAddresses->StartingVirtualAddress = NULL;
 
     for (INT i = MMXAD_MAX_SIZE_LEVELS - 1; i >= 0; i--)
@@ -510,8 +510,8 @@ MmAllocatePhysicalMemoryGather(
 
         while (Head != Current)
         {
-            if (PhysicalAddresses->PhysicalAddressMaximumCount <=
-                PhysicalAddresses->PhysicalAddressCount)
+            if (PhysicalAddresses->AddressMaximumCount <=
+                PhysicalAddresses->AddressCount)
             {
                 DASSERT(AllocatedSize < Size);
                 Status = E_BUFFER_TOO_SMALL;
@@ -523,8 +523,8 @@ MmAllocatePhysicalMemoryGather(
 
             if (Temp->Address.Type == PadFree)
             {
-                PhysicalAddresses->PhysicalAddresses
-                    [PhysicalAddresses->PhysicalAddressCount++].Internal = Temp;
+                PhysicalAddresses->Ranges
+                    [PhysicalAddresses->AddressCount++].Internal = Temp;
 
                 if (AllocatedSize + BlockSize >= Size)
                 {
@@ -561,13 +561,13 @@ ExitLoop:
     // Reclaim addresses by address hint.
     // 
 
-    for (U32 i = 0; i < PhysicalAddresses->PhysicalAddressCount; i++)
+    for (U32 i = 0; i < PhysicalAddresses->AddressCount; i++)
     {
-        MMXAD *Xad = PhysicalAddresses->PhysicalAddresses[i].Internal;
+        MMXAD *Xad = PhysicalAddresses->Ranges[i].Internal;
 
         ADDRESS_RANGE Range = Xad->Address.Range;
 
-        if (i + 1 == PhysicalAddresses->PhysicalAddressCount && SplitLastBlock)
+        if (i + 1 == PhysicalAddresses->AddressCount && SplitLastBlock)
         {
             Range.End = Range.Start + SplitLastBlockSize;
         }
@@ -583,7 +583,7 @@ ExitLoop:
         Status = MmXadReclaimAddress(&MiPadTree, Xad, NULL, &AddressReclaim);
         DASSERT(E_IS_SUCCESS(Status));
 
-        PhysicalAddresses->PhysicalAddresses[i].Range = Range;
+        PhysicalAddresses->Ranges[i].Range = Range;
     }
 
     PhysicalAddresses->AllocatedSize = AllocatedSize;
@@ -612,16 +612,16 @@ MmFreePhysicalMemoryGather(
         return E_INVALID_PARAMETER;
     }
 
-    if (PhysicalAddresses->PhysicalAddressCount > PhysicalAddresses->PhysicalAddressMaximumCount)
+    if (PhysicalAddresses->AddressCount > PhysicalAddresses->AddressMaximumCount)
     {
         return E_INVALID_PARAMETER;
     }
 
     MmXadAcquireLock(&MiPadTree);
 
-    for (U32 i = 0; i < PhysicalAddresses->PhysicalAddressCount; i++)
+    for (U32 i = 0; i < PhysicalAddresses->AddressCount; i++)
     {
-        U64 StartAddress = PhysicalAddresses->PhysicalAddresses[i].Range.Start;
+        U64 StartAddress = PhysicalAddresses->Ranges[i].Range.Start;
 
         MMXAD *Xad = NULL;
         ESTATUS Status = MmXadLookupAddress(&MiPadTree, &Xad, StartAddress, 0, 0, XAD_LAF_ADDRESS);
@@ -639,16 +639,16 @@ MmFreePhysicalMemoryGather(
         }
     }
 
-    for (U32 i = 0; i < PhysicalAddresses->PhysicalAddressCount; i++)
+    for (U32 i = 0; i < PhysicalAddresses->AddressCount; i++)
     {
         MMXAD *Xad = NULL;
         ESTATUS Status = MmXadLookupAddress(&MiPadTree, &Xad,
-            PhysicalAddresses->PhysicalAddresses[i].Range.Start, 0, 0, XAD_LAF_ADDRESS);
+            PhysicalAddresses->Ranges[i].Range.Start, 0, 0, XAD_LAF_ADDRESS);
 
         DASSERT(E_IS_SUCCESS(Status));
 
         ADDRESS AddressReclaim = {
-            .Range = PhysicalAddresses->PhysicalAddresses[i].Range,
+            .Range = PhysicalAddresses->Ranges[i].Range,
             .Type = PadFree,
         };
 
@@ -778,8 +778,8 @@ MiMapMemory(
     IN BOOLEAN AllowNonDefaultPageSize,
     IN OBJECT_POOL *PxePool)
 {
-    if (PhysicalAddresses->PhysicalAddressCount > 
-        PhysicalAddresses->PhysicalAddressMaximumCount)
+    if (PhysicalAddresses->AddressCount > 
+        PhysicalAddresses->AddressMaximumCount)
     {
         return E_INVALID_PARAMETER;
     }
@@ -790,9 +790,9 @@ MiMapMemory(
     }
 
     VIRTUAL_ADDRESS TargetVirtualAddress = ROUNDDOWN_TO_PAGE_SIZE(VirtualAddress);
-    for (U32 i = 0; i < PhysicalAddresses->PhysicalAddressCount; i++)
+    for (U32 i = 0; i < PhysicalAddresses->AddressCount; i++)
     {
-        ADDRESS_RANGE Range = PhysicalAddresses->PhysicalAddresses[i].Range;
+        ADDRESS_RANGE Range = PhysicalAddresses->Ranges[i].Range;
         SIZE_T Size = Range.End - Range.Start;
 
         // @todo: Revert page mapping if fails
@@ -863,11 +863,11 @@ MmMapSinglePage(
 
     PHYSICAL_ADDRESSES PhysicalAddresses = {
         .Mapped = FALSE,
-        .PhysicalAddressCount = 1,
-        .PhysicalAddressMaximumCount = 1,
+        .AddressCount = 1,
+        .AddressMaximumCount = 1,
         .StartingVirtualAddress = 0,
-        .PhysicalAddresses[0].Range.Start = PhysicalAddress,
-        .PhysicalAddresses[0].Range.End = PhysicalAddress + PAGE_SIZE - 1,
+        .Ranges[0].Range.Start = PhysicalAddress,
+        .Ranges[0].Range.End = PhysicalAddress + PAGE_SIZE - 1,
     };
 
     return MiMapMemory(MiPML4TBase, MiRPML4TBase, &PhysicalAddresses, VirtualAddress, 

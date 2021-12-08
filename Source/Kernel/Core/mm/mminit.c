@@ -376,8 +376,8 @@ MmInitialize(
         }
 
         memset(Addresses, 0, SizeOfAddresses);
-        Addresses->PhysicalAddressMaximumCount = AddressMaximumCount;
-        Addresses->PhysicalAddressCount = 0;
+        Addresses->AddressMaximumCount = AddressMaximumCount;
+        Addresses->AddressCount = 0;
 
         PTR PoolVirtualBase = 0;
         SIZE_T PoolSize = MiPoolAddresses[PoolType].PoolSize;

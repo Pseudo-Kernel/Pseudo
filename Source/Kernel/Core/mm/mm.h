@@ -83,27 +83,27 @@ typedef union _PHYSICAL_RANGE_INTERNAL
 
 typedef struct _PHYSICAL_ADDRESSES
 {
-    U32 PhysicalAddressCount;
-    U32 PhysicalAddressMaximumCount;
+    U32 AddressCount;
+    U32 AddressMaximumCount;
     PTR StartingVirtualAddress;
     SIZE_T AllocatedSize;
     BOOLEAN Mapped;
-	PHYSICAL_RANGE_INTERNAL PhysicalAddresses[1];
+	PHYSICAL_RANGE_INTERNAL Ranges[1];
 } PHYSICAL_ADDRESSES;
 
 typedef struct _PHYSICAL_ADDRESSES_R128
 {
     PHYSICAL_ADDRESSES Addresses;
-	PHYSICAL_RANGE_INTERNAL PhysicalAddresses[128-1];
+	PHYSICAL_RANGE_INTERNAL Ranges[128-1];
 } PHYSICAL_ADDRESSES_R128;
 
 #define INITIALIZE_PHYSICAL_ADDRESSES(_phyaddrs, _cnt, _maxcnt) {           \
-    ((PHYSICAL_ADDRESSES *)(_phyaddrs))->PhysicalAddressCount = (_cnt);     \
-    ((PHYSICAL_ADDRESSES *)(_phyaddrs))->PhysicalAddressMaximumCount = (_maxcnt);   \
+    ((PHYSICAL_ADDRESSES *)(_phyaddrs))->AddressCount = (_cnt);             \
+    ((PHYSICAL_ADDRESSES *)(_phyaddrs))->AddressMaximumCount = (_maxcnt);   \
     ((PHYSICAL_ADDRESSES *)(_phyaddrs))->Mapped = FALSE;                \
     ((PHYSICAL_ADDRESSES *)(_phyaddrs))->StartingVirtualAddress = 0;    \
     ((PHYSICAL_ADDRESSES *)(_phyaddrs))->AllocatedSize = 0;             \
-    ((PHYSICAL_ADDRESSES *)(_phyaddrs))->PhysicalAddresses[0].Internal = NULL;  \
+    ((PHYSICAL_ADDRESSES *)(_phyaddrs))->Ranges[0].Internal = NULL;     \
 }
 
 #define PHYSICAL_ADDRESSES_MAXIMUM_COUNT(_phyaddrs_size)    \
