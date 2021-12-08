@@ -20,6 +20,22 @@
 #include <ke/process.h>
 #include <ke/sched.h>
 
+U64
+KiTestSystemThreadStart(
+    IN PVOID Argument)
+{
+    volatile U64 Counter = 0;
+    KPROCESSOR *Processor = KeGetCurrentProcessor();
+    KTHREAD *Thread = KeGetCurrentThread();
+
+    for (;;)
+    {
+        // Test!
+        DASSERT(Processor->CurrentThread == Thread);
+        Counter++;
+    }
+}
+
 VOID
 KiProcessorSchedInitialize(
     VOID)
@@ -54,6 +70,20 @@ KiProcessorSchedInitialize(
 
     Processor->CurrentThread = IdleThread;
     Processor->SchedNormalClass = NormalClass;
+
+
+
+    //
+    // Test!!!
+    //
+
+    KTHREAD *TestThread = KiCreateThread(1, (PKTHREAD_ROUTINE)&KiTestSystemThreadStart, NULL, "Test");
+    DASSERT(TestThread);
+    DASSERT(E_IS_SUCCESS(KiSetupInitialContextThread(TestThread, 0, (PVOID)__readcr3())));
+
+    DASSERT(E_IS_SUCCESS(KiInsertThread(&KiSystemProcess, TestThread)));
+
+    DASSERT(KiSchedInsertThread(KeGetCurrentProcessor()->SchedNormalClass, TestThread, KSCHED_READY_QUEUE));
 }
 
 VOID

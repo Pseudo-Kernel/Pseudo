@@ -68,6 +68,8 @@ KiInitializeProcess(
     DListInitializeHead(&Process->ThreadList);
     DListInitializeHead(&Process->ProcessList);
 
+    Process->ReferenceCount = 1;
+
     Process->ProcessId = ProcessId;
     Process->KernelVads = &MiVadTree;
     Process->UserVads = NULL;

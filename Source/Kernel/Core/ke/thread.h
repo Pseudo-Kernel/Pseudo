@@ -7,6 +7,8 @@ typedef struct _KSCHED_CLASS        KSCHED_CLASS;
 typedef struct _KRUNNER_QUEUE       KRUNNER_QUEUE;
 typedef struct _KPROCESS            KPROCESS;
 
+typedef struct _PHYSICAL_ADDRESSES  PHYSICAL_ADDRESSES;
+
 typedef enum _THREAD_STATE
 {
     ThreadStateInitialize,  // Thread is initialized
@@ -90,8 +92,11 @@ U64
 typedef struct _KTHREAD
 {
     KSPIN_LOCK Lock;
+
     DLIST_ENTRY ThreadList;
     DLIST_ENTRY ProcessThreadList;
+
+    U64 ReferenceCount;
 
     //
     // Scheduler.
@@ -131,6 +136,7 @@ typedef struct _KTHREAD
     // Thread stack.
     //
 
+    PHYSICAL_ADDRESSES *StackPaList;
     PVOID StackBase;    // Stack base. StackTop = (StackBase) + (StackSize) - sizeof(U64)
     SIZE_T StackSize;
 
@@ -188,6 +194,21 @@ VOID
 KiLoadFrameToContext(
     IN KSTACK_FRAME_INTERRUPT *InterruptFrame,
     IN KTHREAD_CONTEXT *Context);
+
+ESTATUS
+KiSetupInitialContextThread(
+    IN KTHREAD *Thread,
+    IN SIZE_T StackSize, 
+    IN PVOID PML4Base);
+
+KIRQL
+KiLockThread(
+    IN KTHREAD *Thread);
+
+VOID
+KiUnlockThread(
+    IN KTHREAD *Thread,
+    IN KIRQL PrevIrql);
 
 KTHREAD *
 KiAllocateThread(

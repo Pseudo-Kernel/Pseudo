@@ -464,6 +464,48 @@ MmAllocatePhysicalAddressesStructure(
 }
 
 /**
+ * @brief Copies PHYSICAL_ADDRESSES structure to destination.
+ * 
+ * @param [out] Destination     Destination structure.\n
+ *                              Caller must specify AddressMaximumCount as valid.\n
+ *                              Caller must specify AddressCount to zero.
+ * @param [in] Source           Source structure.
+ * 
+ * @return ESTATUS code.
+ */
+KEXPORT
+ESTATUS
+KERNELAPI
+MmCopyPhysicalAddressesStructure(
+    OUT PHYSICAL_ADDRESSES *Destination,
+    IN PHYSICAL_ADDRESSES *Source)
+{
+    if (!Source->AddressCount ||
+        Source->AddressCount > Source->AddressMaximumCount ||
+        // Must set Destination->AddressCount to zero
+        Destination->AddressCount ||
+        Destination->AddressCount > Destination->AddressMaximumCount ||
+        // Must check whether the destination buffer is large enough
+        Destination->AddressMaximumCount < Source->AddressCount)
+    {
+        return E_INVALID_PARAMETER;
+    }
+
+    // Destination->AddressMaximumCount will not be changed as it specifies destination buffer size
+    Destination->AddressCount = Source->AddressCount;
+    Destination->AllocatedSize = Source->AllocatedSize;
+    Destination->Mapped = Source->Mapped;
+    Destination->StartingVirtualAddress = Source->StartingVirtualAddress;
+
+    for (U32 i = 0; i < Source->AddressCount; i++)
+    {
+        Destination->Ranges[i] = Source->Ranges[i];
+    }
+
+    return E_SUCCESS;
+}
+
+/**
  * @brief Allocates physical memory blocks for given size.
  *
  * @param [in,out] PhysicalAddresses    Pointer to caller-supplied variable which points

@@ -15,6 +15,8 @@ typedef struct _KPROCESS
     DLIST_ENTRY ProcessList;
     DLIST_ENTRY ThreadList;
 
+    U64 ReferenceCount;
+
     //
     // Address space.
     //

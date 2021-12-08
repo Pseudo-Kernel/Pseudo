@@ -8,12 +8,15 @@
  * 
  * @copyright Copyright (c) 2021
  * 
+ * @todo Preserve extended contexts when doing context switch (x87/XMM/YMM/...)
  */
 
 #include <base/base.h>
 #include <misc/common.h>
 #include <ke/lock.h>
+#include <init/bootgfx.h>
 #include <mm/pool.h>
+#include <mm/mm.h>
 #include <ke/interrupt.h>
 #include <ke/inthandler.h>
 #include <ke/kprocessor.h>
@@ -43,6 +46,8 @@ KiInitializeThread(
     KeInitializeSpinlock(&Thread->Lock);
     DListInitializeHead(&Thread->ThreadList);
     DListInitializeHead(&Thread->ProcessThreadList);
+
+    Thread->ReferenceCount = 1;
 
     DListInitializeHead(&Thread->WaiterList);
     DListInitializeHead(&Thread->RunnerLinks);
@@ -152,6 +157,94 @@ KiLoadFrameToContext(
     Context->Rflags = InterruptFrame->Rflags;
 }
 
+VOID
+KiSystemThreadStartup(
+    IN KTHREAD *Thread)
+{
+    Thread->StartRoutine(Thread->ThreadArgument);
+
+    // @todo: Exit self
+    FATAL("Thread %d returned without exit!", Thread->ThreadId);
+}
+
+ESTATUS
+KiSetupInitialContextThread(
+    IN KTHREAD *Thread,
+    IN SIZE_T StackSize, 
+    IN PVOID PML4Base)
+{
+    PHYSICAL_ADDRESSES_R128 PhysicalAddresses;
+    INITIALIZE_PHYSICAL_ADDRESSES_R128(&PhysicalAddresses, 0);
+
+    if (!StackSize)
+    {
+        StackSize = KERNEL_STACK_SIZE_DEFAULT;
+    }
+
+    ESTATUS Status = MmAllocateAndMapPagesGather(
+        &PhysicalAddresses.Addresses, StackSize, ARCH_X64_PXE_WRITABLE, PadInUse, VadInUse);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    PHYSICAL_ADDRESSES *PaList = MmAllocatePhysicalAddressesStructure(
+        PoolTypeNonPaged, PhysicalAddresses.Addresses.AddressCount);
+
+    if (!PaList)
+    {
+        MmFreeAndUnmapPagesGather(&PhysicalAddresses.Addresses);
+        return E_NOT_ENOUGH_MEMORY;
+    }
+
+    INITIALIZE_PHYSICAL_ADDRESSES(PaList, 0, PhysicalAddresses.Addresses.AddressCount);
+    Status = MmCopyPhysicalAddressesStructure(PaList, &PhysicalAddresses.Addresses);
+    DASSERT(E_IS_SUCCESS(Status));
+
+    //
+    // Allocate thread stack and setup context.
+    //
+
+    KIRQL PrevIrql = KiLockThread(Thread);
+
+    DASSERT(!Thread->StackBase && !Thread->StackSize && !Thread->StackPaList);
+
+    PVOID AllocatedStackBase = (PVOID)PhysicalAddresses.Addresses.StartingVirtualAddress;
+    SIZE_T AllocatedStackSize = PhysicalAddresses.Addresses.AllocatedSize;
+
+    Thread->StackBase = AllocatedStackBase;
+    Thread->StackSize = AllocatedStackSize;
+    Thread->StackPaList = PaList;
+
+    // Zero out all fields in context.
+    memset(&Thread->ThreadContext, 0, sizeof(Thread->ThreadContext));
+
+    Thread->ThreadContext.CR0 = ARCH_X64_CR0_PG | ARCH_X64_CR0_WP | ARCH_X64_CR0_NE | ARCH_X64_CR0_MP | ARCH_X64_CR0_PE;
+    Thread->ThreadContext.CR2 = 0;
+    Thread->ThreadContext.CR3 = (U64)PML4Base; // PCD and PWT cleared
+    Thread->ThreadContext.CR4 = ARCH_X64_CR4_OSXMMEXCPT | ARCH_X64_CR4_OSFXSR | ARCH_X64_CR4_PGE | ARCH_X64_CR4_MCE | ARCH_X64_CR4_PAE;
+    Thread->ThreadContext.CR8 = IRQL_LOWEST; // All interrupts enabled
+
+    Thread->ThreadContext.Cs = KERNEL_CS;
+    Thread->ThreadContext.Ds = KERNEL_DS;
+    Thread->ThreadContext.Es = KERNEL_DS;
+    Thread->ThreadContext.Fs = KERNEL_DS;
+    Thread->ThreadContext.Gs = KERNEL_DS;
+    Thread->ThreadContext.Ss = KERNEL_SS;
+
+    Thread->ThreadContext.Rflags = RFLAG_IF | (1 << 1); /* RFLAGS[1] is always 1 */
+    Thread->ThreadContext.Rip = (U64)&KiSystemThreadStartup;
+    Thread->ThreadContext.Rcx = (U64)Thread; /* msabi uses rcx for 1st argument */
+    Thread->ThreadContext.Rdi = (U64)Thread; /* sysvabi uses rdi for 1st argument */
+    // RSP = (Base) + (Size) - (RIP placeholder size (8bytes)) - (Extra size (e.g. red zone))
+    Thread->ThreadContext.Rsp = (U64)AllocatedStackBase + AllocatedStackSize - sizeof(U64) - sizeof(U64) * 16;
+
+    KiUnlockThread(Thread, PrevIrql);
+
+    return Status;
+}
+
 KTHREAD *
 KiAllocateThread(
     IN U32 BasePriority,
@@ -168,6 +261,24 @@ KiAllocateThread(
     KiInitializeThread(Thread, BasePriority, ThreadId, ThreadName);
 
     return Thread;
+}
+
+KIRQL
+KiLockThread(
+    IN KTHREAD *Thread)
+{
+    KIRQL PrevIrql;
+    KeAcquireSpinlockRaiseIrqlToContextSwitch(&Thread->Lock, &PrevIrql);
+
+    return PrevIrql;
+}
+
+VOID
+KiUnlockThread(
+    IN KTHREAD *Thread,
+    IN KIRQL PrevIrql)
+{
+    KeReleaseSpinlockLowerIrql(&Thread->Lock, PrevIrql);
 }
 
 ESTATUS

@@ -115,6 +115,11 @@ typedef struct _PHYSICAL_ADDRESSES_R128
 #define SIZEOF_PHYSICAL_ADDRESSES(_range_cnt)   \
     ( sizeof(PHYSICAL_ADDRESSES) + ((_range_cnt) - 1) * sizeof(PHYSICAL_RANGE_INTERNAL) )
 
+#define INITIALIZE_PHYSICAL_ADDRESSES_R128(_phyaddrs_r128, _cnt)   \
+    INITIALIZE_PHYSICAL_ADDRESSES(&(_phyaddrs_r128)->Addresses, _cnt, \
+        PHYSICAL_ADDRESSES_MAXIMUM_COUNT(sizeof(PHYSICAL_ADDRESSES_R128)))
+
+
 //ESTATUS
 //MmInitialize(
 //	VOID);
@@ -190,6 +195,13 @@ KERNELAPI
 MmAllocatePhysicalAddressesStructure(
     IN POOL_TYPE PoolType,
     IN U32 MaximumCount);
+
+KEXPORT
+ESTATUS
+KERNELAPI
+MmCopyPhysicalAddressesStructure(
+    OUT PHYSICAL_ADDRESSES *Destination,
+    IN PHYSICAL_ADDRESSES *Source);
 
 KEXPORT
 ESTATUS

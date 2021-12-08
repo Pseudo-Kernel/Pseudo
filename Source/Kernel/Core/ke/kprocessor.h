@@ -8,6 +8,7 @@
 // Bits for CR0.
 //
 
+#define ARCH_X64_CR0_PE                                     (1 << 0)
 #define ARCH_X64_CR0_MP                                     (1 << 1)
 #define ARCH_X64_CR0_EM                                     (1 << 2)
 #define ARCH_X64_CR0_TS                                     (1 << 3)
@@ -15,6 +16,7 @@
 #define ARCH_X64_CR0_WP                                     (1 << 16)
 #define ARCH_X64_CR0_NW                                     (1 << 29)
 #define ARCH_X64_CR0_CD                                     (1 << 30)
+#define ARCH_X64_CR0_PG                                     (1 << 31)
 
 // CD=0 | NW=0 | WP=1 | NE=1 | EM=0 | MP=1 | TS=0
 // MCE=1 | PGE=1 | OSFXSR=1 | OSXMMEXCPT=1 | TSD=0
@@ -25,6 +27,7 @@
 //
 
 #define ARCH_X64_CR4_TSD                                    (1 << 2)
+#define ARCH_X64_CR4_PAE                                    (1 << 5)
 #define ARCH_X64_CR4_MCE                                    (1 << 6)
 #define ARCH_X64_CR4_PGE                                    (1 << 7)
 #define ARCH_X64_CR4_OSFXSR                                 (1 << 9)
