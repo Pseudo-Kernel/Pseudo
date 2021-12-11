@@ -21,6 +21,7 @@
 #include <init/bootgfx.h>
 #include <hal/acpi.h>
 #include <hal/apic.h>
+#include <ke/thread.h>
 
 PTR KiInterruptHandlers[0x100] =
 {
@@ -553,6 +554,20 @@ KiDispatchException(
     IN U32 ExceptionId,
     IN KSTACK_FRAME_INTERRUPT *Frame)
 {
+    if (ExceptionId == 7)
+    {
+        // Ensure that interrupt is disabled when handling #NM
+        DASSERT(!(__readeflags() & RFLAG_IF));
+
+        // Clear CR0.TS before execute fxrstor64 as it raises #NM
+        __writecr0(__readcr0() & ~ARCH_X64_CR0_TS);
+
+        // Restore the SSE state.
+        KTHREAD *Thread = KeGetCurrentThread();
+        _fxrstor64(&Thread->ThreadContext.FXSTATE);
+        return;
+    }
+
     FATAL(
         " ********** Exception (ID %d, Frame 0x%016llx) **********\n"
         "RAX = 0x%016llx, RBX = 0x%016llx, RCX = 0x%016llx, RDX = 0x%016llx, \n"

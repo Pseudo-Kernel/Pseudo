@@ -156,9 +156,18 @@ KiInitializeGdtIdt(
 
     for (U16 Vector = 0; Vector < IDTENTRY_MAXIMUM_COUNT; Vector++)
     {
+        // 0x00..0x1f -> Interrupt (RFLAGS.IF will be automatically cleared when handler is called)
+        U16 Type = ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_INTERRUPT;
+
+        if (Vector >= 0x20)
+        {
+            // For 0x20..0xff, RFLAGS.IF will not be changed when handler is called
+            Type = ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_TRAP;
+        }
+
         if (!KiSetInterruptVector(Idt, Vector, (U64)KiInterruptHandlers[Vector], KERNEL_CS, 
             ARCH_X64_IDTENTRY_ATTRIBUTE_PRESENT |
-            ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE(ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_INTERRUPT) | 
+            ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE(Type) | 
             ARCH_X64_IDTENTRY_ATTRIBUTE_DPL(0) |
             ARCH_X64_IDTENTRY_ATTRIBUTE_IST(0)))
         {

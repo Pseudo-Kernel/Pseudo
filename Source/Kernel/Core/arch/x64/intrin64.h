@@ -1076,5 +1076,18 @@ __cpuid(int cpuinfo[4], int function_id)
 }
 
 
+_DEFINE_INTRINSIC(void)
+_fxsave64(void *addr)
+{
+    __builtin_ia32_fxsave64(addr);
+}
+
+_DEFINE_INTRINSIC(void)
+_fxrstor64(void *addr)
+{
+    __builtin_ia32_fxrstor64(addr);
+}
+
+
 #endif
 

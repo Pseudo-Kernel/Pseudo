@@ -74,9 +74,15 @@
 // Flags for x64 IDT entries.
 //
 
+// 
+// When an interrupt is handled through an interrupt gate, the IF flag is automatically cleared, which disables
+// maskable hardware interrupts. (If an interrupt is handled through a trap gate, the IF flag is not cleared.)
+// [From. Intel SDM, 6.8.1 Masking Maskable Hardware Interrupts]
+// 
+
 //#define ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_TASK               5 // 0101b
-#define ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_INTERRUPT          14 // 1110b
-#define ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_TRAP               15 // 1111b
+#define ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_INTERRUPT          14 // 1110b, Clears RFLAGS.IF
+#define ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE_TRAP               15 // 1111b, RFLAGS.IF not changed
 
 #define ARCH_X64_IDTENTRY_ATTRIBUTE_IST(_ist)               (((_ist) & 0x07) << 0)
 #define ARCH_X64_IDTENTRY_ATTRIBUTE_TYPE(_type)             (((_type) & 0x0f) << 8)

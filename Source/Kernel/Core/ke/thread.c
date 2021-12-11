@@ -70,28 +70,6 @@ KiInitializeThread(
 }
 
 VOID
-KiSaveControlRegisters(
-    IN KTHREAD_CONTEXT *Context)
-{
-    Context->CR0 = __readcr0();
-    Context->CR2 = __readcr2();
-    Context->CR3 = __readcr3();
-    Context->CR4 = __readcr4();
-    Context->CR8 = __readcr8();
-}
-
-VOID
-KiRestoreControlRegisters(
-    IN KTHREAD_CONTEXT *Context)
-{
-    __writecr0(Context->CR0);
-    __writecr2(Context->CR2);
-    __writecr3(Context->CR3);
-    __writecr4(Context->CR4);
-    __writecr8(Context->CR8);
-}
-
-VOID
 KiLoadContextToFrame(
     IN KSTACK_FRAME_INTERRUPT *InterruptFrame,
     IN KTHREAD_CONTEXT *Context)
@@ -220,11 +198,11 @@ KiSetupInitialContextThread(
     // Zero out all fields in context.
     memset(&Thread->ThreadContext, 0, sizeof(Thread->ThreadContext));
 
-    Thread->ThreadContext.CR0 = ARCH_X64_CR0_PG | ARCH_X64_CR0_WP | ARCH_X64_CR0_NE | ARCH_X64_CR0_MP | ARCH_X64_CR0_PE;
-    Thread->ThreadContext.CR2 = 0;
+    //Thread->ThreadContext.CR0 = ARCH_X64_CR0_PG | ARCH_X64_CR0_WP | ARCH_X64_CR0_NE | ARCH_X64_CR0_MP | ARCH_X64_CR0_PE | ARCH_X64_CR0_TS;
+    //Thread->ThreadContext.CR2 = 0;
     Thread->ThreadContext.CR3 = (U64)PML4Base; // PCD and PWT cleared
-    Thread->ThreadContext.CR4 = ARCH_X64_CR4_OSXMMEXCPT | ARCH_X64_CR4_OSFXSR | ARCH_X64_CR4_PGE | ARCH_X64_CR4_MCE | ARCH_X64_CR4_PAE;
-    Thread->ThreadContext.CR8 = IRQL_LOWEST; // All interrupts enabled
+    //Thread->ThreadContext.CR4 = ARCH_X64_CR4_OSXMMEXCPT | ARCH_X64_CR4_OSFXSR | ARCH_X64_CR4_PGE | ARCH_X64_CR4_MCE | ARCH_X64_CR4_PAE;
+    //Thread->ThreadContext.CR8 = IRQL_LOWEST; // All interrupts enabled
 
     Thread->ThreadContext.Cs = KERNEL_CS;
     Thread->ThreadContext.Ds = KERNEL_DS;

@@ -113,7 +113,20 @@ KiKernelStart(
     // Test!
     //
 
-    for (;;)
+    static U32 test1[4] = { 0x11111111, 0x11111111, 0x11111111, 0x11111111 };
+    static U32 test2[4] = { 0x22222222, 0x22222222, 0x22222222, 0x22222222 };
+    volatile U32 test_r1[4];
+    volatile U32 test_r2[4];
+
+    __asm__ __volatile__ (
+        "movdqu xmm0, xmmword ptr [%0]\n\t"
+        "movdqu xmm1, xmmword ptr [%1]\n\t"
+        :
+        : "r"(test1), "r"(test2)
+        : "memory"
+    );
+
+    for (U64 c = 0; ; c++)
     {
         __halt();
 
@@ -124,6 +137,27 @@ KiKernelStart(
         }
 
         BGXTRACE("SystemTimerTick: %10lld\r", HalGetTickCount());
+
+        __asm__ __volatile__ (
+            "movdqa xmm2, xmm0\n\t"
+            "movdqa xmm0, xmm1\n\t"
+            "movdqa xmm1, xmm2\n\t"
+            "movdqu xmmword ptr [%0], xmm0\n\t"
+            "movdqu xmmword ptr [%1], xmm1\n\t"
+            : "=m"(test_r1), "=m"(test_r2)
+            : 
+            : "memory"
+        );
+
+        if (c & 1)
+        {
+            DASSERT(!memcmp(test_r1, test1, 16) && !memcmp(test_r2, test2, 16));
+        }
+        else
+        {
+            DASSERT(!memcmp(test_r1, test2, 16) && !memcmp(test_r2, test1, 16));
+        }
+
     }
 
 	return 0;

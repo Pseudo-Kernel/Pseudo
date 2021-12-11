@@ -137,9 +137,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${TARGET_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${TARGET_EXTENSION})
 
 # Compile options.
+# Note that "-mno-red-zone" and "-mno-sse" must be specified.
 target_compile_options(
     ${PROJECT_NAME} BEFORE
-    PRIVATE -O0 -mno-red-zone -save-temps -DDEBUG_TRACE=${DEBUG_TRACE} -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
+    PRIVATE -O0 -mno-red-zone -mno-sse -save-temps -DDEBUG_TRACE=${DEBUG_TRACE} -DKERNEL_BUILD_TARGET_EMULATOR=${EMULATOR_BUILD} -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 #    PRIVATE -O0 -save-temps -Wall -masm=intel -fstack-check=no -nostdinc -nodefaultlibs -nostdlib -ffreestanding -lgcc -lmsvcrt -g -pedantic -std=c11)
 
 # Link options.

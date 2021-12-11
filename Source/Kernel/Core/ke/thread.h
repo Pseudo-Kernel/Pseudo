@@ -39,6 +39,53 @@ typedef union _V256
 } V256;
 #pragma pack(pop)
 
+#pragma pack(push, 16)
+typedef struct _KTHREAD_FXSAVE64
+{
+    U16 FCW;
+    U16 FSW;
+    U8 FTW;
+    U8 Reserved1;
+    U16 FOP;
+    U64 FIP;
+    U64 FDP;
+    U32 MXCSR;
+    U32 MXCSR_MASK;
+    U8 ST0[10];
+    U8 Reserved_ST0[6];
+    U8 ST1[10];
+    U8 Reserved_ST1[6];
+    U8 ST2[10];
+    U8 Reserved_ST2[6];
+    U8 ST3[10];
+    U8 Reserved_ST3[6];
+    U8 ST4[10];
+    U8 Reserved_ST4[6];
+    U8 ST5[10];
+    U8 Reserved_ST5[6];
+    U8 ST6[10];
+    U8 Reserved_ST6[6];
+    U8 ST7[10];
+    U8 Reserved_ST7[6];
+    V128 XMM0;
+    V128 XMM1;
+    V128 XMM2;
+    V128 XMM3;
+    V128 XMM4;
+    V128 XMM5;
+    V128 XMM6;
+    V128 XMM7;
+    V128 XMM8;
+    V128 XMM9;
+    V128 XMM10;
+    V128 XMM11;
+    V128 XMM12;
+    V128 XMM13;
+    V128 XMM14;
+    V128 XMM15;
+    U8 Reserved2[16 * 3];
+    U8 NotUsed[16 * 3];
+} KTHREAD_FXSAVE64;
 
 typedef struct _KTHREAD_CONTEXT
 {
@@ -74,13 +121,13 @@ typedef struct _KTHREAD_CONTEXT
     // FLAGS
     U64 Rflags;
 
-    // CRx (CR0, 2, 3, 4, 8)
-    U64 CR0;
-    U64 CR2;
-    U64 CR3;
-    U64 CR4;
-    U64 CR8;
+    // CR3 (Top-level paging structure pointer)
+    U64 CR3;        // @todo: Remove this field. Use KTHTEAD.OwnerProcess->TopLevelPageTablePhysicalBase instead.
+    U64 Padding1;
+
+    KTHREAD_FXSAVE64 FXSTATE;
 } KTHREAD_CONTEXT;
+#pragma pack(pop)
 
 #define THREAD_NAME_MAX_LENGTH      128
 
@@ -176,14 +223,6 @@ KiInitializeThread(
     IN U32 BasePriority,
     IN U64 ThreadId,
     IN CHAR *ThreadName);
-
-VOID
-KiSaveControlRegisters(
-    IN KTHREAD_CONTEXT *Context);
-
-VOID
-KiRestoreControlRegisters(
-    IN KTHREAD_CONTEXT *Context);
 
 VOID
 KiLoadContextToFrame(

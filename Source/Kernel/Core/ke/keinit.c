@@ -32,6 +32,23 @@ KiTestProcessorFeature(
 {
     int Info[4];
 
+    __cpuid(Info, 0x00000001);
+    if (!(Info[3] & (1 << 24)))
+    {
+        // EDX[24] = FXSR support (FXSAVE/FXRSTOR)
+        FATAL("Processor does not support FXSAVE/FXRSTOR");
+    }
+
+#if 0
+    __cpuid(Info, 0x00000001);
+    if (!(Info[2] & (1 << 26)) || !(Info[2] & (1 << 27)))
+    {
+        // ECX[26] = XSAVE, ECX[27] = OSXSAVE
+        FATAL("Processor does not support XSAVE/OSXSAVE");
+    }
+#endif
+
+#if 0
     __cpuid(Info, 0x80000001);
     if (!(Info[3] & (1 << 27)))
     {
@@ -43,6 +60,7 @@ KiTestProcessorFeature(
     {
         FATAL("Processor does not support invariant TSC");
     }
+#endif
 }
 
 VOID
@@ -50,7 +68,7 @@ KERNELAPI
 KiInitialize(
     VOID)
 {
-//    KiTestProcessorFeature();
+    KiTestProcessorFeature();
 
     for (ULONG i = 0; i < 0x100; i++)
     {

@@ -13,6 +13,7 @@
 #include <base/base.h>
 #include <init/bootgfx.h>
 #include <ke/lock.h>
+#include <mm/mm.h>
 #include <mm/pool.h>
 #include <ke/interrupt.h>
 #include <ke/kprocessor.h>
@@ -28,10 +29,49 @@ KiTestSystemThreadStart(
     KPROCESSOR *Processor = KeGetCurrentProcessor();
     KTHREAD *Thread = KeGetCurrentThread();
 
+    //
+    // Test!
+    //
+
+    static U32 test1[4] = { 0x33333333, 0x33333333, 0x33333333, 0x33333333 };
+    static U32 test2[4] = { 0x44444444, 0x44444444, 0x44444444, 0x44444444 };
+    volatile U32 test_r1[4];
+    volatile U32 test_r2[4];
+
+    __asm__ __volatile__ (
+        "movdqu xmm0, xmmword ptr [%0]\n\t"
+        "movdqu xmm1, xmmword ptr [%1]\n\t"
+        :
+        : "r"(test1), "r"(test2)
+        : "memory"
+    );
+
+
     for (;;)
     {
         // Test!
         DASSERT(Processor->CurrentThread == Thread);
+
+        __asm__ __volatile__ (
+            "movdqa xmm2, xmm0\n\t"
+            "movdqa xmm0, xmm1\n\t"
+            "movdqa xmm1, xmm2\n\t"
+            "movdqu xmmword ptr [%0], xmm0\n\t"
+            "movdqu xmmword ptr [%1], xmm1\n\t"
+            : "=m"(test_r1), "=m"(test_r2)
+            : 
+            : "memory"
+        );
+
+        if (Counter & 1)
+        {
+            DASSERT(!memcmp(test_r1, test1, 16) && !memcmp(test_r2, test2, 16));
+        }
+        else
+        {
+            DASSERT(!memcmp(test_r1, test2, 16) && !memcmp(test_r2, test1, 16));
+        }
+
         Counter++;
     }
 }
@@ -143,13 +183,31 @@ KiScheduleSwitchContext(
 
     // Save current context and load next thread context.
     KiLoadFrameToContext(InterruptFrame, &CurrentThread->ThreadContext);
-    KiSaveControlRegisters(&CurrentThread->ThreadContext);
+    CurrentThread->ThreadContext.CR3 = __readcr3();
+
+    // Check whether the SSE instruction was executed during thread quantum.
+    if (!(__readcr0() & ARCH_X64_CR0_TS))
+    {
+        // Save SSE state as this thread uses SSE instructions
+        _fxsave64(&CurrentThread->ThreadContext.FXSTATE);
+
+        // Set CR0.TS to catch next #NM
+        __writecr0(__readcr0() | ARCH_X64_CR0_TS);
+    }
 
     // We don't need to load context from same thread. (especially CR3!)
     if (CurrentThread != NextThread)
     {
         KiLoadContextToFrame(InterruptFrame, &NextThread->ThreadContext);
-        KiRestoreControlRegisters(&CurrentThread->ThreadContext);
+
+        // Reload CR3 only if needed.
+        if (__readcr3() != NextThread->ThreadContext.CR3)
+        {
+            __writecr3(NextThread->ThreadContext.CR3);
+        }
+
+        // We don't have to restore SSE state here
+        // We'll restore SSE state in #NM handler
     }
 
     return E_SUCCESS;
