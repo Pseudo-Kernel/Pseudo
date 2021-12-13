@@ -48,6 +48,9 @@
 #include <hal/processor.h>
 #include <hal/ptimer.h>
 
+ESTATUS
+KiYieldThread(
+    VOID);
 
 /**
  * @brief Kernel main entry point.
@@ -151,11 +154,17 @@ KiKernelStart(
 
         if (c & 1)
         {
-            DASSERT(!memcmp(test_r1, test1, 16) && !memcmp(test_r2, test2, 16));
+            DASSERT(
+                !memcmp((PVOID)test_r1, (PVOID)test1, 16) && 
+                !memcmp((PVOID)test_r2, (PVOID)test2, 16));
+
+            KiYieldThread();
         }
         else
         {
-            DASSERT(!memcmp(test_r1, test2, 16) && !memcmp(test_r2, test1, 16));
+            DASSERT(
+                !memcmp((PVOID)test_r1, (PVOID)test2, 16) && 
+                !memcmp((PVOID)test_r2, (PVOID)test1, 16));
         }
 
     }

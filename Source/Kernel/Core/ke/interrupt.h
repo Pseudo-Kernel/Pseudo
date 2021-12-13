@@ -18,17 +18,17 @@
 // The interrupt-priority class is the value of bits 7:4 of the interrupt vector.
 #define IRQL_LOWEST                         0       // Lowest
 #define IRQL_NOT_USED_1                     1       // Not used (Vector range 0x00 - 0x1f is reserved by intel.)
-#define IRQL_NORMAL                         2       // Normal
-#define IRQL_CONTEXT_SWITCH                 3       // Context switch
-#define IRQL_LEGACY                         4       // Legacy (Old PIC Interrupts)
-#define IRQL_DEVICE_1                       5       // Used by devices
-#define IRQL_DEVICE_2                       6       // Used by devices
-#define IRQL_DEVICE_3                       7       // Used by devices
-#define IRQL_DEVICE_4                       8       // Used by devices
-#define IRQL_DEVICE_5                       9       // Used by devices
-#define IRQL_DEVICE_6                       10      // Used by devices
-#define IRQL_DEVICE_7                       11      // Used by devices
-#define IRQL_DEVICE_8                       12      // Used by devices
+#define IRQL_NOT_USED_2                     2       // Not used (Vector range 0x20 - 0x2f is reserved by kernel.)
+#define IRQL_NORMAL                         3       // Normal
+#define IRQL_CONTEXT_SWITCH                 4       // Context switch
+#define IRQL_LEGACY                         5       // Legacy (Old PIC Interrupts)
+#define IRQL_DEVICE_1                       6       // Used by devices
+#define IRQL_DEVICE_2                       7       // Used by devices
+#define IRQL_DEVICE_3                       8       // Used by devices
+#define IRQL_DEVICE_4                       9       // Used by devices
+#define IRQL_DEVICE_5                       10      // Used by devices
+#define IRQL_DEVICE_6                       11      // Used by devices
+#define IRQL_DEVICE_7                       12      // Used by devices
 #define IRQL_RESERVED_SPURIOUS              13      // Spurious vector
 #define IRQL_HIGH                           14      // High priority
 #define IRQL_IPI                            15      // Used by IPI delivery (Highest priority)
