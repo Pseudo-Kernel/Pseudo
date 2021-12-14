@@ -30,6 +30,7 @@
 
 ACPI_XSDT *HalAcpiXsdt;
 ACPI_MADT *HalAcpiMadt;
+ACPI_HPET *HalAcpiHpet;
 
 U8 HalLegacyIrqToGSIMappings[16];
 U8 HalGSIToLegacyIrqMappings[256];
@@ -409,10 +410,29 @@ HalAcpiPreInitialize(
         Record = (ACPI_MADT_RECORD_HEADER *)((PTR)Record + Record->RecordLength);
     }
 
+
+    ACPI_HPET *Hpet = (ACPI_HPET *)HalAcpiLookupDescriptionPointer(Xsdt, ACPI_HPET_SIGNATURE);
+
+    if (!Hpet)
+    {
+        FATAL("HPET not exists!");
+    }
+
+    BGXTRACE_C(
+        BGX_COLOR_LIGHT_CYAN, 
+        "HPET revision %d, EventTimerBlockId 0x%08x, HPETNumber 0x%02hhx, MinimumClockTick 0x%04hx\n", 
+        Hpet->Header.Revision, Hpet->EventTimerBlockId, Hpet->HPETNumber, Hpet->MainCounterMinimumTick);
+
+    BGXTRACE(
+        "HPET BaseAddress 0x%016llx, AddressSpace 0x%02hhx, AccessSize 0x%02hhx, BitOffset 0x%02hhx, BitWidth 0x%02hhx\n", 
+        Hpet->BaseAddress.Address, Hpet->BaseAddress.AddressSpace, Hpet->BaseAddress.AccessSize, 
+        Hpet->BaseAddress.BitOffset, Hpet->BaseAddress.BitWidth);
+
     BGXTRACE("\n");
 
     HalAcpiXsdt = Xsdt;
     HalAcpiMadt = Madt;
+    HalAcpiHpet = Hpet;
 }
 
 /**

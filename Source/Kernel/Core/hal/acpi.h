@@ -84,6 +84,7 @@ typedef struct _ACPI_XSDT
 #define ACPI_SLIT_SIGNATURE         "SLIT"
 #define ACPI_SRAT_SIGNATURE         "SRAT"
 #define ACPI_SSDT_SIGNATURE         "SSDT"
+#define ACPI_HPET_SIGNATURE         "HPET"
 
 
 //
@@ -338,10 +339,22 @@ typedef struct _ACPI_FADT
 
 
 
+typedef struct _ACPI_HPET
+{
+    ACPI_DESCRIPTION_HEADER Header;
+    U32 EventTimerBlockId;
+    ACPI_GENERIC_ADDRESS BaseAddress;
+    U8 HPETNumber;
+    U16 MainCounterMinimumTick; // in periodic mode
+    U8 PageProtection;          // Page protection and OEM attributes
+} ACPI_HPET, *PACPI_HPET;
+
+
 #pragma pack(pop)
 
 extern ACPI_XSDT *HalAcpiXsdt;
 extern ACPI_MADT *HalAcpiMadt;
+extern ACPI_HPET *HalAcpiHpet;
 
 
 

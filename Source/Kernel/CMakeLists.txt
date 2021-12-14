@@ -90,6 +90,7 @@ set(SRC_LIST
     core/hal/apstub16.h
     core/hal/processor.h
     core/hal/ptimer.h
+    core/hal/hpet.h
     core/hal/8259pic.c
     core/hal/8254pit.c
     core/hal/ioapic.c
@@ -99,6 +100,7 @@ set(SRC_LIST
     core/hal/apstub16.c
     core/hal/processor.c
     core/hal/ptimer.c
+    core/hal/hpet.c
 
     # misc
     core/misc/common.h

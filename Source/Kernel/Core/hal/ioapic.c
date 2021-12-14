@@ -8,6 +8,7 @@
  * 
  * @copyright Copyright (c) 2021
  * 
+ * @todo Add routines for IOAPIC redirection entry allocation/free
  */
 
 #include <base/base.h>
