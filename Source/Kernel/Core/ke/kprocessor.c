@@ -397,6 +397,29 @@ KiInitializeProcessor(
     KiProcessorCount++;
 }
 
+/**
+ * @brief Returns current processor id.
+ * 
+ * @return Current processor id.
+ */
+U8
+KERNELAPI
+KeGetCurrentProcessorId(
+    VOID)
+{
+    U8 ApicId = HalApicGetId(HalApicBase);
+    U16 ProcessorId = KiApicIdToProcessorId[ApicId];
+    
+    DASSERT(ProcessorId < 0x100);
+
+    return (U8)ProcessorId;
+}
+
+/**
+ * @brief Returns current processor block.
+ * 
+ * @return Current processor block.
+ */
 KPROCESSOR *
 KERNELAPI
 KeGetCurrentProcessor(
@@ -404,10 +427,7 @@ KeGetCurrentProcessor(
 {
 #if 1
     // Currently not use IA32_GS_BASE/IA32_KERNEL_GS_BASE
-    U8 ApicId = HalApicGetId(HalApicBase);
-    U16 ProcessorId = KiApicIdToProcessorId[ApicId];
-    
-    DASSERT(ProcessorId < 0x100);
+    U8 ProcessorId = KeGetCurrentProcessorId();
 
     return KiProcessorBlocks[ProcessorId];
 #else

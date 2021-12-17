@@ -242,7 +242,10 @@ HalInitializePrivateData(
  * @param [in,out] Interrupt        Interrupt object to be initialized.
  * @param [in] InterruptRoutine     ISR for given interrupt.
  * @param [in] InterruptContext     Interrupt context for given interrupt.
- * @param [in] Vector               Vector.
+ * @param [in] Irql                 Vector IRQL.
+ * @param [in] Vector               Vector number to be allocated.\n
+ *                                  Resulting vector will be allocated automatically if zero is specified.
+ * @param [out] ReturnVector        Resulting vector.
  * 
  * @return ESTATUS code.
  */
@@ -252,35 +255,87 @@ HalRegisterInterrupt(
     IN OUT KINTERRUPT *Interrupt,
     IN PKINTERRUPT_ROUTINE InterruptRoutine,
     IN PVOID InterruptContext,
-    IN ULONG Vector)
+    IN KIRQL Irql,
+    IN ULONG Vector,
+    OUT ULONG *ReturnVector)
 {
+    ULONG AllocationFlags = 0;
+
+    if (Vector)
+    {
+        if (VECTOR_TO_IRQL(Vector) != Irql)
+        {
+            // Specified vector must match with given IRQL
+            return E_INVALID_PARAMETER;
+        }
+
+        AllocationFlags |= INTERRUPT_IRQ_HINT_EXACT_MATCH;
+    }
+
     ULONG ResultVector = 0;
 
-    ESTATUS Status = KeAllocateIrqVector(VECTOR_TO_IRQL(Vector), 1, Vector, 
-        INTERRUPT_IRQ_HINT_EXACT_MATCH, &ResultVector, TRUE);
+    ESTATUS Status = KeAllocateIrqVector(
+        Irql, 1, Vector, AllocationFlags, &ResultVector, TRUE);
     if (!E_IS_SUCCESS(Status))
     {
         return Status;
     }
 
-    DASSERT(Vector == ResultVector);
-
-    Status = KeInitializeInterrupt(Interrupt, InterruptRoutine, InterruptContext, 0);
-    if (!E_IS_SUCCESS(Status))
+    if (Vector)
     {
-        DASSERT(E_IS_SUCCESS(KeFreeIrqVector(ResultVector, 1, TRUE)));
-        return Status;
+        DASSERT(Vector == ResultVector);
     }
 
-    Status = KeConnectInterrupt(Interrupt, Vector, 0);
-    if (!E_IS_SUCCESS(Status))
+    do
     {
-        DASSERT(E_IS_SUCCESS(KeFreeIrqVector(ResultVector, 1, TRUE)));
+        Status = KeInitializeInterrupt(Interrupt, InterruptRoutine, InterruptContext, 0);
+        if (!E_IS_SUCCESS(Status))
+        {
+            break;
+        }
+
+        Status = KeConnectInterrupt(Interrupt, Vector, 0);
+        if (!E_IS_SUCCESS(Status))
+        {
+            break;
+        }
+
+        if (ReturnVector)
+        {
+            *ReturnVector = ResultVector;
+        }
+
         return Status;
+
+    } while (0);
+    
+
+    DASSERT(E_IS_SUCCESS(KeFreeIrqVector(ResultVector, 1, TRUE)));
+    return Status;
+}
+
+/**
+ * @brief Disconnects interrupt object from interrupt chain and frees vector.\n
+ * 
+ * @param [in] Interrupt            Interrupt object.
+ * 
+ * @return ESTATUS code.
+ */
+ESTATUS
+KERNELAPI
+HalUnregisterInterrupt(
+    IN KINTERRUPT *Interrupt)
+{
+    ESTATUS Status = KeDisconnectInterrupt(Interrupt);
+
+    if (E_IS_SUCCESS(Status))
+    {
+        DASSERT(E_IS_SUCCESS(KeFreeIrqVector(Interrupt->InterruptVector, 1, TRUE)));
     }
 
     return Status;
 }
+
 
 /**
  * @brief Registers interrupt for local APIC.
@@ -298,7 +353,7 @@ HalRegisterApicInterrupt(
     Status = HalRegisterInterrupt(
         &PrivateData->InterruptObjects.ApicSpurious,
         &HalIsrSpurious,
-        NULL, VECTOR_SPURIOUS);
+        NULL, IRQL_RESERVED_SPURIOUS, VECTOR_SPURIOUS, NULL);
 
     if (!E_IS_SUCCESS(Status))
     {
@@ -308,7 +363,7 @@ HalRegisterApicInterrupt(
     Status = HalRegisterInterrupt(
         &PrivateData->InterruptObjects.ApicTimer,
         &HalApicIsrTimer,
-        NULL, VECTOR_LVT_TIMER);
+        NULL, IRQL_CONTEXT_SWITCH, VECTOR_LVT_TIMER, NULL);
 
     if (!E_IS_SUCCESS(Status))
     {

@@ -81,32 +81,27 @@ HalInitializePlatformTimer(
     BOOLEAN InterruptState = !!(__readeflags() & RFLAG_IF);
     _disable();
 
+#if 1
     // todo: Use HPET if exists
+    ULONG Vector = VECTOR_PLATFORM_TIMER;
     ESTATUS Status = HalRegisterInterrupt(
         &PrivateData->InterruptObjects.PlatformTimer, 
-        HalIsrPlatformTimer, NULL, VECTOR_PLATFORM_TIMER);
+        HalIsrPlatformTimer, NULL, VECTOR_TO_IRQL(Vector), Vector, NULL);
 
     if (E_IS_SUCCESS(Status))
     {
         U8 GSI = 0;
         DASSERT(HalLegacyIrqToGSI(ISA_IRQ_TIMER, &GSI));
 
-        IOAPIC *IoApic = HalIoApicGetBlockByGSI(GSI);
-        DASSERT(IoApic);
+        // @note: Do not change polarity and trigger mode for legacy IRQ as it is already set
+        Status = HalSetInterruptRedirection(GSI, Vector, KeGetCurrentProcessorId(), 
+            0 /* do not change polarity and trigger mode*/);
 
-        U8 ApicId = HalApicGetId(HalApicBase);
-        HalIoApicSetIoRedirectionByMask(
-            IoApic, 
-            GSI, 
-            IOAPIC_RED_VECTOR(VECTOR_PLATFORM_TIMER) | 
-            IOAPIC_RED_DESTINATION_FIELD(ApicId) | IOAPIC_RED_DEST_MODE_PHYSICAL | 
-            IOAPIC_RED_DELIVERY_MODE(IOAPIC_RED_DELIVER_FIXED), 
-            IOAPIC_RED_SETBIT_VECTOR | IOAPIC_RED_SETBIT_MASK_INT |
-            IOAPIC_RED_SETBIT_DESTINATION | IOAPIC_RED_SETBIT_DESTINATION_MODE |
-            IOAPIC_RED_SETBIT_DELIVERY_MODE);
+        DASSERT(E_IS_SUCCESS(Status));
 
         Hal_8254SetupTimer(1000);
     }
+#endif
 
     if (InterruptState)
     {

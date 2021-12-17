@@ -254,6 +254,11 @@ KERNELAPI
 KiInitializeProcessor(
     VOID);
 
+U8
+KERNELAPI
+KeGetCurrentProcessorId(
+    VOID);
+
 KPROCESSOR *
 KERNELAPI
 KeGetCurrentProcessor(

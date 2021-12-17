@@ -7,15 +7,16 @@
  * @date 2021-12-15
  * 
  * @copyright Copyright (c) 2021
- * 
- * @todo Must implement IOAPIC redirection entry allocation/free routine first!
  */
 
 #include <base/base.h>
 #include <mm/mm.h>
 #include <ke/inthandler.h>
 #include <ke/interrupt.h>
+#include <ke/kprocessor.h>
 #include <hal/halinit.h>
+#include <hal/apic.h>
+#include <hal/processor.h>
 #include <hal/ioapic.h>
 #include <hal/acpi.h>
 #include <hal/hpet.h>
@@ -41,6 +42,8 @@ typedef struct _HAL_HPET_CONTEXT
     HPET_CAPABILITIES_AND_ID Capabilities;
 
     U8 PeriodicTimerNumber;
+
+    KINTERRUPT Interrupt;
 } HAL_HPET_CONTEXT;
 
 
@@ -180,6 +183,26 @@ Cleanup:
     return Status;
 }
 
+/**
+ * @brief ISR for HPET timer.
+ * 
+ * @param [in] Interrupt            Interrupt object.
+ * @param [in] InterruptContext     Interrupt context.
+ * @param [in] InterruptStackFrame  Interrupt stack frame.
+ * 
+ * @return Always InterruptAccepted.
+ */
+KINTERRUPT_RESULT
+KERNELAPI
+HalIsrHighPrecisionTimer(
+    IN PKINTERRUPT Interrupt,
+    IN PVOID InterruptContext,
+    IN PVOID InterruptStackFrame)
+{
+    HalApicSendEoi(HalApicBase);
+    return InterruptAccepted;
+}
+
 ESTATUS
 HalHpetEnable(
     IN HAL_HPET_CONTEXT *HpetContext)
@@ -192,6 +215,87 @@ HalHpetEnable(
     // 4. Route the HPET interrupt (HPET -> IOxAPIC): TN_INT_ROUTE_CNF = XX
     // 5. Do extra setups for HPET. (timer type, interrupt enable, comparator, ...)
     // 
+
+    U32 Vector = VECTOR_PLATFORM_TIMER;
+    ESTATUS Status = HalRegisterInterrupt(&HpetContext->Interrupt, &HalIsrHighPrecisionTimer, 
+        HpetContext, VECTOR_TO_IRQL(Vector), Vector, NULL);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    HPET_CONFIGURATION_AND_CAPABILITIES Configuration;
+    ULONG ConfigurationRegister = HPET_REGISTER_TIMER_N_CONF_CAPABILITY(HpetContext->PeriodicTimerNumber);
+    Configuration.Value = HalHpetReadRegister(HpetContext->BaseAddress, ConfigurationRegister);
+
+    for (U32 i = 0; i < 32; i++)
+    {
+        if (!(Configuration.TN_INT_ROUTE_CAP & (1 << i)))
+        {
+            continue;
+        }
+
+        U32 GSI = 0;
+        Status = HalAllocateInterruptRedirection(&GSI, 1, i, i + 1);
+        if (!E_IS_SUCCESS(Status))
+        {
+            continue;
+        }
+
+        DASSERT(0 <= GSI && GSI < 32);
+        Configuration.TN_INT_ROUTE_CNF = GSI;   // Can be 0..31
+        HalHpetWriteRegister(HpetContext->BaseAddress, ConfigurationRegister, Configuration.Value);
+
+        //
+        // After write, We must prove TN_INT_ROUTE_CNF by reading back once.
+        //
+        // Tn_INT_ROUTE_CNF
+        // If the value is not supported by this prarticular timer, then the value
+        // read back will not match what is written. 
+        // [From: IA-PC HPET Specification 1.0a]
+        //
+
+        Configuration.Value = HalHpetReadRegister(HpetContext->BaseAddress, ConfigurationRegister);
+
+        if (Configuration.TN_INT_ROUTE_CNF == GSI)
+        {
+            // Write was successful.
+            Status = HalSetInterruptRedirection(i, Vector, KeGetCurrentProcessorId(), 
+                /* edge-triggered, high active */
+                INTERRUPT_REDIRECTION_FLAG_SET_POLARITY | INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE);
+        }
+        else
+        {
+            Status = E_NOT_ENOUGH_RESOURCE;
+        }
+
+        if (!E_IS_SUCCESS(Status))
+        {
+            DASSERT(E_IS_SUCCESS(HalFreeInterruptRedirection(GSI, 1)));
+        }
+    }
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        DASSERT(E_IS_SUCCESS(HalUnregisterInterrupt(&HpetContext->Interrupt)));
+        return Status;
+    }
+
+    Configuration.TN_INT_TYPE_CNF = 0; // edge-triggered
+    Configuration.TN_INT_ENB_CNF = 1; // interrupt enable
+    Configuration.TN_TYPE_CNF = 1; // periodic mode
+    Configuration.TN_VAL_SET_CNF = 1; // we'll modify comparator register
+    Configuration.TN_32MODE_CNF = 0; // 64-bit mode
+    Configuration.TN_FSB_EN_CNF = 0; // disable FSB
+
+    HalHpetWriteRegister(HpetContext->BaseAddress, ConfigurationRegister, Configuration.Value);
+
+    ULONG ComparatorRegister = HPET_REGISTER_TIMER_N_COMPARATOR(HpetContext->PeriodicTimerNumber);
+
+    // @todo: fixme!
+    HalHpetWriteRegister(HpetContext->BaseAddress, ComparatorRegister, 12345678);
+
 
     // 
     // The Device Driver code should do the following for an available timer:

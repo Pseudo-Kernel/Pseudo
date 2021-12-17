@@ -43,7 +43,14 @@ HalRegisterInterrupt(
     IN OUT KINTERRUPT *Interrupt,
     IN PKINTERRUPT_ROUTINE InterruptRoutine,
     IN PVOID InterruptContext,
-    IN ULONG Vector);
+    IN KIRQL Irql,
+    IN ULONG Vector,
+    OUT ULONG *ReturnVector);
+
+ESTATUS
+KERNELAPI
+HalUnregisterInterrupt(
+    IN KINTERRUPT *Interrupt);
 
 VOID
 KERNELAPI

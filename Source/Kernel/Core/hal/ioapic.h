@@ -4,6 +4,9 @@
 #include <base/base.h>
 #include <ke/lock.h>
 
+#define IOAPIC_MAX_IRQS             0x100
+#define IOAPIC_REDTBL_BITMAP_SIZE   ((IOAPIC_MAX_IRQS + 7) >> 3)
+
 typedef struct _IOAPIC
 {
     U64 PhysicalBase;   // Physical base address
@@ -19,6 +22,9 @@ typedef struct _IOAPIC
     U32 GSILimit;       // GSI Limit.
 
     KSPIN_LOCK Lock;    // IOAPIC Lock.
+
+    // Bitmap for I/O redirection table allocation state.
+    U8 AllocationBitmap[IOAPIC_REDTBL_BITMAP_SIZE];
 } IOAPIC;
 
 
@@ -240,4 +246,55 @@ IOAPIC *
 KERNELAPI
 HalIoApicGetBlockByGSI(
     IN U32 GSI);
+
+BOOLEAN
+KERNELAPI
+HalIoApicpIsIoRedirectionAllocated(
+    IN IOAPIC *IoApic,
+    IN U32 IntIn,
+    IN BOOLEAN Lock);
+
+ESTATUS
+KERNELAPI
+HalIoApicAllocateIoRedirection(
+    IN IOAPIC *IoApic,
+    OUT U32 *IntIn,
+    IN U32 Count,
+    IN U32 IntInStart,
+    IN U32 IntInEnd);
+
+VOID
+KERNELAPI
+HalIoApicFreeIoRedirection(
+    IN IOAPIC *IoApic,
+    IN U32 IntIn,
+    IN U32 Count);
+
+ESTATUS
+KERNELAPI
+HalAllocateInterruptRedirection(
+    OUT U32 *GSI,
+    IN U32 Count,
+    IN U32 GSIStart,
+    IN U32 GSIEnd);
+
+ESTATUS
+KERNELAPI
+HalFreeInterruptRedirection(
+    IN U32 GSI,
+    IN U32 Count);
+
+
+#define INTERRUPT_REDIRECTION_FLAG_SET_POLARITY         (1 << 0)
+#define INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE     (1 << 1)
+#define INTERRUPT_REDIRECTION_FLAG_LOW_ACTIVE           (1 << 2) // IOAPIC_RED_POLARITY_LOW_ACTIVE
+#define INTERRUPT_REDIRECTION_FLAG_LEVEL_TRIGGERED      (1 << 3) // IOAPIC_RED_TRIGGERED_LEVEL
+
+ESTATUS
+KERNELAPI
+HalSetInterruptRedirection(
+    IN U32 GSI,
+    IN U8 Vector,
+    IN U8 DestinationProcessor,
+    IN U32 Flags);
 
