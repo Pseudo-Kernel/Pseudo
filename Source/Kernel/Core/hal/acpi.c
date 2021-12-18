@@ -272,10 +272,10 @@ HalAcpiPreInitialize(
                 // Map ISA IRQ to GSI (Identity mapping).
                 DASSERT(IoApic->GSILimit >= 15);
 
-                // Allocate INTIN# for ISA IRQs (0..15).
-                U32 IntIn = 0;
-                ESTATUS Status = HalIoApicAllocateIoRedirection(IoApic, &IntIn, 16, 0, 16);
-                DASSERT(E_IS_SUCCESS(Status));
+                // Do not preallocate INTIN# for ISA IRQs (0..15).
+                //U32 IntIn = 0;
+                //ESTATUS Status = HalIoApicAllocateIoRedirection(IoApic, &IntIn, 16, 0, 16);
+                //DASSERT(E_IS_SUCCESS(Status));
 
                 U16 TriggerMode = HalPicReadTriggerModeRegister();
 

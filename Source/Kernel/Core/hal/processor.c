@@ -326,11 +326,12 @@ KERNELAPI
 HalUnregisterInterrupt(
     IN KINTERRUPT *Interrupt)
 {
+    ULONG Vector = Interrupt->InterruptVector;
     ESTATUS Status = KeDisconnectInterrupt(Interrupt);
 
     if (E_IS_SUCCESS(Status))
     {
-        DASSERT(E_IS_SUCCESS(KeFreeIrqVector(Interrupt->InterruptVector, 1, TRUE)));
+        DASSERT(E_IS_SUCCESS(KeFreeIrqVector(Vector, 1, TRUE)));
     }
 
     return Status;

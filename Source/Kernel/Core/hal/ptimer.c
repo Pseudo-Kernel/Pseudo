@@ -24,6 +24,7 @@
 #include <hal/processor.h>
 #include <hal/ptimer.h>
 #include <hal/8254pit.h>
+#include <hal/hpet.h>
 
 
 volatile U64 HalTickCount;
@@ -81,7 +82,7 @@ HalInitializePlatformTimer(
     BOOLEAN InterruptState = !!(__readeflags() & RFLAG_IF);
     _disable();
 
-#if 1
+#if 0
     // todo: Use HPET if exists
     ULONG Vector = VECTOR_PLATFORM_TIMER;
     ESTATUS Status = HalRegisterInterrupt(
@@ -101,6 +102,8 @@ HalInitializePlatformTimer(
 
         Hal_8254SetupTimer(1000);
     }
+#else
+    ESTATUS Status = HalHpetInitialize();
 #endif
 
     if (InterruptState)

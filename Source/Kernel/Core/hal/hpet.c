@@ -46,6 +46,8 @@ typedef struct _HAL_HPET_CONTEXT
     KINTERRUPT Interrupt;
 } HAL_HPET_CONTEXT;
 
+HAL_HPET_CONTEXT HalpHpetContext;
+
 
 U64
 HalHpetReadRegister(
@@ -95,7 +97,7 @@ HalHpetWriteRegisterByMask(
 
 
 ESTATUS
-HalHpetInitialize(
+HalpHpetInitialize0(
     IN HAL_HPET_CONTEXT *HpetContext,
     IN ACPI_HPET *Hpet)
 {
@@ -128,9 +130,13 @@ HalHpetInitialize(
     HPET_CAPABILITIES_AND_ID Capabilities;
     Capabilities.Value = HalHpetReadRegister(VirtualAddress, HPET_REGISTER_CAPABILITIES_ID);
 
+    DbgTraceF(TraceLevelDebug,
+        "COUNT_SIZE_CAP %d, NUM_TIM_CAP %d, COUNTER_CLK_PERIOD 0x%08x\n", 
+        Capabilities.COUNT_SIZE_CAP, Capabilities.NUM_TIM_CAP, Capabilities.COUNTER_CLK_PERIOD);
+
     // Must support 64-bit main counter and 3 timers.
     if (!Capabilities.COUNT_SIZE_CAP || 
-        Capabilities.NUM_TIM_CAP < 3)
+        Capabilities.NUM_TIM_CAP + 1 < 3)
     {
         Status = E_NOT_SUPPORTED;
         goto Cleanup;
@@ -143,16 +149,15 @@ HalHpetInitialize(
         HPET_CONFIGURATION_AND_CAPABILITIES Configuration;
         Configuration.Value = HalHpetReadRegister(VirtualAddress, HPET_REGISTER_TIMER_N_CONF_CAPABILITY(i));
 
-        if (!Configuration.TN_SIZE_CAP)
-        {
-            Status = E_NOT_SUPPORTED;
-            goto Cleanup;
-        }
-
-        if (Configuration.TN_PER_INT_CAP)
+        DbgTraceF(TraceLevelDebug,
+            "T[%d]: TN_INT_ROUTE_CAP 0x%08x, TN_PER_INT_CAP %d, TN_SIZE_CAP %d\n", 
+            i, Configuration.TN_INT_ROUTE_CAP, Configuration.TN_PER_INT_CAP, Configuration.TN_SIZE_CAP);
+        
+        if (Configuration.TN_SIZE_CAP && Configuration.TN_PER_INT_CAP)
         {
             if (PeriodicTimerNumber == (U8)~0)
             {
+                DbgTraceF(TraceLevelDebug, "T[%d] selected\n", i);
                 PeriodicTimerNumber = i;
             }
         }
@@ -199,22 +204,26 @@ HalIsrHighPrecisionTimer(
     IN PVOID InterruptContext,
     IN PVOID InterruptStackFrame)
 {
+    HAL_HPET_CONTEXT *HpetContext = (HAL_HPET_CONTEXT *)InterruptContext;
+    U64 MainCounter = HalHpetReadRegister(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER);
+
+    DbgTraceF(TraceLevelDebug, "HPET_ISR: MainCounter 0x%016llx\n", MainCounter);
+
+    // Clear interrupt state bit (for edge-triggered mode)
+    HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_INTERRUPT_STATUS, 
+        0, 1 << HpetContext->PeriodicTimerNumber);
+
     HalApicSendEoi(HalApicBase);
     return InterruptAccepted;
 }
 
 ESTATUS
-HalHpetEnable(
+HalpHpetEnable(
     IN HAL_HPET_CONTEXT *HpetContext)
 {
-    // 
-    // @todo
-    // 1. Allocate IRQ vector VV.
-    // 2. Allocate IOAPIC redirection table (IOREDTBL) entry XX (by TN_INT_ROUTE_CAP bits).
-    // 3. Set interrupt redirection (IOxAPIC -> VECTOR): IOREDTBL[XX].Vector = VV
-    // 4. Route the HPET interrupt (HPET -> IOxAPIC): TN_INT_ROUTE_CNF = XX
-    // 5. Do extra setups for HPET. (timer type, interrupt enable, comparator, ...)
-    // 
+    //
+    // Allocate IRQ vector and register interrupt.
+    //
 
     U32 Vector = VECTOR_PLATFORM_TIMER;
     ESTATUS Status = HalRegisterInterrupt(&HpetContext->Interrupt, &HalIsrHighPrecisionTimer, 
@@ -225,9 +234,20 @@ HalHpetEnable(
         return Status;
     }
 
+    // Clear overall enable bit.
+    HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
+        HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_VALID_MASK);
+
+    //
+    // Find and setup the interrupt redirection.
+    // Route the HPET interrupt.
+    //
+
     HPET_CONFIGURATION_AND_CAPABILITIES Configuration;
     ULONG ConfigurationRegister = HPET_REGISTER_TIMER_N_CONF_CAPABILITY(HpetContext->PeriodicTimerNumber);
     Configuration.Value = HalHpetReadRegister(HpetContext->BaseAddress, ConfigurationRegister);
+
+    DbgTraceF(TraceLevelDebug, "TN_INT_ROUTE_CAP 0x%08x\n", Configuration.TN_INT_ROUTE_CAP);
 
     for (U32 i = 0; i < 32; i++)
     {
@@ -263,17 +283,19 @@ HalHpetEnable(
             // Write was successful.
             Status = HalSetInterruptRedirection(i, Vector, KeGetCurrentProcessorId(), 
                 /* edge-triggered, high active */
-                INTERRUPT_REDIRECTION_FLAG_SET_POLARITY | INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE);
+                INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE | INTERRUPT_REDIRECTION_FLAG_SET_POLARITY);
         }
         else
         {
             Status = E_NOT_ENOUGH_RESOURCE;
         }
 
-        if (!E_IS_SUCCESS(Status))
+        if (E_IS_SUCCESS(Status))
         {
-            DASSERT(E_IS_SUCCESS(HalFreeInterruptRedirection(GSI, 1)));
+            break;
         }
+
+        DASSERT(E_IS_SUCCESS(HalFreeInterruptRedirection(GSI, 1)));
     }
 
     if (!E_IS_SUCCESS(Status))
@@ -281,6 +303,14 @@ HalHpetEnable(
         DASSERT(E_IS_SUCCESS(HalUnregisterInterrupt(&HpetContext->Interrupt)));
         return Status;
     }
+
+    //
+    // Do extra setups for HPET.
+    // (Timer type, interrupt enable, ...)
+    //
+
+    // Set main counter to zero.
+    HalHpetWriteRegister(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER, 0);
 
     Configuration.TN_INT_TYPE_CNF = 0; // edge-triggered
     Configuration.TN_INT_ENB_CNF = 1; // interrupt enable
@@ -293,22 +323,41 @@ HalHpetEnable(
 
     ULONG ComparatorRegister = HPET_REGISTER_TIMER_N_COMPARATOR(HpetContext->PeriodicTimerNumber);
 
-    // @todo: fixme!
-    HalHpetWriteRegister(HpetContext->BaseAddress, ComparatorRegister, 12345678);
+    // Set comparator register (Must write TN_TYPE_CNF to 1 previously)
+    // (10^15 / COUNTER_CLK_PERIOD) Hz
+    // => (10^12 / COUNTER_CLK_PERIOD) times per 1ms
+    U64 CounterPerMs = 0xe8d4a51000ULL * 1000 / HpetContext->Capabilities.COUNTER_CLK_PERIOD;
+    DbgTraceF(TraceLevelDebug, "HPET count per ms 0x%08llx\n", CounterPerMs);
+    HalHpetWriteRegister(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs);
+    HalHpetWriteRegister(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs);
 
 
-    // 
-    // The Device Driver code should do the following for an available timer:
-    // 1. Set the timer type field (selects one-shot or periodic).
-    // 2. Set the interrupt enable
-    // 3. Set the comparator match
-    // 4. Set the Overall Enable bit (Offset 04h, bit 0).
-    //    This starts the main counter and enables comparators to deliver interrupts. 
-    // 
+    // Finally, set the overall enable bit.
+    HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION, 
+        HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_VALID_MASK);
 
-    //HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION, 
-    //    HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_VALID_MASK);
+    return E_SUCCESS;
+}
 
-    return E_NOT_IMPLEMENTED;
+ESTATUS
+HalHpetInitialize(
+    VOID)
+{
+    ESTATUS Status = HalpHpetInitialize0(&HalpHpetContext, HalAcpiHpet);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    Status = HalpHpetEnable(&HalpHpetContext);
+
+    if (!E_IS_SUCCESS(Status))
+    {
+        // @todo: Do the cleanup.
+        //        Unregister interrupt, unmap base address, free virtual page, ...
+    }
+
+    return Status;
 }
 

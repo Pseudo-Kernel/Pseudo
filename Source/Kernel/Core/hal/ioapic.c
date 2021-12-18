@@ -539,7 +539,8 @@ HalIoApicAllocateIoRedirection(
                     FirstFound = TRUE;
                     FirstIndex = Index;
                 }
-                else
+
+                if (FirstFound)
                 {
                     if (Index - FirstIndex + 1 >= Count)
                     {
@@ -649,7 +650,7 @@ HalAllocateInterruptRedirection(
         GSINext = GSIEnd;
     }
 
-    Status = HalIoApicAllocateIoRedirection(IoApic, &IntIn, GSINext - GSIStart, 
+    Status = HalIoApicAllocateIoRedirection(IoApic, &IntIn, Count, 
         GSIStart - IoApic->GSIBase, GSINext - IoApic->GSIBase);
 
     if (E_IS_SUCCESS(Status))
