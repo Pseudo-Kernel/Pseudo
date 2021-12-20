@@ -625,6 +625,7 @@ KiCallInterruptChain(
         else if (Result == InterruptCallNext)
         {
             // Call next interrupt
+            Next = Next->Next;
             continue;
         }
         else

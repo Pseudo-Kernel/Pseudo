@@ -165,7 +165,7 @@ typedef union _MPS_INTI_FLAGS
 
         // Trigger mode of the APIC I/O Input signals:
         // 00 - Conforms to specifications of the bus
-        //      (For example, ISA is edge-trigerred)
+        //      (For example, ISA is edge-triggered)
         // 01 - Edge-triggered
         // 10 - Reserved
         // 11 - Level-triggered
