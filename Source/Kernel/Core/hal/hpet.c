@@ -7,6 +7,8 @@
  * @date 2021-12-15
  * 
  * @copyright Copyright (c) 2021
+ * 
+ * @todo Need more test for HPET interrupt routing
  */
 
 #include <base/base.h>
@@ -28,7 +30,14 @@
 // 3. HPET must support 1 timer which is periodic capable (Tn_PER_INT_CAP = 1).
 // 
 // 4. HPET may report strange interrupt routing capability bits (Tn_INT_ROUTE_CAP).
-//    e.g.) Reporting IOAPIC IRQ which doesn't exists in IOAPIC.
+//    e.g.) Reporting IOAPIC IRQ which doesn't exist in IOAPIC.
+// 
+// 5. HPET may share same IOAPIC IRQ with PIT.
+//    e.g.) QEMU reports Tn_INT_ROUTE_CAP = 0x00000004 with interrupt override (ISA IRQ 0 -> IOAPIC IRQ 2),
+//          which means HPET interrupt can only be routed to IOAPIC IRQ 2.
+//          Since we can't completely disable the PIT, i think using legacy routing
+//          mode is the only way to handle interrupt for HPET in this case.
+//          (We can pause the PIT counter by writing only 1-byte for 2-byte write count mode, but it is ugly)
 // 
 // 
 
@@ -42,15 +51,28 @@ typedef struct _HAL_HPET_CONTEXT
     HPET_CAPABILITIES_AND_ID Capabilities;
 
     U8 PeriodicTimerNumber;
+    U64 TimerPeriod0;
 
     KINTERRUPT Interrupt;
 } HAL_HPET_CONTEXT;
 
 HAL_HPET_CONTEXT HalpHpetContext;
 
+U32
+HalHpetReadRegister32(
+    IN VIRTUAL_ADDRESS Base,
+    IN ULONG Register)
+{
+    DASSERT(0 <= Register && Register < HPET_SIZE_REGISTER_SPACE);
+    DASSERT(!(Register & (HPET_ACCESS_ALIGNMENT - 1)));
+
+    volatile U32 *p = (volatile U32 *)(Base + Register);
+
+    return *p;
+}
 
 U64
-HalHpetReadRegister(
+HalHpetReadRegister64(
     IN VIRTUAL_ADDRESS Base,
     IN ULONG Register)
 {
@@ -63,7 +85,7 @@ HalHpetReadRegister(
 }
 
 U64
-HalHpetWriteRegister(
+HalHpetWriteRegister64(
     IN VIRTUAL_ADDRESS Base,
     IN ULONG Register,
     IN U64 Value)
@@ -79,7 +101,7 @@ HalHpetWriteRegister(
 }
 
 U64
-HalHpetWriteRegisterByMask(
+HalHpetWriteRegisterByMask64(
     IN VIRTUAL_ADDRESS Base,
     IN ULONG Register,
     IN U64 Value,
@@ -128,11 +150,12 @@ HalpHpetInitialize0(
     //
 
     HPET_CAPABILITIES_AND_ID Capabilities;
-    Capabilities.Value = HalHpetReadRegister(VirtualAddress, HPET_REGISTER_CAPABILITIES_ID);
+    Capabilities.Value = HalHpetReadRegister64(VirtualAddress, HPET_REGISTER_CAPABILITIES_ID);
 
     DbgTraceF(TraceLevelDebug,
-        "COUNT_SIZE_CAP %d, NUM_TIM_CAP %d, COUNTER_CLK_PERIOD 0x%08x\n", 
-        Capabilities.COUNT_SIZE_CAP, Capabilities.NUM_TIM_CAP, Capabilities.COUNTER_CLK_PERIOD);
+        "COUNT_SIZE_CAP %d, NUM_TIM_CAP %d, COUNTER_CLK_PERIOD 0x%08x, LEG_ROUTE_CAP %d\n", 
+        Capabilities.COUNT_SIZE_CAP, Capabilities.NUM_TIM_CAP, 
+        Capabilities.COUNTER_CLK_PERIOD, Capabilities.LEG_ROUTE_CAP);
 
     // Must support 64-bit main counter and 3 timers.
     if (!Capabilities.COUNT_SIZE_CAP || 
@@ -147,7 +170,7 @@ HalpHpetInitialize0(
     for (U8 i = 0; i <= Capabilities.NUM_TIM_CAP; i++)
     {
         HPET_CONFIGURATION_AND_CAPABILITIES Configuration;
-        Configuration.Value = HalHpetReadRegister(VirtualAddress, HPET_REGISTER_TIMER_N_CONF_CAPABILITY(i));
+        Configuration.Value = HalHpetReadRegister64(VirtualAddress, HPET_REGISTER_TIMER_N_CONF_CAPABILITY(i));
 
         DbgTraceF(TraceLevelDebug,
             "T[%d]: TN_INT_ROUTE_CAP 0x%08x, TN_PER_INT_CAP %d, TN_SIZE_CAP %d\n", 
@@ -159,6 +182,20 @@ HalpHpetInitialize0(
             {
                 DbgTraceF(TraceLevelDebug, "T[%d] selected\n", i);
                 PeriodicTimerNumber = i;
+            }
+        }
+
+        if (!(Configuration.TN_INT_ROUTE_CAP & ~0xffff))
+        {
+            // Only IOAPIC IRQ < 16 is supported for timer[i].
+            // Check whether the legacy interrupt routing is supported.
+            if (!Capabilities.LEG_ROUTE_CAP)
+            {
+                DbgTraceF(TraceLevelDebug, 
+                    "T[%d] unusable (Legacy routing not supported, Routable IOAPIC IRQ < 16)\n", i);
+
+                Status = E_NOT_SUPPORTED;
+                goto Cleanup;
             }
         }
     }
@@ -205,15 +242,24 @@ HalIsrHighPrecisionTimer(
     IN PVOID InterruptStackFrame)
 {
     HAL_HPET_CONTEXT *HpetContext = (HAL_HPET_CONTEXT *)InterruptContext;
-    U64 MainCounter = HalHpetReadRegister(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER);
+
+    HalApicSendEoi(HalApicBase);
+
+    // Clear ENABLE_CNF.
+    HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
+        0, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
+
+    U64 MainCounter = HalHpetReadRegister64(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER);
+ 
+    U64 Comparator = HalHpetReadRegister64(HpetContext->BaseAddress, HPET_REGISTER_TIMER_N_COMPARATOR(0));
+    HalHpetWriteRegister64(HpetContext->BaseAddress, HPET_REGISTER_TIMER_N_COMPARATOR(0), Comparator + HpetContext->TimerPeriod0);
+
+    // Set ENABLE_CNF.
+    HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
+        HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
 
     DbgTraceF(TraceLevelDebug, "HPET_ISR: MainCounter 0x%016llx\n", MainCounter);
 
-    // Clear interrupt state bit (for edge-triggered mode)
-    HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_INTERRUPT_STATUS, 
-        0, 1 << HpetContext->PeriodicTimerNumber);
-
-    HalApicSendEoi(HalApicBase);
     return InterruptAccepted;
 }
 
@@ -221,6 +267,12 @@ ESTATUS
 HalpHpetEnable(
     IN HAL_HPET_CONTEXT *HpetContext)
 {
+    //
+    // Currently we use timer 0.
+    //
+
+    const ULONG TimerNumber = 0;
+
     //
     // Allocate IRQ vector and register interrupt.
     //
@@ -234,75 +286,112 @@ HalpHpetEnable(
         return Status;
     }
 
-    // Clear overall enable bit.
-    HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
-        HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_VALID_MASK);
+    BOOLEAN LegacyRouting = FALSE;
 
     //
-    // Find and setup the interrupt redirection.
-    // Route the HPET interrupt.
+    // Check legacy routing capability if needed.
     //
 
     HPET_CONFIGURATION_AND_CAPABILITIES Configuration;
-    ULONG ConfigurationRegister = HPET_REGISTER_TIMER_N_CONF_CAPABILITY(HpetContext->PeriodicTimerNumber);
-    Configuration.Value = HalHpetReadRegister(HpetContext->BaseAddress, ConfigurationRegister);
+    ULONG ConfigurationRegister = HPET_REGISTER_TIMER_N_CONF_CAPABILITY(TimerNumber);
+    Configuration.Value = HalHpetReadRegister64(HpetContext->BaseAddress, ConfigurationRegister);
 
     DbgTraceF(TraceLevelDebug, "TN_INT_ROUTE_CAP 0x%08x\n", Configuration.TN_INT_ROUTE_CAP);
 
-    for (U32 i = 0; i < 32; i++)
+    if (!(Configuration.TN_INT_ROUTE_CAP & ~0xffff))
     {
-        if (!(Configuration.TN_INT_ROUTE_CAP & (1 << i)))
+        DASSERT(HpetContext->Capabilities.LEG_ROUTE_CAP && TimerNumber < 2);
+
+        //
+        // Do legacy routing.
+        //
+
+        LegacyRouting = TRUE;
+    }
+
+    // Clear ENABLE_CNF.
+    HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
+        LegacyRouting ? HPET_GENERAL_CONFIGURATION_LEG_RT_CNF : 0,
+        HPET_GENERAL_CONFIGURATION_VALID_MASK);
+
+    if (LegacyRouting)
+    {
+        U32 GSI = 0;
+
+        if (TimerNumber == 0)
+            GSI = 2; // Timer0 -> IOAPIC IRQ 2
+        else if (TimerNumber == 1)
+            GSI = 8; // Timer1 -> IOAPIC IRQ 8
+        else
+            DASSERT(FALSE);
+
+        Status = HalSetInterruptRedirection(GSI, Vector, KeGetCurrentProcessorId(), 
+            /* edge-triggered, high active */
+            INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE | INTERRUPT_REDIRECTION_FLAG_SET_POLARITY);
+    }
+    else
+    {
+        //
+        // Find and setup the interrupt redirection.
+        // Route the HPET interrupt.
+        //
+
+        for (U32 i = 16; i < 32; i++)
         {
-            continue;
+            if (!(Configuration.TN_INT_ROUTE_CAP & (1 << i)))
+            {
+                continue;
+            }
+
+            U32 GSI = 0;
+            Status = HalAllocateInterruptRedirection(&GSI, 1, i, i + 1);
+            if (!E_IS_SUCCESS(Status))
+            {
+                continue;
+            }
+
+            DASSERT(0 <= GSI && GSI < 32);
+            Configuration.TN_INT_ROUTE_CNF = GSI;   // Can be 0..31
+            HalHpetWriteRegister64(HpetContext->BaseAddress, ConfigurationRegister, Configuration.Value);
+
+            //
+            // After write, We must prove TN_INT_ROUTE_CNF by reading back once.
+            //
+            // Tn_INT_ROUTE_CNF
+            // If the value is not supported by this prarticular timer, then the value
+            // read back will not match what is written. 
+            // [From: IA-PC HPET Specification 1.0a]
+            //
+
+            Configuration.Value = HalHpetReadRegister64(HpetContext->BaseAddress, ConfigurationRegister);
+
+            if (Configuration.TN_INT_ROUTE_CNF == GSI)
+            {
+                // Write was successful.
+                Status = HalSetInterruptRedirection(i, Vector, KeGetCurrentProcessorId(), 
+                    /* edge-triggered, high active */
+                    INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE | INTERRUPT_REDIRECTION_FLAG_SET_POLARITY);
+            }
+            else
+            {
+                Status = E_NOT_ENOUGH_RESOURCE;
+            }
+
+            if (E_IS_SUCCESS(Status))
+            {
+                break;
+            }
+
+            DASSERT(E_IS_SUCCESS(HalFreeInterruptRedirection(GSI, 1)));
         }
 
-        U32 GSI = 0;
-        Status = HalAllocateInterruptRedirection(&GSI, 1, i, i + 1);
         if (!E_IS_SUCCESS(Status))
         {
-            continue;
+            DASSERT(E_IS_SUCCESS(HalUnregisterInterrupt(&HpetContext->Interrupt)));
+            return Status;
         }
-
-        DASSERT(0 <= GSI && GSI < 32);
-        Configuration.TN_INT_ROUTE_CNF = GSI;   // Can be 0..31
-        HalHpetWriteRegister(HpetContext->BaseAddress, ConfigurationRegister, Configuration.Value);
-
-        //
-        // After write, We must prove TN_INT_ROUTE_CNF by reading back once.
-        //
-        // Tn_INT_ROUTE_CNF
-        // If the value is not supported by this prarticular timer, then the value
-        // read back will not match what is written. 
-        // [From: IA-PC HPET Specification 1.0a]
-        //
-
-        Configuration.Value = HalHpetReadRegister(HpetContext->BaseAddress, ConfigurationRegister);
-
-        if (Configuration.TN_INT_ROUTE_CNF == GSI)
-        {
-            // Write was successful.
-            Status = HalSetInterruptRedirection(i, Vector, KeGetCurrentProcessorId(), 
-                /* edge-triggered, high active */
-                INTERRUPT_REDIRECTION_FLAG_SET_TRIGGER_MODE | INTERRUPT_REDIRECTION_FLAG_SET_POLARITY);
-        }
-        else
-        {
-            Status = E_NOT_ENOUGH_RESOURCE;
-        }
-
-        if (E_IS_SUCCESS(Status))
-        {
-            break;
-        }
-
-        DASSERT(E_IS_SUCCESS(HalFreeInterruptRedirection(GSI, 1)));
     }
 
-    if (!E_IS_SUCCESS(Status))
-    {
-        DASSERT(E_IS_SUCCESS(HalUnregisterInterrupt(&HpetContext->Interrupt)));
-        return Status;
-    }
 
     //
     // Do extra setups for HPET.
@@ -310,31 +399,31 @@ HalpHpetEnable(
     //
 
     // Set main counter to zero.
-    HalHpetWriteRegister(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER, 0);
+    HalHpetWriteRegister64(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER, 0);
 
     Configuration.TN_INT_TYPE_CNF = 0; // edge-triggered
     Configuration.TN_INT_ENB_CNF = 1; // interrupt enable
-    Configuration.TN_TYPE_CNF = 1; // periodic mode
-    Configuration.TN_VAL_SET_CNF = 1; // we'll modify comparator register
+    Configuration.TN_TYPE_CNF = 0; // one-shot mode
+    Configuration.TN_VAL_SET_CNF = 0; // not interested since we're not using periodic mode
     Configuration.TN_32MODE_CNF = 0; // 64-bit mode
     Configuration.TN_FSB_EN_CNF = 0; // disable FSB
 
-    HalHpetWriteRegister(HpetContext->BaseAddress, ConfigurationRegister, Configuration.Value);
+    HalHpetWriteRegister64(HpetContext->BaseAddress, ConfigurationRegister, Configuration.Value);
 
-    ULONG ComparatorRegister = HPET_REGISTER_TIMER_N_COMPARATOR(HpetContext->PeriodicTimerNumber);
+    ULONG ComparatorRegister = HPET_REGISTER_TIMER_N_COMPARATOR(TimerNumber);
 
     // Set comparator register (Must write TN_TYPE_CNF to 1 previously)
     // (10^15 / COUNTER_CLK_PERIOD) Hz
     // => (10^12 / COUNTER_CLK_PERIOD) times per 1ms
-    U64 CounterPerMs = 0xe8d4a51000ULL * 1000 / HpetContext->Capabilities.COUNTER_CLK_PERIOD;
+    U64 CounterPerMs = 0xe8d4a51000ULL / HpetContext->Capabilities.COUNTER_CLK_PERIOD;
     DbgTraceF(TraceLevelDebug, "HPET count per ms 0x%08llx\n", CounterPerMs);
-    HalHpetWriteRegister(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs);
-    HalHpetWriteRegister(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs);
+    HalHpetWriteRegister64(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs);
+    HpetContext->TimerPeriod0 = CounterPerMs;
 
 
     // Finally, set the overall enable bit.
-    HalHpetWriteRegisterByMask(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION, 
-        HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_VALID_MASK);
+    HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION, 
+        HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
 
     return E_SUCCESS;
 }
