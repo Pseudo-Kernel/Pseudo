@@ -54,6 +54,7 @@ typedef struct _HAL_HPET_CONTEXT
     U64 TimerPeriod0;
 
     KINTERRUPT Interrupt;
+    BOOLEAN Initialized;
 } HAL_HPET_CONTEXT;
 
 HAL_HPET_CONTEXT HalpHpetContext;
@@ -215,6 +216,7 @@ HalpHpetInitialize0(
     HpetContext->Capabilities = Capabilities;
 
     HpetContext->PeriodicTimerNumber = PeriodicTimerNumber;
+    HpetContext->Initialized = TRUE;
 
     return E_SUCCESS;
 
@@ -245,6 +247,7 @@ HalIsrHighPrecisionTimer(
 
     HalApicSendEoi(HalApicBase);
 
+#if 0
     // Clear ENABLE_CNF.
     HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
         0, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
@@ -257,6 +260,9 @@ HalIsrHighPrecisionTimer(
     // Set ENABLE_CNF.
     HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
         HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
+#else
+    U64 MainCounter = HalHpetReadRegister64(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER);
+#endif
 
     DbgTraceF(TraceLevelDebug, "HPET_ISR: MainCounter 0x%016llx\n", MainCounter);
 
@@ -267,11 +273,7 @@ ESTATUS
 HalpHpetEnable(
     IN HAL_HPET_CONTEXT *HpetContext)
 {
-    //
-    // Currently we use timer 0.
-    //
-
-    const ULONG TimerNumber = 0;
+    const ULONG TimerNumber = HpetContext->PeriodicTimerNumber;
 
     //
     // Allocate IRQ vector and register interrupt.
@@ -298,15 +300,19 @@ HalpHpetEnable(
 
     DbgTraceF(TraceLevelDebug, "TN_INT_ROUTE_CAP 0x%08x\n", Configuration.TN_INT_ROUTE_CAP);
 
-    if (!(Configuration.TN_INT_ROUTE_CAP & ~0xffff))
+    if (TimerNumber < 2)
     {
-        DASSERT(HpetContext->Capabilities.LEG_ROUTE_CAP && TimerNumber < 2);
+        // Legacy routing affects for timer 0, 1
+        if (!(Configuration.TN_INT_ROUTE_CAP & ~0xffff))
+        {
+            DASSERT(HpetContext->Capabilities.LEG_ROUTE_CAP);
 
-        //
-        // Do legacy routing.
-        //
+            //
+            // Do legacy routing.
+            //
 
-        LegacyRouting = TRUE;
+            LegacyRouting = TRUE;
+        }
     }
 
     // Clear ENABLE_CNF.
@@ -403,8 +409,8 @@ HalpHpetEnable(
 
     Configuration.TN_INT_TYPE_CNF = 0; // edge-triggered
     Configuration.TN_INT_ENB_CNF = 1; // interrupt enable
-    Configuration.TN_TYPE_CNF = 0; // one-shot mode
-    Configuration.TN_VAL_SET_CNF = 0; // not interested since we're not using periodic mode
+    Configuration.TN_TYPE_CNF = 1; // periodic mode
+    Configuration.TN_VAL_SET_CNF = 1; // we'll change comparator after write this
     Configuration.TN_32MODE_CNF = 0; // 64-bit mode
     Configuration.TN_FSB_EN_CNF = 0; // disable FSB
 
@@ -418,12 +424,49 @@ HalpHpetEnable(
     U64 CounterPerMs = 0xe8d4a51000ULL / HpetContext->Capabilities.COUNTER_CLK_PERIOD;
     DbgTraceF(TraceLevelDebug, "HPET count per ms 0x%08llx\n", CounterPerMs);
     HalHpetWriteRegister64(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs);
+    HalHpetWriteRegister64(HpetContext->BaseAddress, ComparatorRegister, CounterPerMs); // once more!
     HpetContext->TimerPeriod0 = CounterPerMs;
-
 
     // Finally, set the overall enable bit.
     HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION, 
         HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
+
+    return E_SUCCESS;
+}
+
+ESTATUS
+HalHpetGetFrequency(
+    OUT U64 *Frequency)
+{
+    if (!HalpHpetContext.Initialized)
+    {
+        return E_FAILED;
+    }
+
+    DASSERT(HalpHpetContext.Capabilities.COUNTER_CLK_PERIOD);
+
+    // 0x38d7ea4c68000ULL = 10^15
+    *Frequency = 0x38d7ea4c68000ULL / HalpHpetContext.Capabilities.COUNTER_CLK_PERIOD;
+
+    return E_SUCCESS;
+}
+
+ESTATUS
+HalHpetReadCounter(
+    OUT U64 *Counter)
+{
+    if (!HalpHpetContext.Initialized)
+    {
+        return E_FAILED;
+    }
+
+    U64 Configuration = HalHpetReadRegister64(HalpHpetContext.BaseAddress, HPET_REGISTER_CONFIGURATION);
+    if (!(Configuration & HPET_GENERAL_CONFIGURATION_ENABLE_CNF))
+    {
+        return E_FAILED;
+    }
+
+    *Counter = HalHpetReadRegister64(HalpHpetContext.BaseAddress, HPET_REGISTER_MAIN_COUNTER);
 
     return E_SUCCESS;
 }
