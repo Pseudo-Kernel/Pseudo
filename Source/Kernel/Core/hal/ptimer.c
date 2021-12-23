@@ -2,7 +2,7 @@
 /**
  * @file ptimer.c
  * @author Pseudo-Kernel (sandbox.isolated@gmail.com)
- * @brief Implements platform timer initialization and ISR.
+ * @brief Implements platform timer initialization.
  * @version 0.1
  * @date 2021-10-25
  * 
@@ -30,27 +30,6 @@
 volatile U64 HalTickCount;
 
 /**
- * @brief ISR for platform timer.
- * 
- * @param [in] Interrupt            Interrupt object.
- * @param [in] InterruptContext     Interrupt context.
- * @param [in] InterruptStackFrame  Interrupt stack frame.
- * 
- * @return Always InterruptAccepted.
- */
-KINTERRUPT_RESULT
-KERNELAPI
-HalIsrPlatformTimer(
-    IN PKINTERRUPT Interrupt,
-    IN PVOID InterruptContext,
-    IN PVOID InterruptStackFrame)
-{
-    HalTickCount++;
-    HalApicSendEoi(HalApicBase);
-    return InterruptAccepted;
-}
-
-/**
  * @brief Returns tick count.
  * 
  * @return 64-bit tick count.
@@ -64,11 +43,39 @@ HalGetTickCount(
 }
 
 /**
+ * @brief Returns timer frequency.
+ * 
+ * @param [out] Frequency       Counter per second.
+ * 
+ * @return ESTATUS code.
+ */
+ESTATUS
+KERNELAPI
+HalTimerGetFrequency(
+    OUT U64 *Frequency)
+{
+    return HalHpetGetFrequency(Frequency);
+}
+
+/**
+ * @brief Returns 64-bit counter.
+ * 
+ * @param [out] Counter     Current counter.
+ * 
+ * @return ESTATUS code.
+ */
+ESTATUS
+KERNELAPI
+HalTimerReadCounter(
+    OUT U64 *Counter)
+{
+    return HalHpetReadCounter(Counter);
+}
+
+/**
  * @brief Initializes the system timer.\n
  * 
  * @return ESTATUS code.
- * 
- * @todo If exists, use HPET instead.
  */
 ESTATUS
 KERNELAPI
@@ -82,29 +89,7 @@ HalInitializePlatformTimer(
     BOOLEAN InterruptState = !!(__readeflags() & RFLAG_IF);
     _disable();
 
-#if 0
-    // todo: Use HPET if exists
-    ULONG Vector = VECTOR_PLATFORM_TIMER;
-    ESTATUS Status = HalRegisterInterrupt(
-        &PrivateData->InterruptObjects.PlatformTimer, 
-        HalIsrPlatformTimer, NULL, VECTOR_TO_IRQL(Vector), Vector, NULL);
-
-    if (E_IS_SUCCESS(Status))
-    {
-        U8 GSI = 0;
-        DASSERT(HalLegacyIrqToGSI(ISA_IRQ_TIMER, &GSI));
-
-        // @note: Do not change polarity and trigger mode for legacy IRQ as it is already set
-        Status = HalSetInterruptRedirection(GSI, Vector, KeGetCurrentProcessorId(), 
-            0 /* do not change polarity and trigger mode*/);
-
-        DASSERT(E_IS_SUCCESS(Status));
-
-        Hal_8254SetupTimer(1000);
-    }
-#else
     ESTATUS Status = HalHpetInitialize();
-#endif
 
     if (InterruptState)
     {

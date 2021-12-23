@@ -7,8 +7,6 @@
  * @date 2021-12-15
  * 
  * @copyright Copyright (c) 2021
- * 
- * @todo Need more test for HPET interrupt routing
  */
 
 #include <base/base.h>
@@ -22,6 +20,8 @@
 #include <hal/ioapic.h>
 #include <hal/acpi.h>
 #include <hal/hpet.h>
+
+extern volatile U64 HalTickCount;
 
 // 
 // HPET driver implementation prerequisites:
@@ -247,7 +247,10 @@ HalIsrHighPrecisionTimer(
 
     HalApicSendEoi(HalApicBase);
 
-#if 0
+#if 1 // Periodic mode
+    U64 MainCounter = HalHpetReadRegister64(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER);
+
+#else
     // Clear ENABLE_CNF.
     HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
         0, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
@@ -260,11 +263,12 @@ HalIsrHighPrecisionTimer(
     // Set ENABLE_CNF.
     HalHpetWriteRegisterByMask64(HpetContext->BaseAddress, HPET_REGISTER_CONFIGURATION,
         HPET_GENERAL_CONFIGURATION_ENABLE_CNF, HPET_GENERAL_CONFIGURATION_ENABLE_CNF);
-#else
-    U64 MainCounter = HalHpetReadRegister64(HpetContext->BaseAddress, HPET_REGISTER_MAIN_COUNTER);
 #endif
 
-    DbgTraceF(TraceLevelDebug, "HPET_ISR: MainCounter 0x%016llx\n", MainCounter);
+//    DbgTraceF(TraceLevelDebug, "HPET_ISR: MainCounter 0x%016llx\n", MainCounter);
+
+//    HalTickCount = MainCounter / (0xe8d4a51000ULL / HpetContext->Capabilities.COUNTER_CLK_PERIOD);
+    _InterlockedIncrement64(&HalTickCount);
 
     return InterruptAccepted;
 }

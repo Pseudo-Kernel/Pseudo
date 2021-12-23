@@ -10,6 +10,16 @@ HalGetTickCount(
 
 ESTATUS
 KERNELAPI
+HalTimerGetFrequency(
+    OUT U64 *Frequency);
+
+ESTATUS
+KERNELAPI
+HalTimerReadCounter(
+    OUT U64 *Counter);
+
+ESTATUS
+KERNELAPI
 HalInitializePlatformTimer(
     VOID);
 

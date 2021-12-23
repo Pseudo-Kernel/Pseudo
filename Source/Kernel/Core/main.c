@@ -34,6 +34,9 @@
  *         Looks like BSP hangs when writing ICR high/ICR low (first SIPI command).
  *       - Kernel crashes during AP initialization (Getting triple fault). [RESOLVED]\n
  *         Resolved. It was also a AP stub bug (sets rsp to invalid address). Same as BSP hang issue.
+ *       - Kernel randomly crashes. It may took 2~30+ min.\n
+ *         Since CS:RIP pointing something wrong, it seems that there is problem with register save/restore\n
+ *         in interrupt handler...
  */
 
 #include <base/base.h>
@@ -129,17 +132,37 @@ KiKernelStart(
         : "memory"
     );
 
+    CHAR DebugText[512];
+    SIZE_T DebugTextLength;
+
     for (U64 c = 0; ; c++)
     {
         __halt();
 
+        DebugText[0] = '\0';
+        DebugTextLength = 0;
+
         for (U32 i = 0; i < KeGetProcessorCount(); i++)
         {
             HAL_PRIVATE_DATA *PrivateData = (HAL_PRIVATE_DATA *)KiProcessorBlocks[i]->HalPrivateData;
-            BGXTRACE("P%d: %10d | ", i, PrivateData->ApicTickCount);
+            DebugTextLength += ClStrFormatU8(
+                DebugText + DebugTextLength, COUNTOF(DebugText) - DebugTextLength, 
+                "P%d: %7d | ", i, PrivateData->ApicTickCount);
+            //BGXTRACE("P%d: %7d | ", i, PrivateData->ApicTickCount);
         }
 
-        BGXTRACE("SystemTimerTick: %10lld\r", HalGetTickCount());
+        U64 Counter = 0;
+        HalTimerReadCounter(&Counter);
+
+        DebugTextLength += ClStrFormatU8(
+            DebugText + DebugTextLength, COUNTOF(DebugText) - DebugTextLength, 
+            "Tick: %10lld (Counter 0x%016llx)", HalGetTickCount(), Counter);
+
+        ClStrTerminateU8(DebugText, COUNTOF(DebugText), DebugTextLength);
+
+        BGXTRACE("%s\r", DebugText);
+
+        //BGXTRACE("Tick: %10lld (Counter 0x%016llx)\r", HalGetTickCount(), Counter);
 
         __asm__ __volatile__ (
             "movdqa xmm2, xmm0\n\t"

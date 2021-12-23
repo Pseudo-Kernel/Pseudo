@@ -126,3 +126,10 @@ ESTATUS
 HalHpetInitialize(
     VOID);
 
+ESTATUS
+HalHpetGetFrequency(
+    OUT U64 *Frequency);
+
+ESTATUS
+HalHpetReadCounter(
+    OUT U64 *Counter);
