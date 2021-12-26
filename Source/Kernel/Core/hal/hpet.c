@@ -59,6 +59,7 @@ typedef struct _HAL_HPET_CONTEXT
 
 HAL_HPET_CONTEXT HalpHpetContext;
 
+/*
 U32
 HalHpetReadRegister32(
     IN VIRTUAL_ADDRESS Base,
@@ -71,7 +72,16 @@ HalHpetReadRegister32(
 
     return *p;
 }
+*/
 
+/**
+ * @brief Reads the 64-bit HPET register.
+ * 
+ * @param [in] Base         Base address of HPET.
+ * @param [in] Register     Register offset (8-byte aligned).
+ * 
+ * @return Register value.
+ */
 U64
 HalHpetReadRegister64(
     IN VIRTUAL_ADDRESS Base,
@@ -85,6 +95,15 @@ HalHpetReadRegister64(
     return *p;
 }
 
+/**
+ * @brief Writes to the 64-bit HPET register.
+ * 
+ * @param [in] Base         Base address of HPET.
+ * @param [in] Register     Register offset (8-byte aligned).
+ * @param [in] Value        New value.
+ * 
+ * @return Previous value.
+ */
 U64
 HalHpetWriteRegister64(
     IN VIRTUAL_ADDRESS Base,
@@ -101,6 +120,19 @@ HalHpetWriteRegister64(
     return PrevValue;
 }
 
+/**
+ * @brief Do read-modify-write operation to the 64-bit HPET register.
+ * 
+ * @param [in] Base         Base address of HPET.
+ * @param [in] Register     Register offset (8-byte aligned).
+ * @param [in] Value        New value.
+ * @param [in] SetMask      64-bit mask which specifies the bits to be modified.\n
+ *                          The resulting value will be written to the register as follows:\n
+ *                          Result = (Value AND SetMask) OR (PrevValue AND NOT(SetMask)).\n
+ *                          If zero is specified, then operation has no effect because same value will be written.\n
+ * 
+ * @return Previous value.
+ */
 U64
 HalHpetWriteRegisterByMask64(
     IN VIRTUAL_ADDRESS Base,
@@ -118,9 +150,16 @@ HalHpetWriteRegisterByMask64(
     return PrevValue;
 }
 
-
+/**
+ * @brief Do the pre-initialization of HPET.
+ * 
+ * @param [in] HpetContext      HPET context structure.
+ * @param [in] Hpet             ACPI HPET table.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
-HalpHpetInitialize0(
+HalpHpetPreInitialize(
     IN HAL_HPET_CONTEXT *HpetContext,
     IN ACPI_HPET *Hpet)
 {
@@ -273,6 +312,13 @@ HalIsrHighPrecisionTimer(
     return InterruptAccepted;
 }
 
+/**
+ * @brief Registers the interrupt and enables the HPET timer.
+ * 
+ * @param [in] HpetContext      HPET context structure.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 HalpHpetEnable(
     IN HAL_HPET_CONTEXT *HpetContext)
@@ -315,6 +361,7 @@ HalpHpetEnable(
             // Do legacy routing.
             //
 
+            DbgTraceF(TraceLevelDebug, "Use legacy replacement routing for HPET timer %d\n", TimerNumber);
             LegacyRouting = TRUE;
         }
     }
@@ -438,6 +485,13 @@ HalpHpetEnable(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Returns HPET timer frequency.
+ * 
+ * @param [out] Frequency   HPET timer Frequency.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 HalHpetGetFrequency(
     OUT U64 *Frequency)
@@ -455,6 +509,13 @@ HalHpetGetFrequency(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Returns HPET main counter.
+ * 
+ * @param [out] Counter     HPET main counter.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 HalHpetReadCounter(
     OUT U64 *Counter)
@@ -475,11 +536,16 @@ HalHpetReadCounter(
     return E_SUCCESS;
 }
 
+/**
+ * @brief Initializes the HPET.
+ * 
+ * @return ESTATUS code.
+ */
 ESTATUS
 HalHpetInitialize(
     VOID)
 {
-    ESTATUS Status = HalpHpetInitialize0(&HalpHpetContext, HalAcpiHpet);
+    ESTATUS Status = HalpHpetPreInitialize(&HalpHpetContext, HalAcpiHpet);
 
     if (!E_IS_SUCCESS(Status))
     {
