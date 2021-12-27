@@ -28,7 +28,7 @@ KiInitializeTimer(
 {
     memset(Timer, 0, sizeof(*Timer));
 
-    KiInitializeWaitHeader(&Timer->WaitHeader, NULL);
+    KiInitializeWaitHeader(&Timer->WaitHeader, 0, NULL);
     DListInitializeHead(&Timer->TimerList);
     Timer->Interval = 0;
     Timer->ExpirationTimeAbsolute = 0;

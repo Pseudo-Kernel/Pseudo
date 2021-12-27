@@ -15,3 +15,7 @@ KiScheduleSwitchContext(
 VOID
 KiYieldThreadInternal(
     IN KSTACK_FRAME_INTERRUPT *InterruptFrame);
+
+ESTATUS
+KiYieldThread(
+    VOID);

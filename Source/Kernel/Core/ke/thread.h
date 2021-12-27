@@ -2,6 +2,7 @@
 #pragma once
 
 #include <ke/lock.h>
+#include <ke/wait.h>
 
 typedef struct _KSCHED_CLASS        KSCHED_CLASS;
 typedef struct _KRUNNER_QUEUE       KRUNNER_QUEUE;
@@ -129,12 +130,15 @@ typedef struct _KTHREAD_CONTEXT
 } KTHREAD_CONTEXT;
 #pragma pack(pop)
 
-#define THREAD_NAME_MAX_LENGTH      128
+#define THREAD_NAME_MAX_LENGTH              128
 
 typedef
 U64
 (KERNELAPI *PKTHREAD_ROUTINE)(
     IN PVOID Argument);
+
+#define THREAD_BUILTIN_WAITER_BLOCK_COUNT       MAXIMUM_WAITER_BLOCKS_ALLOWED
+#define MAXIMUM_WAITER_BLOCKS_ALLOWED           64
 
 typedef struct _KTHREAD
 {
@@ -150,9 +154,10 @@ typedef struct _KTHREAD
     //
 
 //    KWAIT_HEADER WaitHeader;
-    DLIST_ENTRY WaiterList;         // Used when thread is waiting objects
+    DLIST_ENTRY WaiterBlockLinks;   // Used when thread is waiting objects
+    KWAITER_BLOCK WaiterBlocks[THREAD_BUILTIN_WAITER_BLOCK_COUNT];
 
-    DLIST_ENTRY RunnerLinks;
+    DLIST_ENTRY RunnerLinks;        // Link to runner queue
     U32 BasePriority;               // Base priority
     U32 Priority;                   // Dynamic priority
 

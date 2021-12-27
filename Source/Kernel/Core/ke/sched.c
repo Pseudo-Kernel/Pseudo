@@ -163,7 +163,11 @@ KiScheduleNextThread(
 
     CurrentThread->ContextSwitchCount++;
 
-    DASSERT(KiSchedInsertThread(Processor->SchedNormalClass, CurrentThread, KSCHED_IDLE_QUEUE));
+    if (!CurrentThread->InWaiting)
+    {
+        DASSERT(KiSchedInsertThread(Processor->SchedNormalClass, CurrentThread, KSCHED_IDLE_QUEUE));
+    }
+    
     DASSERT(KiSchedNextThread(Processor->SchedNormalClass, &NextThread));
     DASSERT(NextThread);
 

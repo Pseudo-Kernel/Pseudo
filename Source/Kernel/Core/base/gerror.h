@@ -18,6 +18,8 @@ typedef enum _ESTATUS
     E_NOT_ENOUGH_RESOURCE,
     E_RACE_CONDITION,
     E_ALREADY_EXISTS,
+    E_TIMEOUT,
+    E_WAIT_DONE,
 
     // System initialization error codes.
     E_PREINIT_POOL_INIT_FAILED,

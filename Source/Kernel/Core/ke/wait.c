@@ -3,17 +3,24 @@
 #include <ke/lock.h>
 #include <ke/interrupt.h>
 #include <mm/pool.h>
+#include <ke/kprocessor.h>
+#include <ke/process.h>
+#include <ke/thread.h>
+#include <ke/sched.h>
+#include <ke/timer.h>
 #include <ke/wait.h>
 
 
 VOID
 KiInitializeWaitHeader(
     OUT KWAIT_HEADER *Object,
+    IN U32 Flags,
     IN PVOID WaitContext)
 {
     KeInitializeSpinlock(&Object->Lock);
-    DListInitializeHead(&Object->WaiterThreadList);
+    DListInitializeHead(&Object->WaiterBlockLinks);
     Object->State = 0;
+    Object->Flags = Flags;
     Object->WaitContext = NULL;
 }
 

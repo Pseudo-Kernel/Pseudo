@@ -49,7 +49,7 @@ KiInitializeThread(
 
     Thread->ReferenceCount = 1;
 
-    DListInitializeHead(&Thread->WaiterList);
+    DListInitializeHead(&Thread->WaiterBlockLinks);
     DListInitializeHead(&Thread->RunnerLinks);
 
     Thread->BasePriority = BasePriority;

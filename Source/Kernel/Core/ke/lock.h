@@ -96,7 +96,7 @@ KeAcquireSpinlockMultipleDisableInterrupt(
 
 VOID
 KERNELAPI
-KeReleaseSpinlockMultipleDisableInterrupt(
+KeReleaseSpinlockMultipleRestoreInterrupt(
     IN PKSPIN_LOCK *LockList,
     IN ULONG Count,
     IN BOOLEAN PrevState);
