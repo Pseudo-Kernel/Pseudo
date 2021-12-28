@@ -100,6 +100,8 @@ KiLoadContextToFrame(
 
     InterruptFrame->Rip = Context->Rip;
     InterruptFrame->Rflags = Context->Rflags;
+    
+    InterruptFrame->Cr8 = Context->CR8;
 }
 
 VOID
@@ -133,6 +135,8 @@ KiLoadFrameToContext(
 
     Context->Rip = InterruptFrame->Rip;
     Context->Rflags = InterruptFrame->Rflags;
+
+    Context->CR8 = InterruptFrame->Cr8;
 }
 
 VOID
@@ -202,7 +206,7 @@ KiSetupInitialContextThread(
     //Thread->ThreadContext.CR2 = 0;
     Thread->ThreadContext.CR3 = (U64)PML4Base; // PCD and PWT cleared
     //Thread->ThreadContext.CR4 = ARCH_X64_CR4_OSXMMEXCPT | ARCH_X64_CR4_OSFXSR | ARCH_X64_CR4_PGE | ARCH_X64_CR4_MCE | ARCH_X64_CR4_PAE;
-    //Thread->ThreadContext.CR8 = IRQL_LOWEST; // All interrupts enabled
+    Thread->ThreadContext.CR8 = IRQL_LOWEST; // All interrupts enabled
 
     Thread->ThreadContext.Cs = KERNEL_CS;
     Thread->ThreadContext.Ds = KERNEL_DS;

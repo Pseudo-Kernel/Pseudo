@@ -124,7 +124,7 @@ typedef struct _KTHREAD_CONTEXT
 
     // CR3 (Top-level paging structure pointer)
     U64 CR3;        // @todo: Remove this field. Use KTHTEAD.OwnerProcess->TopLevelPageTablePhysicalBase instead.
-    U64 Padding1;
+    U64 CR8;        // Previous IRQL
 
     KTHREAD_FXSAVE64 FXSTATE;
 } KTHREAD_CONTEXT;

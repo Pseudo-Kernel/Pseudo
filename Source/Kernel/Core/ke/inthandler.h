@@ -8,7 +8,9 @@
 
 typedef struct _KSTACK_FRAME_INTERRUPT
 {
-    U8 Reserved[128+8];
+    U8 Reserved[128+16];
+
+    U64 Cr8;
 
     U64 Gs;
     U64 Fs;
@@ -85,10 +87,14 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "push rax\n\t"   \
     "push fs\n\t"   \
     "push gs\n\t"   \
-    "sub rsp, 0x88\n\t" /* red zone size + 8 byte */
+    "mov rax, cr8\n\t"  \
+    "push rax\n\t"  \
+    "sub rsp, 0x90\n\t" /* red zone size + 16 byte */
  
 #define ASM_INTERRUPT_FRAME_POP_ERRCODE    \
-    "add rsp, 0x88\n\t"  /* red zone size + 8 byte */  \
+    "add rsp, 0x90\n\t"  /* red zone size + 16 byte */  \
+    "pop rax\n\t"   \
+    "mov cr8, rax\n\t"  \
     "pop gs\n\t"    \
     "pop fs\n\t"    \
     "pop rax\n\t"    \
@@ -134,11 +140,15 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "push rax\n\t"   \
     "push fs\n\t"   \
     "push gs\n\t"   \
+    "mov rax, cr8\n\t"  \
+    "push rax\n\t"  \
     /* todo: make sure that rsp is 16-byte aligned after push */ \
-    "sub rsp, 0x88\n\t" /* red zone size + 8 byte */ \
+    "sub rsp, 0x90\n\t" /* red zone size + 16 byte */
 
 #define ASM_INTERRUPT_FRAME_POP    \
-    "add rsp, 0x88\n\t"  /* red zone size + 8 byte */ \
+    "add rsp, 0x90\n\t"  /* red zone size + 16 byte */ \
+    "pop rax\n\t"   \
+    "mov cr8, rax\n\t"  \
     "pop gs\n\t"    \
     "pop fs\n\t"    \
     "pop rax\n\t"    \
@@ -159,7 +169,7 @@ typedef struct _KSTACK_FRAME_INTERRUPT
     "pop rbx\n\t"   \
     "pop rdx\n\t"   \
     "pop rcx\n\t"   \
-    "pop rax\n\t"   \
+    "pop rax\n\t"
 
 
 /*
